@@ -1,8 +1,8 @@
 {
   "name": "open-support-agent-spec",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "private": true,
-  "description": "Open Support Agent Spec (OSAS) v0.1 — open interoperability spec for customer-support agents, with a TypeScript reference implementation.",
+  "description": "Open Support Agent Spec (OSAS) v0.1 \u2014 open interoperability spec for customer-support agents, with a TypeScript reference implementation.",
   "license": "Apache-2.0",
   "packageManager": "pnpm@11.7.0",
   "engines": {

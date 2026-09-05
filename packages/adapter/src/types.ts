@@ -2,6 +2,7 @@ import type {
   ActionProposal,
   Approval,
   AuditEvent,
+  CapabilityManifest,
   Case,
   CaseNote,
   CaseStatus,
@@ -124,4 +125,11 @@ export interface SupportAdapter {
   ): Promise<HumanHandoff>;
   getPolicy(ctx: ToolContext, tenantId: string): Promise<TenantPolicy>;
   putPolicy(ctx: ToolContext, policy: TenantPolicy): Promise<TenantPolicy>;
+  /**
+   * Optional capability provider (v0.1.1). Implementations that declare a
+   * CapabilityManifest have it enforced: operations needing an undeclared
+   * capability fail with AdapterCapabilityError (CAPABILITY_UNSUPPORTED).
+   * Adapters without this method stay permissive for backward compatibility.
+   */
+  getCapabilities?(ctx: ToolContext): Promise<CapabilityManifest>;
 }

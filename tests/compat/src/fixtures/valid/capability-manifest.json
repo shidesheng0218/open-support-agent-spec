@@ -1,0 +1,38 @@
+{
+  "specVersion": "0.1",
+  "implementationId": "osas-mock-backend",
+  "implementationVersion": "0.1.1",
+  "profiles": [
+    {
+      "name": "core",
+      "capabilities": [
+        "case.read",
+        "customer.read",
+        "knowledge.read",
+        "evidence.read",
+        "note.write",
+        "escalation.write",
+        "proposal.write",
+        "approval.read",
+        "approval.decide",
+        "audit.read"
+      ]
+    },
+    {
+      "name": "ecommerce",
+      "capabilities": [
+        "ecommerce.order.read",
+        "ecommerce.shipment.read",
+        "ecommerce.refund.propose",
+        "ecommerce.refund.execute"
+      ]
+    },
+    {
+      "name": "saas",
+      "capabilities": ["saas.subscription.read", "saas.credit.propose"]
+    }
+  ],
+  "transports": ["http", "mcp"],
+  "executionModes": ["proposal_only", "shadow", "live"],
+  "adapterVersion": "0.1.1"
+}

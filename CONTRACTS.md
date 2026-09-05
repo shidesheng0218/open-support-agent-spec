@@ -8,7 +8,7 @@ machine-checkable authority; this file must agree with them. `SPEC_VERSION = "0.
 ## 0. Fixed decisions
 
 - pnpm workspace, Node >= 20, TypeScript strict, **ESM** (`"type": "module"`, NodeNext → relative imports in TS **must use `.js` suffix**), Vitest for all tests.
-- npm scope `@osas/*`, every package `"version": "0.1.0"`, `"private": true`.
+- npm scope `@osas/*`, every package `"version": "0.1.1"` (specVersion stays `"0.1"`), `"private": true`.
 - Runtime validation: **Ajv v8 + ajv-formats only** (no zod). Schemas: JSON Schema draft 2020-12, `additionalProperties: false` on every object unless noted.
 - Money is `{ currency: string (ISO 4217, 3 upper-case letters), minorUnits: integer }`. Never floats.
 - Timestamps: ISO 8601 strings (`format: "date-time"`). IDs: opaque strings.
@@ -165,13 +165,16 @@ export interface SupportAdapter {
   updateHandoff(ctx, id: string, patch: Partial<Pick<HumanHandoff,"status"|"assignedTo"|"notes"|"resolvedAt">>): Promise<HumanHandoff>;
   getPolicy(ctx, tenantId: string): Promise<TenantPolicy>;
   putPolicy(ctx, policy: TenantPolicy): Promise<TenantPolicy>;
+  // v0.1.1: optional capability provider; once declared it is enforced
+  // (undeclared capability -> AdapterCapabilityError CAPABILITY_UNSUPPORTED).
+  getCapabilities?(ctx): Promise<CapabilityManifest>;
 }
 ```
 Package also ships `templates/byo-adapter.template.ts` — a copy-paste starting point with TODOs for real systems (Zendesk/Shopify/Stripe-agnostic). Adapter methods must throw `AdapterNotFoundError` (→ API 404) / `AdapterPermissionError` (→ 403) from @osas/adapter errors.ts.
 
 ## 7. MCP mapping (@osas/mcp-server)
 
-- Export pure data `TOOL_DEFINITIONS: ToolDefinition[]` (`{ name, profile, description, inputSchema, adapterMethod, permissionRequired }`) — used by compat tests and the API `/v1/meta/tools`.
+- Export pure data `TOOL_DEFINITIONS: ToolDefinition[]` (`{ name, profile, description, inputSchema, adapterMethod, permissionRequired, capabilityRequired }`) — used by compat tests and the API `/v1/meta/tools`. `capabilityRequired` (v0.1.1) maps each tool to its spec capability; undeclared capabilities fail with `CAPABILITY_UNSUPPORTED` before the adapter is touched.
 - Tool names (16): `osas_core_get_case, osas_core_search_cases, osas_core_get_customer, osas_core_search_knowledge, osas_core_create_case_note, osas_core_create_escalation, osas_core_create_action_proposal, osas_ecom_get_order, osas_ecom_list_orders, osas_ecom_get_shipment, osas_saas_get_subscription, osas_saas_list_invoices, osas_saas_get_credit_balance, osas_saas_create_credit_request, osas_saas_create_cancellation_request, osas_saas_create_plan_change_request`.
 - The three `*_request` saas tools + ecom return/refund shortcut tools build an ActionProposal (status `proposed`, requestedPermission `request-approval`) via `createActionProposal`; they never execute.
 - Each tool's inputSchema lives at `schemas/tools/<tool_name>.json`.
@@ -219,7 +222,15 @@ CORS enabled. `x-tenant-id` header optional (default `tenant_demo`). All errors 
 | GET | /v1/handoffs?status | → HumanHandoff[] |
 | POST | /v1/handoffs/:id/claim | `{ assignee }`; POST /v1/handoffs/:id/resolve `{ notes? }` |
 | GET | /v1/audit?caseId&proposalId | → AuditEvent[] |
-| GET | /v1/policies/:tenantId → TenantPolicy; PUT /v1/policies/:tenantId (validated, bumps version) |
+| GET | /v1/policies/:tenantId | → active TenantPolicy version (PolicyStore-backed) |
+| PUT | /v1/policies/:tenantId | → 409 `POLICY_IMMUTABLE` (v0.1.1: use the version lifecycle below) |
+| GET | /.well-known/osas | → discovery document `{ specVersion, version, capabilities, endpoints }` |
+| GET | /v1/capabilities | → CapabilityManifest, or 404 `CAPABILITIES_NOT_DECLARED` |
+| GET | /v1/audit/verify | → `{ tenantId, chainLength, intact, firstError? }` (hash-chain verification) |
+| GET | /v1/policies/:tenantId/versions | → PolicyVersionRecord[] |
+| POST | /v1/policies/:tenantId/drafts | TenantPolicy body → 201 draft (policy_admin) |
+| POST | /v1/policies/:tenantId/simulate | `{ version, proposal, customer?, evidence? }` → `{ decision, policyVersion }`, pure (no Approval/Execution/Handoff/business write) |
+| POST | /v1/policies/:tenantId/versions/:version/approve · /activate · /retire | lifecycle transitions (policy_admin), audited |
 | POST | /v1/chat | `{ caseId?, message, profile? }` → `{ reply, proposal?, decision?, execution?, handoff? }` — demo driver: gateway(mock) → maybe proposal → evaluate → maybe execute |
 | GET | /v1/compat/report | → `tests/compat/report/latest.json` or 404 |
 
@@ -265,3 +276,9 @@ MockSupportAdapter: in-memory maps, deep clones, id gen `<prefix>_<counter>`, de
 ## 14. Governance docs (owned by docs task)
 
 README.md + README.zh-CN.md (Draft 开放规范 v0.1 positioning, quickstart: pnpm & docker, architecture, three demo paths), docs/spec-v0.1.md + docs/spec-v0.1.zh-CN.md (full spec text from §2–§8 of this contract, expanded), CONTRIBUTING.md + CONTRIBUTING.zh-CN.md (bilingual flow, RFC requirement, release gate: schemas+docs+impl+compat tests in same PR; no stable release without runnable examples + passing tests), CODE_OF_CONDUCT.md (Contributor Covenant 2.1), SECURITY.md (report via GitHub private vulnerability reporting; no real customer data; redaction), GOVERNANCE.md (founding maintainers, semver, RFC for breaking/new semantics, profile-compat declaration requires passing compat suite; v1.0 requires ≥3 independent passing implementations), rfcs/0000-template.md + rfcs/0001-v0.1-core.md, CHANGELOG.md (0.1.0 draft).
+
+## 15. v0.1.1 extensions
+
+- **Capability manifest**: `schemas/core/capability-manifest.json` + `CapabilityManifest`/`Capability` types in @osas/core; 16 spec capabilities (`case.read`, `customer.read`, `knowledge.read`, `evidence.read`, `note.write`, `escalation.write`, `proposal.write`, `approval.read`, `approval.decide`, `audit.read`, `ecommerce.order.read`, `ecommerce.shipment.read`, `ecommerce.refund.propose`, `ecommerce.refund.execute`, `saas.subscription.read`, `saas.credit.propose`). Enforcement helper `requireAdapterCapability` in @osas/adapter; adapters without `getCapabilities` stay permissive. Mock adapter declares all 16.
+- **Policy lifecycle**: immutable versions `draft → simulated → approved → active → retired` (`POLICY_VERSION_TRANSITIONS` in @osas/core; `PolicyStore`/`InMemoryPolicyStore` in @osas/policy-engine). Runtime evaluation resolves the active version from the store (`resolveActivePolicy`), lazily importing the adapter's legacy policy as the initial active version. Demo RBAC: `x-osas-role: policy_admin` header (single seam `policyAdminActor` in apps/api/src/routes/policies.ts; Milestone 2 swaps to JWT). All changes audited (`policy_draft_created`/`policy_simulated`/`policy_approved`/`policy_activated`/`policy_retired`).
+- **Audit integrity**: optional `sequence`/`previousHash`/`eventHash` on AuditEvent; per-tenant append-only SHA-256 chain over stable JSON (`audit-chain.ts` in @osas/policy-engine; genesis previousHash = 64 zeros). `GET /v1/audit/verify` recomputes the chain. Tamper-evidence only — does not replace WORM storage; log redaction rules unchanged.

@@ -41,7 +41,12 @@
         "prompt_injection_blocked",
         "permission_overreach_blocked",
         "budget_exceeded",
-        "model_call_recorded"
+        "model_call_recorded",
+        "policy_draft_created",
+        "policy_simulated",
+        "policy_approved",
+        "policy_activated",
+        "policy_retired"
       ]
     },
     "actorType": {
@@ -73,6 +78,21 @@
       }
     },
     "detail": { "type": "object" },
-    "createdAt": { "$ref": "./common.json#/$defs/DateTime" }
+    "createdAt": { "$ref": "./common.json#/$defs/DateTime" },
+    "sequence": {
+      "type": "integer",
+      "minimum": 1,
+      "description": "1-based position in the tenant's audit hash chain (v0.1.1 extension)"
+    },
+    "previousHash": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$",
+      "description": "eventHash of the previous event in the chain; genesis uses 64 zeros"
+    },
+    "eventHash": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$",
+      "description": "SHA-256 over the stable JSON of this event with eventHash excluded"
+    }
   }
 }

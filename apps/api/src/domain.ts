@@ -4,15 +4,17 @@ import type {
   Approval,
   AuditEvent,
   AuditEventType,
+  Customer,
   Evidence,
   ExecutionResult,
   HandoffReason,
   HumanHandoff,
   PolicyDecision,
+  TenantPolicy,
 } from "@osas/core";
 import { detectInjection } from "@osas/core";
 import { evaluateProposal, executeProposal, reconcile } from "@osas/policy-engine";
-import type { ExecutionStore } from "@osas/policy-engine";
+import type { ExecutionStore, PolicyStore } from "@osas/policy-engine";
 import { ConflictError } from "./plugins.js";
 
 type AuditInput = Omit<AuditEvent, "id" | "specVersion" | "createdAt" | "tenantId">;
@@ -23,6 +25,47 @@ export async function audit(
   event: AuditInput,
 ): Promise<AuditEvent> {
   return adapter.appendAuditEvent(ctx, { tenantId: ctx.tenantId, ...event });
+}
+
+/**
+ * Active policy resolution (v0.1.1): the PolicyStore is the source of truth
+ * once a tenant has versioned policies; otherwise the adapter's legacy policy
+ * is imported as the initial active version (demo/backward-compat path).
+ */
+export async function resolveActivePolicy(
+  adapter: SupportAdapter,
+  store: PolicyStore,
+  ctx: ToolContext,
+  tenantId: string,
+): Promise<TenantPolicy> {
+  const active = store.getActive(tenantId);
+  if (active) return active;
+  const legacy = await adapter.getPolicy(ctx, tenantId);
+  return store.importActive(legacy, "system:legacy-import");
+}
+
+/**
+ * Policy Simulation (v0.1.1): pure evaluation against a specific policy
+ * version. Returns only the decision and reasons — it never creates an
+ * Approval, Execution, Handoff, audit event, or any business write.
+ */
+export function simulateProposal(
+  proposal: ActionProposal,
+  input: {
+    customer?: Customer;
+    evidence: Evidence[];
+    policy: TenantPolicy;
+    injectionSuspected?: boolean;
+  },
+): PolicyDecision {
+  return evaluateProposal(proposal, {
+    customer: input.customer,
+    evidence: input.evidence,
+    policy: input.policy,
+    recentProposals: [],
+    injectionSuspected:
+      input.injectionSuspected ?? detectInjection(JSON.stringify(proposal.params ?? {})),
+  });
 }
 
 // §4 rule 10: load referenced Evidence through the adapter. Records that
@@ -66,12 +109,12 @@ export async function runEvaluation(
   adapter: SupportAdapter,
   ctx: ToolContext,
   proposal: ActionProposal,
-  opts: { injectionSuspected?: boolean } = {},
+  opts: { injectionSuspected?: boolean; policy?: TenantPolicy } = {},
 ): Promise<EvaluationOutcome> {
   const kase = await adapter.getCase(ctx, proposal.caseId);
   const customer = await adapter.getCustomer(ctx, kase.customerId);
   const evidence = await collectEvidence(adapter, ctx, proposal.evidenceIds);
-  const policy = await adapter.getPolicy(ctx, ctx.tenantId);
+  const policy = opts.policy ?? (await adapter.getPolicy(ctx, ctx.tenantId));
   const recentProposals = await adapter.listProposals(ctx, { caseId: proposal.caseId });
   const injectionSuspected =
     opts.injectionSuspected ?? detectInjection(JSON.stringify(proposal.params ?? {}));

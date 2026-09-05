@@ -1,0 +1,75 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://open-support-agent.dev/schemas/core/capability-manifest.json",
+  "title": "CapabilityManifest",
+  "description": "What an OSAS implementation actually supports (v0.1.1). Served at GET /.well-known/osas and GET /v1/capabilities; operations needing an undeclared capability fail with CAPABILITY_UNSUPPORTED.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "specVersion",
+    "implementationId",
+    "implementationVersion",
+    "profiles",
+    "transports",
+    "executionModes",
+    "adapterVersion"
+  ],
+  "properties": {
+    "specVersion": { "$ref": "./common.json#/$defs/SpecVersion" },
+    "implementationId": { "type": "string", "minLength": 1 },
+    "implementationVersion": { "type": "string", "minLength": 1 },
+    "profiles": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["name", "capabilities"],
+        "properties": {
+          "name": { "type": "string", "enum": ["core", "ecommerce", "saas"] },
+          "capabilities": {
+            "type": "array",
+            "items": { "$ref": "#/$defs/Capability" },
+            "uniqueItems": true
+          }
+        }
+      }
+    },
+    "transports": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "type": "string", "enum": ["http", "mcp"] },
+      "uniqueItems": true
+    },
+    "executionModes": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "type": "string", "enum": ["proposal_only", "shadow", "live"] },
+      "uniqueItems": true
+    },
+    "adapterVersion": { "type": "string", "minLength": 1 }
+  },
+  "$defs": {
+    "Capability": {
+      "type": "string",
+      "enum": [
+        "case.read",
+        "customer.read",
+        "knowledge.read",
+        "evidence.read",
+        "note.write",
+        "escalation.write",
+        "proposal.write",
+        "approval.read",
+        "approval.decide",
+        "audit.read",
+        "ecommerce.order.read",
+        "ecommerce.shipment.read",
+        "ecommerce.refund.propose",
+        "ecommerce.refund.execute",
+        "saas.subscription.read",
+        "saas.credit.propose"
+      ]
+    }
+  }
+}

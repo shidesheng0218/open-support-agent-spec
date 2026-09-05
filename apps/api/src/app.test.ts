@@ -399,21 +399,25 @@ describe("compat report", () => {
 });
 
 describe("policies", () => {
-  it("PUT /v1/policies/:tenantId validates and bumps the semver patch version", async () => {
+  it("GET /v1/policies/:tenantId returns the active policy version", async () => {
     const getRes = await app.inject({ method: "GET", url: `/v1/policies/${TENANT}` });
     expect(getRes.statusCode).toBe(200);
+    expect(getRes.json().version).toBe("1.0.0");
+  });
+
+  it("PUT /v1/policies/:tenantId can no longer overwrite the active policy (409 POLICY_IMMUTABLE)", async () => {
+    const getRes = await app.inject({ method: "GET", url: `/v1/policies/${TENANT}` });
     const policy = getRes.json();
-    expect(policy.version).toBe("1.0.0");
 
     const putRes = await app.inject({
       method: "PUT",
       url: `/v1/policies/${TENANT}`,
       payload: policy,
     });
-    expect(putRes.statusCode).toBe(200);
-    expect(putRes.json().version).toBe("1.0.1");
+    expect(putRes.statusCode).toBe(409);
+    expect(putRes.json().error.code).toBe("POLICY_IMMUTABLE");
 
     const after = await app.inject({ method: "GET", url: `/v1/policies/${TENANT}` });
-    expect(after.json().version).toBe("1.0.1");
+    expect(after.json().version).toBe("1.0.0");
   });
 });

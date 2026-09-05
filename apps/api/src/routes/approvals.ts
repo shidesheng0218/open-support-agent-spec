@@ -1,5 +1,5 @@
 import type { FastifyInstance } from "fastify";
-import type { SupportAdapter } from "@osas/adapter";
+import { requireAdapterCapability, type SupportAdapter } from "@osas/adapter";
 import type { Approval } from "@osas/core";
 import { SchemaInvalidError } from "../plugins.js";
 import { audit, runExecution } from "../domain.js";
@@ -10,6 +10,7 @@ export async function approvalRoutes(app: FastifyInstance): Promise<void> {
 
   app.get("/v1/approvals", async (req) => {
     const ctx = ctxFor(req);
+    await requireAdapterCapability(adapter, ctx, "approval.read");
     const q = req.query as { status?: Approval["status"] };
     const approvals = await adapter.listApprovals(ctx, { status: q.status });
     return Promise.all(
@@ -22,6 +23,7 @@ export async function approvalRoutes(app: FastifyInstance): Promise<void> {
 
   app.post("/v1/approvals/:id/decide", async (req) => {
     const ctx = ctxFor(req);
+    await requireAdapterCapability(adapter, ctx, "approval.decide");
     const { id } = req.params as { id: string };
     const body = (req.body ?? {}) as { decision?: string; approverId?: string; comment?: string };
     if ((body.decision !== "approved" && body.decision !== "rejected") || !body.approverId) {

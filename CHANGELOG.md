@@ -29,6 +29,44 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - CI `docker` job additionally asserts the compat report endpoint and the static
   web `/healthz`.
 
+
+## [0.1.1] — Milestone 1: capability declaration, policy versioning, audit integrity
+
+### Added
+
+- **Capability manifest**: `schemas/core/capability-manifest.json`,
+  `CapabilityManifest`/`Capability` types and enums in `@osas/core`, the optional
+  `SupportAdapter.getCapabilities` provider, `requireAdapterCapability`
+  enforcement in `@osas/adapter`, `AdapterCapabilityError`
+  (`CAPABILITY_UNSUPPORTED`), per-tool `capabilityRequired` in the MCP catalog
+  with server-side enforcement, and the discovery endpoints
+  `GET /.well-known/osas` + `GET /v1/capabilities`. The mock adapter declares
+  all 16 spec capabilities; adapters without a provider stay permissive.
+- **Policy version lifecycle**: immutable policy versions
+  `draft → simulated → approved → active → retired`
+  (`POLICY_VERSION_TRANSITIONS` in `@osas/core`, `PolicyStore` /
+  `InMemoryPolicyStore` in `@osas/policy-engine`), pure policy simulation
+  (no Approval/Execution/Handoff/business writes), activation provenance
+  (actor/time/previous/new version), demo-mode `policy_admin` role via the
+  `x-osas-role` header, audit events for every policy change, and the APIs
+  `GET /v1/policies/:tenantId/versions`, `POST .../drafts`, `POST .../simulate`,
+  `POST .../versions/:version/approve|activate|retire`.
+- **Audit integrity**: optional `sequence`/`previousHash`/`eventHash` hash-chain
+  fields on AuditEvent (per-tenant append-only SHA-256 chain over stable JSON),
+  `hashAuditEvent`/`verifyAuditChain` in `@osas/policy-engine`, hash-chained
+  appends in the mock adapter, and `GET /v1/audit/verify` returning
+  `{ tenantId, chainLength, intact, firstError? }`. Tamper-evidence only; does
+  not replace WORM storage.
+- Compat suite: new `capabilities-policy-audit` suite plus automatic
+  capability-manifest schema checks.
+
+### Changed
+
+- `PUT /v1/policies/:tenantId` no longer overwrites the active policy; it
+  returns 409 `POLICY_IMMUTABLE`. Runtime policy evaluation resolves the active
+  version from the policy store (legacy adapter policies are lazily imported as
+  the initial active version). `defaultDecision: "block"` is unchanged.
+
 ## [0.1.0] - 2026-09-05
 
 First public draft of the Open Support Agent Spec (OSAS). **Draft status — not a

@@ -9,6 +9,7 @@ import type {
   ActionProposal,
   Approval,
   AuditEvent,
+  CapabilityManifest,
   Case,
   CaseNote,
   CaseStatus,
@@ -26,6 +27,7 @@ import type {
   Subscription,
   TenantPolicy,
 } from "@osas/core";
+import { AUDIT_CHAIN_GENESIS_HASH, hashAuditEvent } from "@osas/policy-engine";
 import { createDemoFixtures, SPEC_VERSION, type DemoFixtures } from "./fixtures.js";
 
 const clone = <T>(value: T): T => structuredClone(value);
@@ -66,6 +68,8 @@ export class MockSupportAdapter implements SupportAdapter {
   private readonly handoffs = new Map<string, HumanHandoff>();
   private readonly auditEvents = new Map<string, AuditEvent>();
   private readonly policies = new Map<string, TenantPolicy>();
+  /** Per-tenant hash-chain head: last assigned sequence + last eventHash. */
+  private readonly auditChainHeads = new Map<string, { sequence: number; lastHash: string }>();
 
   constructor(fixtures: DemoFixtures = createDemoFixtures()) {
     const seed = clone(fixtures);
@@ -471,8 +475,23 @@ export class MockSupportAdapter implements SupportAdapter {
       tenantId: ctx.tenantId,
       createdAt: nowIso(),
     };
-    this.auditEvents.set(event.id, event);
-    return clone(event);
+    // Hash-chain extension (v0.1.1): per-tenant append-only chain.
+    const head = this.auditChainHeads.get(ctx.tenantId) ?? {
+      sequence: 0,
+      lastHash: AUDIT_CHAIN_GENESIS_HASH,
+    };
+    const linked: AuditEvent = {
+      ...event,
+      sequence: head.sequence + 1,
+      previousHash: head.lastHash,
+    };
+    linked.eventHash = hashAuditEvent(linked);
+    this.auditChainHeads.set(ctx.tenantId, {
+      sequence: linked.sequence as number,
+      lastHash: linked.eventHash,
+    });
+    this.auditEvents.set(linked.id, linked);
+    return clone(linked);
   }
 
   async listAuditEvents(
@@ -610,5 +629,49 @@ export class MockSupportAdapter implements SupportAdapter {
     this.check(ctx, "execute");
     this.policies.set(policy.tenantId, clone(policy));
     return clone(policy);
+  }
+
+  // ---- capability manifest (v0.1.1) -----------------------------------------
+
+  /** The mock implements every spec capability on every profile. */
+  async getCapabilities(_ctx: ToolContext): Promise<CapabilityManifest> {
+    return {
+      specVersion: SPEC_VERSION,
+      implementationId: "osas-mock-backend",
+      implementationVersion: "0.1.1",
+      profiles: [
+        {
+          name: "core",
+          capabilities: [
+            "case.read",
+            "customer.read",
+            "knowledge.read",
+            "evidence.read",
+            "note.write",
+            "escalation.write",
+            "proposal.write",
+            "approval.read",
+            "approval.decide",
+            "audit.read",
+          ],
+        },
+        {
+          name: "ecommerce",
+          capabilities: [
+            "ecommerce.order.read",
+            "ecommerce.shipment.read",
+            "ecommerce.refund.propose",
+            "ecommerce.refund.execute",
+          ],
+        },
+        {
+          name: "saas",
+          capabilities: ["saas.subscription.read", "saas.credit.propose"],
+        },
+      ],
+      transports: ["http", "mcp"],
+      executionModes: ["proposal_only", "shadow", "live"],
+      adapterVersion: "0.1.1",
+    };
   }
 }

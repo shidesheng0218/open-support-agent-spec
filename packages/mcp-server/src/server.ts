@@ -1,6 +1,8 @@
 import {
+  AdapterCapabilityError,
   AdapterNotFoundError,
   AdapterPermissionError,
+  requireAdapterCapability,
   requirePermission,
   type Principal,
   type SupportAdapter,
@@ -186,6 +188,8 @@ export function buildMcpServer(adapter: SupportAdapter, principal: Principal): M
             : "tenant_demo",
         principal,
       };
+      // v0.1.1: tools run only when the implementation declares the capability.
+      await requireAdapterCapability(adapter, ctx, def.capabilityRequired);
       const result = await invoke(def, adapter, ctx, principal, request.params.arguments ?? {});
       const structuredContent =
         typeof result === "object" && result !== null && !Array.isArray(result)
@@ -196,7 +200,11 @@ export function buildMcpServer(adapter: SupportAdapter, principal: Principal): M
         structuredContent,
       };
     } catch (err) {
-      if (err instanceof AdapterNotFoundError || err instanceof AdapterPermissionError) {
+      if (
+        err instanceof AdapterNotFoundError ||
+        err instanceof AdapterPermissionError ||
+        err instanceof AdapterCapabilityError
+      ) {
         return {
           content: [{ type: "text" as const, text: `${err.code}: ${err.message}` }],
           isError: true,

@@ -17,3 +17,15 @@ export class AdapterPermissionError extends Error {
     this.name = "AdapterPermissionError";
   }
 }
+
+/**
+ * Thrown when an operation needs a capability the implementation's
+ * CapabilityManifest does not declare (v0.1.1). → API 403 CAPABILITY_UNSUPPORTED.
+ */
+export class AdapterCapabilityError extends Error {
+  readonly code = "CAPABILITY_UNSUPPORTED";
+  constructor(capability: string, message?: string) {
+    super(message ?? `Capability '${capability}' is not declared by this implementation`);
+    this.name = "AdapterCapabilityError";
+  }
+}

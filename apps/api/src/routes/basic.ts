@@ -1,13 +1,20 @@
 import { readFile } from "node:fs/promises";
 import path from "node:path";
 import type { FastifyInstance } from "fastify";
-import type { SupportAdapter, ToolContext } from "@osas/adapter";
-import type { CaseStatus, Profile, TenantPolicy } from "@osas/core";
+import { requireAdapterCapability, type SupportAdapter, type ToolContext } from "@osas/adapter";
+import type { CaseStatus, Profile } from "@osas/core";
+import { verifyAuditChain } from "@osas/policy-engine";
 import * as schemaValidator from "@osas/schema-validator";
 import { TOOL_DEFINITIONS } from "@osas/mcp-server";
-import { API_VERSION, SPEC_VERSION, SchemaInvalidError, SYSTEM_PRINCIPAL } from "../plugins.js";
+import {
+  API_VERSION,
+  SPEC_VERSION,
+  PolicyImmutableError,
+  SchemaInvalidError,
+  SYSTEM_PRINCIPAL,
+} from "../plugins.js";
 import { REPO_ROOT } from "../paths.js";
-import { collectEvidence } from "../domain.js";
+import { collectEvidence, resolveActivePolicy } from "../domain.js";
 
 const PROPOSAL_SCHEMA = "core/action-proposal";
 const POLICY_SCHEMA = "core/tenant-policy";
@@ -36,20 +43,43 @@ async function validateSchema(schemaName: string, data: unknown): Promise<{ vali
 
 export { validateSchema };
 
-function bumpPatch(version: string): string {
-  const m = /^(\d+)\.(\d+)\.(\d+)([-+].*)?$/.exec(version);
-  if (!m) return version;
-  return `${m[1]}.${m[2]}.${Number(m[3]) + 1}${m[4] ?? ""}`;
-}
-
 export async function basicRoutes(app: FastifyInstance): Promise<void> {
   const adapter: SupportAdapter = app.adapter;
 
   app.get("/health", async () => ({ status: "ok", specVersion: SPEC_VERSION, version: API_VERSION }));
 
+  // v0.1.1 discovery: what this implementation supports.
+  app.get("/.well-known/osas", async (req) => {
+    const manifest = adapter.getCapabilities ? await adapter.getCapabilities(ctxFor(req)) : null;
+    return {
+      specVersion: SPEC_VERSION,
+      version: API_VERSION,
+      capabilities: manifest,
+      endpoints: {
+        capabilities: "/v1/capabilities",
+        policies: "/v1/policies/:tenantId",
+        auditVerify: "/v1/audit/verify",
+        compatReport: "/v1/compat/report",
+      },
+    };
+  });
+
+  app.get("/v1/capabilities", async (req, reply) => {
+    if (!adapter.getCapabilities) {
+      return reply.code(404).send({
+        error: {
+          code: "CAPABILITIES_NOT_DECLARED",
+          message: "This implementation does not publish a CapabilityManifest",
+        },
+      });
+    }
+    return adapter.getCapabilities(ctxFor(req));
+  });
+
   app.get("/v1/cases", async (req) => {
     const q = req.query as { status?: CaseStatus; customerId?: string; profile?: Profile; q?: string };
     const ctx = ctxFor(req);
+    await requireAdapterCapability(adapter, ctx, "case.read");
     let cases = await adapter.searchCases(ctx, { status: q.status, customerId: q.customerId, q: q.q });
     if (q.profile) cases = cases.filter((c) => c.profile === q.profile);
     return cases;
@@ -57,6 +87,7 @@ export async function basicRoutes(app: FastifyInstance): Promise<void> {
 
   app.get("/v1/cases/:id", async (req) => {
     const ctx = ctxFor(req);
+    await requireAdapterCapability(adapter, ctx, "case.read");
     const { id } = req.params as { id: string };
     const kase = await adapter.getCase(ctx, id);
     const customer = await adapter.getCustomer(ctx, kase.customerId);
@@ -71,8 +102,10 @@ export async function basicRoutes(app: FastifyInstance): Promise<void> {
   });
 
   app.get("/v1/customers/:id", async (req) => {
+    const ctx = ctxFor(req);
+    await requireAdapterCapability(adapter, ctx, "customer.read");
     const { id } = req.params as { id: string };
-    return adapter.getCustomer(ctxFor(req), id);
+    return adapter.getCustomer(ctx, id);
   });
 
   app.post("/v1/validate", async (req) => {
@@ -103,26 +136,32 @@ export async function basicRoutes(app: FastifyInstance): Promise<void> {
   app.get("/v1/meta/tools", async () => TOOL_DEFINITIONS);
 
   app.get("/v1/audit", async (req) => {
+    const ctx = ctxFor(req);
+    await requireAdapterCapability(adapter, ctx, "audit.read");
     const q = req.query as { caseId?: string; proposalId?: string };
-    return adapter.listAuditEvents(ctxFor(req), { caseId: q.caseId, proposalId: q.proposalId });
+    return adapter.listAuditEvents(ctx, { caseId: q.caseId, proposalId: q.proposalId });
+  });
+
+  // v0.1.1: verify the tenant's audit hash chain (tamper-evidence, not WORM).
+  app.get("/v1/audit/verify", async (req) => {
+    const ctx = ctxFor(req);
+    await requireAdapterCapability(adapter, ctx, "audit.read");
+    const events = await adapter.listAuditEvents(ctx, {});
+    const result = verifyAuditChain(events);
+    return { tenantId: ctx.tenantId, ...result };
   });
 
   app.get("/v1/policies/:tenantId", async (req) => {
     const { tenantId } = req.params as { tenantId: string };
-    return adapter.getPolicy(ctxFor(req, tenantId), tenantId);
+    const ctx = ctxFor(req, tenantId);
+    return resolveActivePolicy(adapter, app.policyStore, ctx, tenantId);
   });
 
+  // v0.1.1: the active policy is immutable. Change it through the versioned
+  // lifecycle (drafts -> simulate -> approve -> activate), never in place.
   app.put("/v1/policies/:tenantId", async (req) => {
     const { tenantId } = req.params as { tenantId: string };
-    const body = req.body as Record<string, unknown> | undefined;
-    if (!body || typeof body !== "object") {
-      throw new SchemaInvalidError([{ message: "body must be a TenantPolicy object" }]);
-    }
-    const candidate: Record<string, unknown> = { ...body, tenantId };
-    const result = await validateSchema(POLICY_SCHEMA, candidate);
-    if (!result.valid) throw new SchemaInvalidError(result.errors);
-    const bumped = { ...candidate, version: bumpPatch(String(candidate.version ?? "0.1.0")) };
-    return adapter.putPolicy(ctxFor(req, tenantId), bumped as TenantPolicy);
+    throw new PolicyImmutableError(tenantId);
   });
 
   app.get("/v1/compat/report", async (_req, reply) => {

@@ -1,10 +1,21 @@
 import { randomUUID } from "node:crypto";
 import type { FastifyInstance } from "fastify";
-import type { SupportAdapter } from "@osas/adapter";
-import type { ActionProposal, ProposalStatus } from "@osas/core";
+import { requireAdapterCapability, type SupportAdapter } from "@osas/adapter";
+import type { Capability, ActionProposal, ProposalStatus } from "@osas/core";
 import { SPEC_VERSION, SchemaInvalidError } from "../plugins.js";
-import { audit, runEvaluation, runExecution, runReconcile } from "../domain.js";
+import { audit, resolveActivePolicy, runEvaluation, runExecution, runReconcile } from "../domain.js";
 import { PROPOSAL_SCHEMA, ctxFor, validateSchema } from "./basic.js";
+
+/** Capability required to propose a given actionType (v0.1.1). */
+const PROPOSE_CAPABILITY: Partial<Record<ActionProposal["actionType"], Capability>> = {
+  refund: "ecommerce.refund.propose",
+  credit_apply: "saas.credit.propose",
+};
+
+/** Capability required to execute a given actionType (v0.1.1). */
+const EXECUTE_CAPABILITY: Partial<Record<ActionProposal["actionType"], Capability>> = {
+  refund: "ecommerce.refund.execute",
+};
 
 export async function proposalRoutes(app: FastifyInstance): Promise<void> {
   const adapter: SupportAdapter = app.adapter;
@@ -21,10 +32,13 @@ export async function proposalRoutes(app: FastifyInstance): Promise<void> {
 
   app.post("/v1/proposals", async (req, reply) => {
     const ctx = ctxFor(req);
+    await requireAdapterCapability(adapter, ctx, "proposal.write");
     const body = req.body as Record<string, unknown> | undefined;
     if (!body || typeof body !== "object" || Array.isArray(body)) {
       throw new SchemaInvalidError([{ message: "body must be an ActionProposal object" }]);
     }
+    const actionCapability = PROPOSE_CAPABILITY[body.actionType as ActionProposal["actionType"]];
+    if (actionCapability) await requireAdapterCapability(adapter, ctx, actionCapability);
     const now = new Date().toISOString();
     const candidate: Record<string, unknown> = {
       ...body,
@@ -68,8 +82,10 @@ export async function proposalRoutes(app: FastifyInstance): Promise<void> {
     const { id } = req.params as { id: string };
     const body = (req.body ?? {}) as { injectionSuspected?: boolean };
     const proposal = await adapter.getProposal(ctx, id);
+    const policy = await resolveActivePolicy(adapter, app.policyStore, ctx, ctx.tenantId);
     const outcome = await runEvaluation(adapter, ctx, proposal, {
       injectionSuspected: body.injectionSuspected,
+      policy,
     });
     return { proposal: outcome.proposal, decision: outcome.decision };
   });
@@ -78,6 +94,8 @@ export async function proposalRoutes(app: FastifyInstance): Promise<void> {
     const ctx = ctxFor(req);
     const { id } = req.params as { id: string };
     const proposal = await adapter.getProposal(ctx, id);
+    const actionCapability = EXECUTE_CAPABILITY[proposal.actionType];
+    if (actionCapability) await requireAdapterCapability(adapter, ctx, actionCapability);
     const outcome = await runExecution(adapter, ctx, app.executionStore, proposal);
     return { proposal: outcome.proposal, execution: outcome.execution, replayed: outcome.replayed };
   });

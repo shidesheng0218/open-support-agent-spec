@@ -111,6 +111,24 @@ const validFixtures: Record<string, unknown> = {
   },
   "core/case-note": { ...base, caseId: "case_1", body: "note" },
   "core/escalation": { ...base, caseId: "case_1", reason: "vip" },
+  "core/capability-manifest": {
+    specVersion: SPEC_VERSION,
+    implementationId: "test-impl",
+    implementationVersion: "0.1.1",
+    profiles: [{ name: "core", capabilities: ["case.read", "customer.read"] }],
+    transports: ["http"],
+    executionModes: ["proposal_only"],
+    adapterVersion: "0.1.1",
+  },
+};
+
+// v0.1.1 hash-chain extension fields on AuditEvent + policy lifecycle event types.
+const chainedAuditEvent = {
+  ...(validFixtures["core/audit-event"] as object),
+  eventType: "policy_activated",
+  sequence: 1,
+  previousHash: "0".repeat(64),
+  eventHash: "a".repeat(64),
 };
 
 const validator = createValidator();
@@ -130,10 +148,11 @@ describe("schemas dir resolution + manifest", () => {
     }
   });
 
-  it("manifest covers 12 core + 5 profile + 16 tool schemas", () => {
+  it("manifest covers 13 core + 5 profile + 16 tool schemas", () => {
     const manifest = loadManifest();
     expect(manifest.specVersion).toBe(SPEC_VERSION);
-    expect(manifest.schemas).toHaveLength(33);
+    expect(manifest.schemas).toHaveLength(34);
+    expect(listSchemas().map((s) => s.name)).toContain("core/capability-manifest");
     expect(listSchemas().map((s) => s.name)).toContain("tools/osas_core_get_case");
     expect(loadSchema("core/case")).toMatchObject({ title: "Case" });
     expect(() => loadSchema("nope/nope")).toThrow(/Unknown schema/);
@@ -148,6 +167,20 @@ describe("valid minimal fixtures pass", () => {
       expect(result.valid).toBe(true);
     });
   }
+
+  it("audit events accept the v0.1.1 hash-chain fields and policy lifecycle event types", () => {
+    const result = validator.validate("core/audit-event", chainedAuditEvent);
+    expect(result.errors).toEqual([]);
+    expect(result.valid).toBe(true);
+  });
+
+  it("audit events reject malformed hashes", () => {
+    const result = validator.validate("core/audit-event", {
+      ...(chainedAuditEvent as object),
+      eventHash: "not-a-sha256",
+    });
+    expect(result.valid).toBe(false);
+  });
 });
 
 describe("invalid data is rejected", () => {

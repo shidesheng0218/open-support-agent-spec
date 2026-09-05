@@ -9,6 +9,7 @@
     { "name": "core/approval", "profile": "core", "path": "core/approval.json" },
     { "name": "core/tenant-policy", "profile": "core", "path": "core/tenant-policy.json" },
     { "name": "core/audit-event", "profile": "core", "path": "core/audit-event.json" },
+    { "name": "core/capability-manifest", "profile": "core", "path": "core/capability-manifest.json" },
     { "name": "core/human-handoff", "profile": "core", "path": "core/human-handoff.json" },
     { "name": "core/knowledge-article", "profile": "core", "path": "core/knowledge-article.json" },
     { "name": "core/case-note", "profile": "core", "path": "core/case-note.json" },

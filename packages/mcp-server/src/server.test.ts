@@ -103,4 +103,56 @@ describe("buildMcpServer", () => {
     expect(textContent(result)[0]!.text).toContain("NOT_FOUND");
     await server.close();
   });
+
+  it("rejects tools whose capability is not declared (CAPABILITY_UNSUPPORTED)", async () => {
+    // Read-only implementation: declares only the core read capabilities.
+    const adapter = new MockSupportAdapter();
+    const full = await adapter.getCapabilities!({
+      tenantId: "tenant_demo",
+      principal: DEMO_PRINCIPAL,
+    });
+    adapter.getCapabilities = async () => ({
+      ...full,
+      profiles: [
+        {
+          name: "core" as const,
+          capabilities: ["case.read" as const, "customer.read" as const, "knowledge.read" as const, "evidence.read" as const],
+        },
+      ],
+    });
+    const server = buildMcpServer(adapter, DEMO_PRINCIPAL);
+    const [clientTransport, serverTransport] = InMemoryTransport.createLinkedPair();
+    const client = new Client({ name: "test-client", version: "0.0.0" });
+    await Promise.all([client.connect(clientTransport), server.connect(serverTransport)]);
+
+    // Declared capability still works.
+    const ok = await client.callTool({ name: "osas_core_get_case", arguments: { id: "case_refund" } });
+    expect(ok.isError).toBeFalsy();
+
+    // Undeclared capabilities are refused before touching the adapter.
+    const note = await client.callTool({
+      name: "osas_core_create_case_note",
+      arguments: { caseId: "case_refund", body: "hi", idempotencyKey: "k1" },
+    });
+    expect(note.isError).toBe(true);
+    expect(textContent(note)[0]!.text).toContain("CAPABILITY_UNSUPPORTED");
+
+    const order = await client.callTool({ name: "osas_ecom_get_order", arguments: { id: "ord_small" } });
+    expect(order.isError).toBe(true);
+    expect(textContent(order)[0]!.text).toContain("CAPABILITY_UNSUPPORTED");
+
+    await server.close();
+  });
+
+  it("adapters without a capability provider stay permissive (backward compat)", async () => {
+    const adapter = new MockSupportAdapter();
+    Object.defineProperty(adapter, "getCapabilities", { value: undefined });
+    const server = buildMcpServer(adapter, DEMO_PRINCIPAL);
+    const [clientTransport, serverTransport] = InMemoryTransport.createLinkedPair();
+    const client = new Client({ name: "test-client", version: "0.0.0" });
+    await Promise.all([client.connect(clientTransport), server.connect(serverTransport)]);
+    const result = await client.callTool({ name: "osas_core_get_case", arguments: { id: "case_refund" } });
+    expect(result.isError).toBeFalsy();
+    await server.close();
+  });
 });

@@ -250,7 +250,12 @@ export type AuditEventType =
   | "prompt_injection_blocked"
   | "permission_overreach_blocked"
   | "budget_exceeded"
-  | "model_call_recorded";
+  | "model_call_recorded"
+  | "policy_draft_created"
+  | "policy_simulated"
+  | "policy_approved"
+  | "policy_activated"
+  | "policy_retired";
 
 export type AuditActorType = "model" | "policy_engine" | "human" | "system" | "adapter";
 
@@ -280,7 +285,72 @@ export interface AuditEvent {
   modelInfo?: AuditModelInfo;
   detail: Record<string, unknown>;
   createdAt: IsoDateTime;
+  /**
+   * Hash-chain extension (v0.1.1, optional for backward compatibility).
+   * Per-tenant append-only chain: `sequence` is 1-based per tenant,
+   * `previousHash` is the prior event's `eventHash` (genesis uses the
+   * all-zero hash), `eventHash` is SHA-256 over the stable JSON of the
+   * event with `eventHash` itself excluded. Tamper-evidence only — this
+   * does not replace WORM storage.
+   */
+  sequence?: number;
+  previousHash?: string;
+  eventHash?: string;
 }
+
+/* ---------------- Capability manifest (v0.1.1) ---------------- */
+
+/** Spec-defined capability identifiers (schemas/core/capability-manifest.json). */
+export type Capability =
+  | "case.read"
+  | "customer.read"
+  | "knowledge.read"
+  | "evidence.read"
+  | "note.write"
+  | "escalation.write"
+  | "proposal.write"
+  | "approval.read"
+  | "approval.decide"
+  | "audit.read"
+  | "ecommerce.order.read"
+  | "ecommerce.shipment.read"
+  | "ecommerce.refund.propose"
+  | "ecommerce.refund.execute"
+  | "saas.subscription.read"
+  | "saas.credit.propose";
+
+export type Transport = "http" | "mcp";
+
+export type ExecutionMode = "proposal_only" | "shadow" | "live";
+
+export interface CapabilityProfileGrant {
+  name: Profile;
+  capabilities: Capability[];
+}
+
+/**
+ * CapabilityManifest — what an implementation actually supports. Served at
+ * GET /.well-known/osas and GET /v1/capabilities; operations needing an
+ * undeclared capability fail with CAPABILITY_UNSUPPORTED.
+ */
+export interface CapabilityManifest {
+  specVersion: SpecVersion;
+  implementationId: string;
+  implementationVersion: string;
+  profiles: CapabilityProfileGrant[];
+  transports: Transport[];
+  executionModes: ExecutionMode[];
+  adapterVersion: string;
+}
+
+/* ---------------- Policy version lifecycle (v0.1.1) ---------------- */
+
+/**
+ * Lifecycle of an immutable TenantPolicy version:
+ * draft -> simulated -> approved -> active -> retired.
+ * The active version is never modified in place; changes are new versions.
+ */
+export type PolicyVersionStatus = "draft" | "simulated" | "approved" | "active" | "retired";
 
 /* ---------------- HumanHandoff ---------------- */
 

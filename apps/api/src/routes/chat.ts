@@ -1,11 +1,11 @@
 import { randomUUID } from "node:crypto";
 import type { FastifyInstance } from "fastify";
-import type { SupportAdapter, ToolContext } from "@osas/adapter";
+import { requireAdapterCapability, type SupportAdapter, type ToolContext } from "@osas/adapter";
 import type { ActionProposal, Case, Profile } from "@osas/core";
 import { detectInjection, FINANCIAL_ACTION_TYPES } from "@osas/core";
 import type { ModelTelemetry } from "@osas/model-gateway";
 import { SchemaInvalidError } from "../plugins.js";
-import { audit, runEvaluation, runExecution } from "../domain.js";
+import { audit, resolveActivePolicy, runEvaluation, runExecution } from "../domain.js";
 import { ctxFor } from "./basic.js";
 
 async function recordModelCall(
@@ -242,6 +242,7 @@ export async function chatRoutes(app: FastifyInstance): Promise<void> {
       input.evidenceIds = await captureProposalEvidence(adapter, ctx, input);
     }
 
+    await requireAdapterCapability(adapter, ctx, "proposal.write");
     const proposal = await adapter.createActionProposal(ctx, input);
     await audit(adapter, ctx, {
       caseId: proposal.caseId,
@@ -254,6 +255,7 @@ export async function chatRoutes(app: FastifyInstance): Promise<void> {
 
     const evaluation = await runEvaluation(adapter, ctx, proposal, {
       injectionSuspected: detectInjection(JSON.stringify(proposal.params ?? {})),
+      policy: await resolveActivePolicy(adapter, app.policyStore, ctx, ctx.tenantId),
     });
 
     let execution;

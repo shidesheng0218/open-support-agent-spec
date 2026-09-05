@@ -1,12 +1,16 @@
 import type { FastifyError, FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
 import type { Principal, SupportAdapter } from "@osas/adapter";
-import { AdapterNotFoundError, AdapterPermissionError } from "@osas/adapter";
+import {
+  AdapterCapabilityError,
+  AdapterNotFoundError,
+  AdapterPermissionError,
+} from "@osas/adapter";
 import { IllegalTransitionError } from "@osas/core";
-import type { ExecutionStore } from "@osas/policy-engine";
+import type { ExecutionStore, PolicyStore } from "@osas/policy-engine";
 import type { ModelGateway } from "@osas/model-gateway";
 
 export const SPEC_VERSION = "0.1";
-export const API_VERSION = "0.1.0";
+export const API_VERSION = "0.1.1";
 export const DEFAULT_TENANT = "tenant_demo";
 
 // API backend principal: only the policy engine / API layer may execute (§3).
@@ -31,6 +35,7 @@ declare module "fastify" {
   interface FastifyInstance {
     adapter: SupportAdapter;
     executionStore: ExecutionStore;
+    policyStore: PolicyStore;
     gateway: ModelGateway;
     compatReportPath?: string;
   }
@@ -50,6 +55,24 @@ export class ConflictError extends Error {
   override name = "ConflictError";
 }
 
+/** Demo-mode RBAC: policy lifecycle operations require the policy_admin role. */
+export class PolicyAdminRequiredError extends Error {
+  override name = "PolicyAdminRequiredError";
+  constructor() {
+    super("policy lifecycle operations require the policy_admin role (header x-osas-role)");
+  }
+}
+
+export class PolicyImmutableError extends Error {
+  override name = "PolicyImmutableError";
+  constructor(tenantId: string) {
+    super(
+      `Active policy for tenant ${tenantId} cannot be overwritten in place. ` +
+        "Create a draft via POST /v1/policies/:tenantId/drafts and activate it instead.",
+    );
+  }
+}
+
 export async function tenantHook(req: FastifyRequest): Promise<void> {
   const header = req.headers["x-tenant-id"];
   const value = Array.isArray(header) ? header[0] : header;
@@ -65,11 +88,23 @@ export function errorHandler(err: FastifyError, req: FastifyRequest, reply: Fast
   if (err instanceof AdapterNotFoundError || err.name === "AdapterNotFoundError") {
     return send(404, "NOT_FOUND", err.message);
   }
+  if (err.name === "PolicyVersionNotFoundError") {
+    return send(404, "NOT_FOUND", err.message);
+  }
   if (err instanceof AdapterPermissionError || err.name === "AdapterPermissionError") {
     return send(403, "FORBIDDEN", err.message);
   }
+  if (err instanceof AdapterCapabilityError || err.name === "AdapterCapabilityError") {
+    return send(403, "CAPABILITY_UNSUPPORTED", err.message);
+  }
+  if (err instanceof PolicyAdminRequiredError || err.name === "PolicyAdminRequiredError") {
+    return send(403, "POLICY_ADMIN_REQUIRED", err.message);
+  }
   if (err instanceof SchemaInvalidError || err.name === "SchemaInvalidError") {
     return send(422, "SCHEMA_INVALID", err.message, (err as unknown as SchemaInvalidError).details);
+  }
+  if (err instanceof PolicyImmutableError || err.name === "PolicyImmutableError") {
+    return send(409, "POLICY_IMMUTABLE", err.message);
   }
   if (
     err instanceof IllegalTransitionError ||
@@ -77,7 +112,8 @@ export function errorHandler(err: FastifyError, req: FastifyRequest, reply: Fast
     err.name === "IllegalTransitionError" ||
     err.name === "ConflictError" ||
     err.name === "ExecutionStatusError" || // policy-engine §5 status guards
-    err.name === "ReconcileStatusError"
+    err.name === "ReconcileStatusError" ||
+    err.name === "PolicyVersionConflictError"
   ) {
     return send(409, "CONFLICT", err.message);
   }

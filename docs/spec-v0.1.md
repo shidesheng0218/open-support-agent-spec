@@ -147,7 +147,7 @@ The deterministic rulebook evaluated per tenant.
 | Field | Type | Required | Description |
 |---|---|---|---|
 | `tenantId` | string | yes | Owning tenant |
-| `version` | string | yes | Semver string; bumped on every update |
+| `version` | string | yes | Semver string; v0.1.1: identifies an immutable version in the policy lifecycle (§12.2) |
 | `effectiveFrom` | date-time | yes | Effective time |
 | `duplicateWindowSeconds` | integer | yes | Window for duplicate detection (§5 step 6) |
 | `maxEvidenceAgeSeconds` | integer | yes | Max evidence age from `retrievedAt` (§5 step 10) |
@@ -182,13 +182,18 @@ Every meaningful step emits an append-only audit event.
 | `policyVersion` | string | no | Policy version in force |
 | `modelInfo` | object | no | `{ provider, model, tier, inputTokens, outputTokens, latencyMs, costUsd }` |
 | `detail` | object | yes | Event-specific payload |
+| `sequence` | integer | no | v0.1.1: 1-based position in the tenant's audit hash chain (§12.3) |
+| `previousHash` | string | no | v0.1.1: `eventHash` of the previous chain event (genesis = 64 zeros) |
+| `eventHash` | string | no | v0.1.1: SHA-256 over the stable JSON of the event, `eventHash` excluded |
 
 `AuditEventType` values: `proposal_created`, `proposal_validated`,
 `proposal_validation_failed`, `policy_evaluated`, `approval_requested`,
 `approval_decided`, `execution_started`, `execution_succeeded`, `execution_failed`,
 `execution_uncertain`, `reconciliation_opened`, `reconciliation_resolved`,
 `handoff_created`, `handoff_resolved`, `prompt_injection_blocked`,
-`permission_overreach_blocked`, `budget_exceeded`, `model_call_recorded`.
+`permission_overreach_blocked`, `budget_exceeded`, `model_call_recorded`,
+and (v0.1.1) `policy_draft_created`, `policy_simulated`, `policy_approved`,
+`policy_activated`, `policy_retired`.
 
 ### 2.9 HumanHandoff
 
@@ -504,3 +509,91 @@ tool-definition ↔ adapter-method ↔ input-schema 1:1 mapping, state-machine l
 tables, the policy evaluation matrix, and idempotency/reconciliation behavior. The suite
 emits a machine-readable report
 (`{ specVersion, runAt, suites: [{ name, passed, failed, cases: [...] }], ok: boolean }`).
+
+## 12. v0.1.1 extensions (backward compatible)
+
+v0.1.1 adds capability declaration, policy version lifecycle, and audit
+integrity. `specVersion` remains `"0.1"`; all additions are additive and
+optional for pre-0.1.1 implementations.
+
+### 12.1 Capability manifest
+
+An implementation MAY publish a `CapabilityManifest`
+(`schemas/core/capability-manifest.json`):
+
+| Field | Type | Required | Description |
+|---|---|---|---|
+| `specVersion` | const | yes | `"0.1"` |
+| `implementationId` | string | yes | Stable implementation identifier |
+| `implementationVersion` | string | yes | Implementation release |
+| `profiles` | array | yes | `{ name: core\|ecommerce\|saas, capabilities: Capability[] }` |
+| `transports` | array | yes | Subset of `http`, `mcp` |
+| `executionModes` | array | yes | Subset of `proposal_only`, `shadow`, `live` |
+| `adapterVersion` | string | yes | Adapter contract version |
+
+The 16 spec-defined capabilities: `case.read`, `customer.read`,
+`knowledge.read`, `evidence.read`, `note.write`, `escalation.write`,
+`proposal.write`, `approval.read`, `approval.decide`, `audit.read`,
+`ecommerce.order.read`, `ecommerce.shipment.read`, `ecommerce.refund.propose`,
+`ecommerce.refund.execute`, `saas.subscription.read`, `saas.credit.propose`.
+
+Adapters expose the manifest through the optional `getCapabilities` provider
+method. Once declared, the manifest binds: any MCP tool call or HTTP operation
+whose required capability is undeclared MUST fail with
+`CAPABILITY_UNSUPPORTED` (HTTP 403 / MCP tool error). Adapters without a
+capability provider remain permissive (backward compatibility).
+
+Discovery endpoints: `GET /.well-known/osas` (discovery document) and
+`GET /v1/capabilities` (the manifest, or 404 `CAPABILITIES_NOT_DECLARED`).
+
+### 12.2 Policy version lifecycle
+
+The active tenant policy MUST NOT be overwritten in place. Policy changes go
+through immutable versions with the lifecycle
+`draft → simulated → approved → active → retired`:
+
+- Creating a draft preserves all previous versions; version numbers are unique
+  per tenant.
+- **Simulation** (`POST /v1/policies/:tenantId/simulate`) evaluates a proposal
+  against a specified version and returns only the decision and reasons. It
+  produces no Approval, Execution, Handoff, or business write; the
+  `draft → simulated` transition is itself audited.
+- **Activation** records the operator, time, previous version, and new version;
+  activating a new version retires the previously active one.
+- Only the `policy_admin` role may create, simulate, approve, activate, or
+  retire policy versions (demo mode: `x-osas-role: policy_admin` header; the
+  role source is a single seam that Milestone 2 replaces with JWT claims).
+- Every policy change emits an audit event (`policy_draft_created`,
+  `policy_simulated`, `policy_approved`, `policy_activated`, `policy_retired`).
+- `defaultDecision: "block"` semantics are unchanged.
+- `PUT /v1/policies/:tenantId` now fails with 409 `POLICY_IMMUTABLE`.
+
+Lifecycle API: `GET /v1/policies/:tenantId/versions`,
+`POST /v1/policies/:tenantId/drafts`, `POST /v1/policies/:tenantId/simulate`,
+`POST /v1/policies/:tenantId/versions/:version/approve|activate|retire`.
+
+### 12.3 Audit integrity (hash chain)
+
+Audit events MAY carry the hash-chain extension fields `sequence`,
+`previousHash`, `eventHash`. Per tenant, the audit stream forms an append-only
+chain: `sequence` is 1-based and contiguous, `previousHash` links to the prior
+event's `eventHash` (genesis uses 64 zeros), and `eventHash` is SHA-256 over
+the stable (key-sorted) JSON serialization of the event with `eventHash`
+itself excluded.
+
+`GET /v1/audit/verify` recomputes the chain and returns
+`{ tenantId, chainLength, intact, firstError? }` where `firstError` identifies
+the first broken event with expected/actual hashes.
+
+This is tamper-evidence, not tamper-proofing: it detects modifications,
+deletions, and reordering, but an attacker who can rewrite the whole stream can
+recompute the chain — it does not replace WORM storage. Customer-sensitive
+content is not added to log output by this mechanism, and the existing log
+redaction rules (email, phone, Authorization) are unchanged.
+
+### 12.4 Conformance additions
+
+The compat suite additionally checks: capability-manifest schema validity, that
+the reference manifest declares all 16 capabilities, tool→capability mapping,
+read-only manifests, policy version immutability and lifecycle legality, and
+audit hash-chain tamper detection with cross-tenant isolation.

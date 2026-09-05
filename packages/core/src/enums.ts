@@ -9,6 +9,7 @@ import type {
   ApprovalStatus,
   AuditActorType,
   AuditEventType,
+  Capability,
   Case,
   CaseChannel,
   CasePriority,
@@ -17,6 +18,7 @@ import type {
   CoreActionType,
   EcommerceActionType,
   EvidenceKind,
+  ExecutionMode,
   ExecutionStatus,
   HandoffReason,
   HandoffStatus,
@@ -25,11 +27,13 @@ import type {
   OrderStatus,
   Permission,
   PolicyDecisionValue,
+  PolicyVersionStatus,
   Profile,
   ProposalStatus,
   SaasActionType,
   ShipmentStatus,
   SubscriptionStatus,
+  Transport,
 } from "./types.js";
 
 export const SPEC_VERSION = "0.1" as const;
@@ -112,6 +116,11 @@ export const AUDIT_EVENT_TYPES: readonly AuditEventType[] = [
   "permission_overreach_blocked",
   "budget_exceeded",
   "model_call_recorded",
+  "policy_draft_created",
+  "policy_simulated",
+  "policy_approved",
+  "policy_activated",
+  "policy_retired",
 ];
 
 export const AUDIT_ACTOR_TYPES: readonly AuditActorType[] = [
@@ -265,4 +274,60 @@ export function transitionProposal(p: ActionProposal, to: ProposalStatus): Actio
     throw new IllegalTransitionError("proposal", p.status, to);
   }
   return { ...p, status: to, updatedAt: nowIso() };
+}
+
+/* ---------------- Capability manifest (v0.1.1) ---------------- */
+
+export const CAPABILITIES: readonly Capability[] = [
+  "case.read",
+  "customer.read",
+  "knowledge.read",
+  "evidence.read",
+  "note.write",
+  "escalation.write",
+  "proposal.write",
+  "approval.read",
+  "approval.decide",
+  "audit.read",
+  "ecommerce.order.read",
+  "ecommerce.shipment.read",
+  "ecommerce.refund.propose",
+  "ecommerce.refund.execute",
+  "saas.subscription.read",
+  "saas.credit.propose",
+];
+
+export const TRANSPORTS: readonly Transport[] = ["http", "mcp"];
+
+export const EXECUTION_MODES: readonly ExecutionMode[] = ["proposal_only", "shadow", "live"];
+
+/* ---------------- Policy version lifecycle (v0.1.1) ---------------- */
+
+export const POLICY_VERSION_STATUSES: readonly PolicyVersionStatus[] = [
+  "draft",
+  "simulated",
+  "approved",
+  "active",
+  "retired",
+];
+
+/**
+ * draft -> simulated -> approved -> active -> retired. `active -> retired`
+ * also covers supersession (activating a new version retires the old one).
+ */
+export const POLICY_VERSION_TRANSITIONS: Readonly<
+  Record<PolicyVersionStatus, readonly PolicyVersionStatus[]>
+> = {
+  draft: ["simulated"],
+  simulated: ["approved", "simulated"],
+  approved: ["active", "retired"],
+  active: ["retired"],
+  retired: [],
+};
+
+export function canTransitionPolicyVersion(
+  from: PolicyVersionStatus,
+  to: PolicyVersionStatus,
+): boolean {
+  return POLICY_VERSION_TRANSITIONS[from].includes(to);
 }

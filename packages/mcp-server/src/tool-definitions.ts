@@ -1,4 +1,5 @@
 import type { Permission, SupportAdapter } from "@osas/adapter";
+import type { Capability } from "@osas/core";
 
 /**
  * Pure-data tool catalog (CONTRACTS.md §7). Consumed by buildMcpServer, the
@@ -16,6 +17,8 @@ export interface ToolDefinition {
   inputSchema: Record<string, unknown>;
   adapterMethod: keyof SupportAdapter;
   permissionRequired: Permission;
+  /** Capability (v0.1.1) the implementation must declare for this tool. */
+  capabilityRequired: Capability;
 }
 
 const MONEY_SCHEMA: Record<string, unknown> = {
@@ -48,6 +51,7 @@ export const TOOL_DEFINITIONS: ToolDefinition[] = [
     },
     adapterMethod: "getCase",
     permissionRequired: "read",
+    capabilityRequired: "case.read",
   },
   {
     name: "osas_core_search_cases",
@@ -67,6 +71,7 @@ export const TOOL_DEFINITIONS: ToolDefinition[] = [
     },
     adapterMethod: "searchCases",
     permissionRequired: "read",
+    capabilityRequired: "case.read",
   },
   {
     name: "osas_core_get_customer",
@@ -80,6 +85,7 @@ export const TOOL_DEFINITIONS: ToolDefinition[] = [
     },
     adapterMethod: "getCustomer",
     permissionRequired: "read",
+    capabilityRequired: "customer.read",
   },
   {
     name: "osas_core_search_knowledge",
@@ -97,6 +103,7 @@ export const TOOL_DEFINITIONS: ToolDefinition[] = [
     },
     adapterMethod: "searchKnowledge",
     permissionRequired: "read",
+    capabilityRequired: "knowledge.read",
   },
   {
     name: "osas_core_create_case_note",
@@ -115,6 +122,7 @@ export const TOOL_DEFINITIONS: ToolDefinition[] = [
     },
     adapterMethod: "createCaseNote",
     permissionRequired: "draft",
+    capabilityRequired: "note.write",
   },
   {
     name: "osas_core_create_escalation",
@@ -132,6 +140,7 @@ export const TOOL_DEFINITIONS: ToolDefinition[] = [
     },
     adapterMethod: "createEscalation",
     permissionRequired: "draft",
+    capabilityRequired: "escalation.write",
   },
   {
     name: "osas_core_create_action_proposal",
@@ -168,6 +177,7 @@ export const TOOL_DEFINITIONS: ToolDefinition[] = [
     },
     adapterMethod: "createActionProposal",
     permissionRequired: "request-approval",
+    capabilityRequired: "proposal.write",
   },
   // ---- ecommerce ----------------------------------------------------------
   {
@@ -182,6 +192,7 @@ export const TOOL_DEFINITIONS: ToolDefinition[] = [
     },
     adapterMethod: "getOrder",
     permissionRequired: "read",
+    capabilityRequired: "ecommerce.order.read",
   },
   {
     name: "osas_ecom_list_orders",
@@ -195,6 +206,7 @@ export const TOOL_DEFINITIONS: ToolDefinition[] = [
     },
     adapterMethod: "listOrders",
     permissionRequired: "read",
+    capabilityRequired: "ecommerce.order.read",
   },
   {
     name: "osas_ecom_get_shipment",
@@ -208,6 +220,7 @@ export const TOOL_DEFINITIONS: ToolDefinition[] = [
     },
     adapterMethod: "getShipment",
     permissionRequired: "read",
+    capabilityRequired: "ecommerce.shipment.read",
   },
   // ---- saas ----------------------------------------------------------------
   {
@@ -222,6 +235,7 @@ export const TOOL_DEFINITIONS: ToolDefinition[] = [
     },
     adapterMethod: "getSubscription",
     permissionRequired: "read",
+    capabilityRequired: "saas.subscription.read",
   },
   {
     name: "osas_saas_list_invoices",
@@ -235,6 +249,7 @@ export const TOOL_DEFINITIONS: ToolDefinition[] = [
     },
     adapterMethod: "listInvoices",
     permissionRequired: "read",
+    capabilityRequired: "saas.subscription.read",
   },
   {
     name: "osas_saas_get_credit_balance",
@@ -248,6 +263,7 @@ export const TOOL_DEFINITIONS: ToolDefinition[] = [
     },
     adapterMethod: "getCreditBalance",
     permissionRequired: "read",
+    capabilityRequired: "saas.subscription.read",
   },
   {
     name: "osas_saas_create_credit_request",
@@ -269,6 +285,7 @@ export const TOOL_DEFINITIONS: ToolDefinition[] = [
     },
     adapterMethod: "createActionProposal",
     permissionRequired: "request-approval",
+    capabilityRequired: "saas.credit.propose",
   },
   {
     name: "osas_saas_create_cancellation_request",
@@ -288,6 +305,7 @@ export const TOOL_DEFINITIONS: ToolDefinition[] = [
     },
     adapterMethod: "createActionProposal",
     permissionRequired: "request-approval",
+    capabilityRequired: "proposal.write",
   },
   {
     name: "osas_saas_create_plan_change_request",
@@ -308,5 +326,6 @@ export const TOOL_DEFINITIONS: ToolDefinition[] = [
     },
     adapterMethod: "createActionProposal",
     permissionRequired: "request-approval",
+    capabilityRequired: "proposal.write",
   },
 ];

@@ -143,7 +143,7 @@ Agent 改变业务状态的**唯一**途径。建议是一条结构化、可审�
 | 字段 | 类型 | 必填 | 说明 |
 |---|---|---|---|
 | `tenantId` | string | 是 | 所属租户 |
-| `version` | string | 是 | 语义化版本字符串；每次更新递增 |
+| `version` | string | 是 | 语义化版本字符串；v0.1.1：标识策略生命周期中的不可变版本（§12.2） |
 | `effectiveFrom` | date-time | 是 | 生效时间 |
 | `duplicateWindowSeconds` | integer | 是 | 重复检测窗口（§5 第 6 步） |
 | `maxEvidenceAgeSeconds` | integer | 是 | 自 `retrievedAt` 起算的证据最大年龄（§5 第 10 步） |
@@ -178,13 +178,18 @@ Agent 改变业务状态的**唯一**途径。建议是一条结构化、可审�
 | `policyVersion` | string | 否 | 当时生效的策略版本 |
 | `modelInfo` | object | 否 | `{ provider, model, tier, inputTokens, outputTokens, latencyMs, costUsd }` |
 | `detail` | object | 是 | 事件特定载荷 |
+| `sequence` | integer | 否 | v0.1.1：在租户审计哈希链中的位置（从 1 开始，§12.3） |
+| `previousHash` | string | 否 | v0.1.1：链上前一事件的 `eventHash`（创世事件为 64 个 0） |
+| `eventHash` | string | 否 | v0.1.1：对事件稳定 JSON（剔除 `eventHash` 自身）的 SHA-256 |
 
 `AuditEventType` 取值：`proposal_created`、`proposal_validated`、
 `proposal_validation_failed`、`policy_evaluated`、`approval_requested`、
 `approval_decided`、`execution_started`、`execution_succeeded`、`execution_failed`、
 `execution_uncertain`、`reconciliation_opened`、`reconciliation_resolved`、
 `handoff_created`、`handoff_resolved`、`prompt_injection_blocked`、
-`permission_overreach_blocked`、`budget_exceeded`、`model_call_recorded`。
+`permission_overreach_blocked`、`budget_exceeded`、`model_call_recorded`，
+以及（v0.1.1）`policy_draft_created`、`policy_simulated`、`policy_approved`、
+`policy_activated`、`policy_retired`。
 
 ### 2.9 HumanHandoff（人工接管）
 
@@ -488,3 +493,81 @@ Profile（`core`、`ecommerce`、`saas`）的**兼容性**。套件校验：Sche
 校验、跨 Profile 的 actionType 规则、工具定义 ↔ Adapter 方法 ↔ 输入 Schema 的一一
 映射、状态机合法性表、策略求值矩阵、幂等与对账行为。套件输出机器可读报告
 （`{ specVersion, runAt, suites: [{ name, passed, failed, cases: [...] }], ok: boolean }`）。
+
+## 12. v0.1.1 扩展（向后兼容）
+
+v0.1.1 新增能力声明、策略版本生命周期与审计完整性。`specVersion` 保持
+`"0.1"`；所有新增均为向后兼容扩展，对 0.1.1 之前的实现为可选。
+
+### 12.1 能力清单（Capability Manifest）
+
+实现**可以**发布 `CapabilityManifest`（`schemas/core/capability-manifest.json`）：
+
+| 字段 | 类型 | 必填 | 说明 |
+|---|---|---|---|
+| `specVersion` | const | 是 | `"0.1"` |
+| `implementationId` | string | 是 | 稳定的实现标识 |
+| `implementationVersion` | string | 是 | 实现版本号 |
+| `profiles` | array | 是 | `{ name: core\|ecommerce\|saas, capabilities: Capability[] }` |
+| `transports` | array | 是 | `http`、`mcp` 的子集 |
+| `executionModes` | array | 是 | `proposal_only`、`shadow`、`live` 的子集 |
+| `adapterVersion` | string | 是 | Adapter 契约版本 |
+
+规范定义的 16 种能力：`case.read`、`customer.read`、`knowledge.read`、
+`evidence.read`、`note.write`、`escalation.write`、`proposal.write`、
+`approval.read`、`approval.decide`、`audit.read`、`ecommerce.order.read`、
+`ecommerce.shipment.read`、`ecommerce.refund.propose`、
+`ecommerce.refund.execute`、`saas.subscription.read`、`saas.credit.propose`。
+
+Adapter 通过可选的 `getCapabilities` 方法暴露能力清单。一旦声明即生效：
+任何所需能力未被声明的 MCP 工具调用或 HTTP 操作**必须**以
+`CAPABILITY_UNSUPPORTED` 失败（HTTP 403 / MCP 工具错误）。未提供能力清单的
+Adapter 保持宽松行为（向后兼容）。
+
+发现端点：`GET /.well-known/osas`（发现文档）与 `GET /v1/capabilities`
+（能力清单；未声明时返回 404 `CAPABILITIES_NOT_DECLARED`）。
+
+### 12.2 策略版本生命周期
+
+线上生效的策略**不得**被原地覆盖。策略变更通过不可变版本进行，生命周期为
+`draft → simulated → approved → active → retired`：
+
+- 创建草稿会保留所有历史版本；版本号在租户内唯一。
+- **模拟**（`POST /v1/policies/:tenantId/simulate`）用指定版本对提案求值，
+  只返回决策与理由；不产生 Approval、Execution、Handoff 或业务写入；
+  `draft → simulated` 的状态迁移本身会写入审计。
+- **激活**记录操作者、时间、旧版本与新版本；激活新版本会自动退休旧的
+  生效版本。
+- 仅 `policy_admin` 角色可创建、模拟、批准、激活或退休策略版本
+  （demo 模式：`x-osas-role: policy_admin` 请求头；角色来源是单一接缝，
+  Milestone 2 将切换为 JWT 声明）。
+- 每次策略变更都会写入审计事件（`policy_draft_created`、
+  `policy_simulated`、`policy_approved`、`policy_activated`、
+  `policy_retired`）。
+- `defaultDecision: "block"` 语义保持不变。
+- `PUT /v1/policies/:tenantId` 现在以 409 `POLICY_IMMUTABLE` 失败。
+
+生命周期 API：`GET /v1/policies/:tenantId/versions`、
+`POST /v1/policies/:tenantId/drafts`、`POST /v1/policies/:tenantId/simulate`、
+`POST /v1/policies/:tenantId/versions/:version/approve|activate|retire`。
+
+### 12.3 审计完整性（哈希链）
+
+审计事件**可以**携带哈希链扩展字段 `sequence`、`previousHash`、`eventHash`。
+每个租户的审计流构成只追加的链：`sequence` 从 1 开始连续编号，
+`previousHash` 链接前一事件的 `eventHash`（创世为 64 个 0），`eventHash`
+是对事件稳定（键排序）JSON 序列化（剔除 `eventHash` 自身）的 SHA-256。
+
+`GET /v1/audit/verify` 重算整条链并返回
+`{ tenantId, chainLength, intact, firstError? }`，其中 `firstError` 标出首个
+被破坏的事件及预期/实际哈希。
+
+这是篡改**检测**能力而非防篡改存储：它能发现修改、删除与乱序，但能整体重写
+审计流的攻击者可以重算整条链——它不能替代 WORM 存储。该机制不会把客户敏感
+内容纳入日志原文输出，既有日志脱敏规则（email、phone、Authorization）不变。
+
+### 12.4 一致性新增检查
+
+兼容性套件新增检查：能力清单 Schema 有效性、参考实现清单声明全部 16 种能力、
+工具→能力映射、只读清单的合法声明、策略版本不可变性与生命周期合法性、
+以及审计哈希链篡改检测与跨租户隔离。

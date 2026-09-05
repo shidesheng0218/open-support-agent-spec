@@ -1,7 +1,7 @@
 import Fastify, { type FastifyInstance } from "fastify";
 import cors from "@fastify/cors";
 import type { SupportAdapter } from "@osas/adapter";
-import { InMemoryExecutionStore } from "@osas/policy-engine";
+import { InMemoryExecutionStore, InMemoryPolicyStore } from "@osas/policy-engine";
 import { ModelGateway, MockModelProvider } from "@osas/model-gateway";
 import { createSeededAdapter } from "./seed.js";
 import { loggerOptions, registerPlugins } from "./plugins.js";
@@ -21,6 +21,7 @@ export async function buildApp(opts: BuildAppOptions = {}): Promise<FastifyInsta
   await app.register(cors, { origin: true });
   app.decorate("adapter", adapter);
   app.decorate("executionStore", new InMemoryExecutionStore());
+  app.decorate("policyStore", new InMemoryPolicyStore());
   app.decorate("gateway", new ModelGateway([new MockModelProvider()]));
   app.decorate("compatReportPath", opts.compatReportPath);
   registerPlugins(app);
