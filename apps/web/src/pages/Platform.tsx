@@ -1,5 +1,5 @@
 import { Fragment, useCallback, useEffect, useState } from "react";
-import { api, ApiError } from "../api";
+import { api, isCompatReportNotGenerated } from "../api";
 import { ErrorBox, JsonBlock, Section, StatusBadge } from "../components";
 import type { AuditEvent, CompatReport } from "../types";
 
@@ -117,7 +117,7 @@ function CompatReportViewer() {
       .get<CompatReport>("/v1/compat/report")
       .then(setReport)
       .catch((e) => {
-        if (e instanceof ApiError && e.status === 404) setMissing(true);
+        if (isCompatReportNotGenerated(e)) setMissing(true);
         else setError(e);
       });
   }, []);
@@ -158,8 +158,9 @@ function CompatReportViewer() {
         </>
       ) : missing ? (
         <p className="empty" data-testid="compat-empty">
-          No compat report yet (404). Run <span className="mono">@osas/compat-suite</span> to generate{" "}
-          <span className="mono">tests/compat/report/latest.json</span>.
+          No compat report yet. Run <span className="mono">pnpm test:compat</span> to generate{" "}
+          <span className="mono">tests/compat/report/latest.json</span> (Docker images generate it
+          at build time).
         </p>
       ) : error ? null : (
         <p className="muted">Loading…</p>

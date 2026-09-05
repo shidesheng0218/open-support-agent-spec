@@ -28,6 +28,7 @@ pnpm dev:web        # Console on http://localhost:5173
 pnpm typecheck      # strict TypeScript across the workspace
 pnpm test           # build + all unit tests
 pnpm test:compat    # compat suite → tests/compat/report/latest.json
+pnpm verify         # full release gate: typecheck + tests + compat + docker + health + e2e
 pnpm docker:up      # docker compose up --build (console :8080, api :3001)
 ```
 

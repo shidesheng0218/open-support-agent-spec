@@ -36,6 +36,12 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
   return body as T;
 }
 
+// True when the API reports that no compat report has been generated yet
+// (expected on fresh non-Docker checkouts — not a system error).
+export function isCompatReportNotGenerated(e: unknown): boolean {
+  return e instanceof ApiError && e.code === "COMPAT_REPORT_NOT_GENERATED";
+}
+
 // Base = same origin; vite proxy forwards /v1 and /health to the API (localhost:3001).
 export const api = {
   get: <T>(path: string) => request<T>(path),

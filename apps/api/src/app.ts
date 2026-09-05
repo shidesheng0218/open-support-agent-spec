@@ -10,6 +10,9 @@ import { registerRoutes } from "./routes/index.js";
 export interface BuildAppOptions {
   adapter?: SupportAdapter;
   logger?: boolean;
+  // Defaults to <repo>/tests/compat/report/latest.json; overridable for tests
+  // and deployments that generate the report elsewhere.
+  compatReportPath?: string;
 }
 
 export async function buildApp(opts: BuildAppOptions = {}): Promise<FastifyInstance> {
@@ -19,6 +22,7 @@ export async function buildApp(opts: BuildAppOptions = {}): Promise<FastifyInsta
   app.decorate("adapter", adapter);
   app.decorate("executionStore", new InMemoryExecutionStore());
   app.decorate("gateway", new ModelGateway([new MockModelProvider()]));
+  app.decorate("compatReportPath", opts.compatReportPath);
   registerPlugins(app);
   await registerRoutes(app);
   return app;

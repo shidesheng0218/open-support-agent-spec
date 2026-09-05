@@ -16,6 +16,11 @@ COPY schemas ./schemas
 RUN pnpm install --frozen-lockfile
 RUN pnpm build
 
+# Generate the compat report inside the image so /v1/compat/report serves a
+# report produced by THIS build (the report directory is git-ignored).
+# A failing compat suite fails the image build — releases must be green.
+RUN pnpm --filter @osas/compat-suite test
+
 ENV NODE_ENV=production \
     PORT=3001 \
     SEED_DEMO=true \

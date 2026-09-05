@@ -32,6 +32,7 @@ declare module "fastify" {
     adapter: SupportAdapter;
     executionStore: ExecutionStore;
     gateway: ModelGateway;
+    compatReportPath?: string;
   }
 }
 

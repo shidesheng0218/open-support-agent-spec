@@ -1,4 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { mkdtemp, rm, writeFile } from "node:fs/promises";
+import os from "node:os";
+import path from "node:path";
 import type { FastifyInstance } from "fastify";
 import type { ToolContext } from "@osas/adapter";
 import type { Evidence } from "@osas/core";
@@ -354,6 +357,44 @@ describe("case detail", () => {
     const body = res.json() as { case: { id: string }; evidence: { id: string }[] };
     expect(body.case.id).toBe("case_refund");
     expect(body.evidence.map((e) => e.id).sort()).toEqual(["ev_expired", "ev_ord_small"]);
+  });
+});
+
+describe("compat report", () => {
+  it("GET /v1/compat/report returns a structured COMPAT_REPORT_NOT_GENERATED error when the report is missing", async () => {
+    const missing = path.join(os.tmpdir(), `osas-missing-report-${Date.now()}`, "latest.json");
+    const isolated = await buildApp({ logger: false, compatReportPath: missing });
+    try {
+      const res = await isolated.inject({ method: "GET", url: "/v1/compat/report" });
+      expect(res.statusCode).toBe(404);
+      const body = res.json() as { error: { code: string; message: string } };
+      expect(body.error.code).toBe("COMPAT_REPORT_NOT_GENERATED");
+      expect(body.error.message).toContain("pnpm test:compat");
+    } finally {
+      await isolated.close();
+    }
+  });
+
+  it("GET /v1/compat/report serves the report JSON when the file exists", async () => {
+    const dir = await mkdtemp(path.join(os.tmpdir(), "osas-report-"));
+    try {
+      const reportPath = path.join(dir, "latest.json");
+      await writeFile(
+        reportPath,
+        JSON.stringify({ specVersion: "0.1", ok: true, totals: { passed: 1, failed: 0 }, suites: [] }),
+      );
+      const isolated = await buildApp({ logger: false, compatReportPath: reportPath });
+      try {
+        const res = await isolated.inject({ method: "GET", url: "/v1/compat/report" });
+        expect(res.statusCode).toBe(200);
+        expect(res.headers["content-type"]).toContain("application/json");
+        expect(res.json().specVersion).toBe("0.1");
+      } finally {
+        await isolated.close();
+      }
+    } finally {
+      await rm(dir, { recursive: true, force: true });
+    }
   });
 });
 

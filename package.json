@@ -17,6 +17,7 @@
     "dev:api": "pnpm --filter @osas/api run dev",
     "dev:web": "pnpm --filter @osas/web run dev",
     "start:api": "pnpm --filter @osas/api run start",
+    "verify": "bash scripts/verify.sh",
     "docker:up": "docker compose up --build",
     "docker:down": "docker compose down"
   },

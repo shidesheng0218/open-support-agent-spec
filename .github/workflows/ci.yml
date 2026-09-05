@@ -64,10 +64,16 @@ jobs:
         run: |
           curl -fsS http://localhost:3001/v1/meta/tools | grep -q 'osas_core_get_case'
           curl -fsS http://localhost:3001/v1/cases | grep -q 'tenant_demo'
+      - name: Assert compat report was generated at image build
+        run: |
+          report="$(curl -fsS http://localhost:3001/v1/compat/report)"
+          echo "$report" | grep -Eq '"specVersion": *"0.1"'
+          echo "$report" | grep -Eq '"ok": *true'
       - name: Assert web console served through nginx proxy
         run: |
           curl -fsS http://localhost:8080/ | grep -qi 'html'
           curl -fsS http://localhost:8080/health | grep -q '"status":"ok"'
+          curl -fsS http://localhost:8080/healthz | grep -q '"service":"web"'
       - run: docker compose down
         if: always()
 

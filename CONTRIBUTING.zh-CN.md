@@ -25,6 +25,7 @@ pnpm dev:web        # 控制台运行于 http://localhost:5173
 pnpm typecheck      # 整个 workspace 的严格 TypeScript 检查
 pnpm test           # 构建 + 全部单元测试
 pnpm test:compat    # 兼容套件 → tests/compat/report/latest.json
+pnpm verify         # 完整发布门禁：typecheck + 测试 + 兼容套件 + docker + 健康检查 + e2e
 pnpm docker:up      # docker compose up --build（控制台 :8080，API :3001）
 ```
 

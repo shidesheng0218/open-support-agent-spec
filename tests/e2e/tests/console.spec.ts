@@ -30,6 +30,15 @@ test("developer page lists all 16 MCP tools", async ({ page }) => {
   await expect(page.locator("pre.json")).toBeVisible();
 });
 
+test("platform page renders the compat report generated at image build", async ({ page }) => {
+  await page.goto("/platform");
+  // The API image generates tests/compat/report/latest.json during docker build,
+  // so the console must show the suite table — never the "not generated" hint.
+  await expect(page.getByTestId("compat-table")).toBeVisible();
+  await expect(page.getByTestId("compat-suite-row").first()).toBeVisible();
+  await expect(page.getByTestId("compat-empty")).toHaveCount(0);
+});
+
 test("demo scenario 1 auto-executes the refund", async ({ page }) => {
   await page.goto("/demo");
   const card = page.getByTestId("scenario-refund-auto");

@@ -126,12 +126,18 @@ export async function basicRoutes(app: FastifyInstance): Promise<void> {
   });
 
   app.get("/v1/compat/report", async (_req, reply) => {
-    const reportPath = path.join(REPO_ROOT, "tests", "compat", "report", "latest.json");
+    const reportPath =
+      app.compatReportPath ?? path.join(REPO_ROOT, "tests", "compat", "report", "latest.json");
     const raw = await readFile(reportPath, "utf8").catch(() => undefined);
     if (!raw) {
-      return reply
-        .code(404)
-        .send({ error: { code: "NOT_FOUND", message: "No compat report generated yet" } });
+      return reply.code(404).send({
+        error: {
+          code: "COMPAT_REPORT_NOT_GENERATED",
+          message:
+            "No compat report has been generated yet. Run `pnpm test:compat` to write " +
+            "tests/compat/report/latest.json (Docker images generate it at build time).",
+        },
+      });
     }
     return reply.type("application/json").send(raw);
   });
