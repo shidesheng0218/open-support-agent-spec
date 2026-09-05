@@ -12,6 +12,7 @@ export {
   createValidator,
   getValidator,
   validate,
+  validateInline,
   type SchemaValidator,
   type ValidationError,
   type ValidationResult,

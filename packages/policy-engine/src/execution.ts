@@ -31,10 +31,10 @@ export interface StoredExecution {
   completedAt: string;
 }
 
-/** §5: executions keyed by (tenantId, idempotencyKey). */
+/** §5: executions keyed by (tenantId, idempotencyKey). Async since Milestone 2 (Postgres backends). */
 export interface ExecutionStore {
-  get(tenantId: string, idempotencyKey: string): StoredExecution | undefined;
-  put(record: StoredExecution): void;
+  get(tenantId: string, idempotencyKey: string): Promise<StoredExecution | undefined>;
+  put(record: StoredExecution): Promise<void>;
 }
 
 export class InMemoryExecutionStore implements ExecutionStore {
@@ -44,11 +44,11 @@ export class InMemoryExecutionStore implements ExecutionStore {
     return `${tenantId} ${idempotencyKey}`;
   }
 
-  get(tenantId: string, idempotencyKey: string): StoredExecution | undefined {
+  async get(tenantId: string, idempotencyKey: string): Promise<StoredExecution | undefined> {
     return this.map.get(InMemoryExecutionStore.key(tenantId, idempotencyKey));
   }
 
-  put(record: StoredExecution): void {
+  async put(record: StoredExecution): Promise<void> {
     this.map.set(
       InMemoryExecutionStore.key(record.tenantId, record.idempotencyKey),
       record,
@@ -97,7 +97,7 @@ export async function executeProposal(
   store: ExecutionStore,
   now: Date = new Date(),
 ): Promise<ExecuteOutcome> {
-  const prior = store.get(proposal.tenantId, proposal.idempotencyKey);
+  const prior = await store.get(proposal.tenantId, proposal.idempotencyKey);
   if (prior) {
     return { proposal, execution: prior.result, replayed: true };
   }
@@ -115,7 +115,7 @@ export async function executeProposal(
   switch (result.status) {
     case "succeeded": {
       const executed = transitionProposal(executing, "executed");
-      store.put({
+      await store.put({
         tenantId: proposal.tenantId,
         idempotencyKey: proposal.idempotencyKey,
         proposalId: proposal.id,
@@ -127,7 +127,7 @@ export async function executeProposal(
     }
     case "failed": {
       const failed = transitionProposal(executing, "failed");
-      store.put({
+      await store.put({
         tenantId: proposal.tenantId,
         idempotencyKey: proposal.idempotencyKey,
         proposalId: proposal.id,

@@ -597,3 +597,84 @@ The compat suite additionally checks: capability-manifest schema validity, that
 the reference manifest declares all 16 capabilities, tool→capability mapping,
 read-only manifests, policy version immutability and lifecycle legality, and
 audit hash-chain tamper detection with cross-tenant isolation.
+
+## 13. v0.1.1 Milestone 2 — runtime substrate (backward compatible)
+
+Milestone 2 adds the real runtime foundation: authentication, durable storage,
+and LLM provider/cost control. `specVersion` remains `"0.1"`; all additions
+are backward-compatible extensions.
+
+### 13.1 Authentication and tenant isolation
+
+`OSAS_AUTH_MODE=demo | jwt` selects the authentication mode at startup:
+
+- **demo** (default): header-driven principals (`x-osas-role`,
+  `x-osas-actor-id`, `x-tenant-id`) for local development and demos. Demo mode
+  is **not allowed with `NODE_ENV=production`** — startup fails closed with an
+  explicit error.
+- **jwt**: OIDC Bearer tokens verified against a JWKS endpoint
+  (`OSAS_JWKS_URL` / `OSAS_JWT_ISSUER` / `OSAS_JWT_AUDIENCE`). The
+  authenticated principal's `sub`, `tenant_id`, and `roles` come exclusively
+  from verified claims; `x-tenant-id` / `x-osas-role` headers are ignored.
+  Missing any of the three config values fails startup closed.
+
+Roles are `support_agent`, `policy_admin`, `auditor`, and `system_executor`.
+External requests can never obtain `execute` permission: `system_executor` is
+a server-internal principal, and a token or header claiming it is rejected.
+Tenant isolation is enforced at the route layer — a path tenant parameter must
+match the principal's tenant (403 `TENANT_MISMATCH`), so a JWT for one tenant
+can never read or mutate another tenant's objects.
+
+### 13.2 PostgreSQL persistence
+
+Storage is selected with `OSAS_STORAGE=memory | postgres`:
+
+- **memory** (default): in-memory stores; no external service needed.
+- **postgres**: requires `DATABASE_URL`; startup fails closed when the
+  database is unreachable. Migrations are plain SQL applied with
+  `pnpm db:migrate` (`db:seed`, `db:reset` — reset refuses to run under
+  `NODE_ENV=production`). Tables cover tenants, policy versions, proposals,
+  approvals, evidence, audit events, execution records, shadow runs
+  (semantics land in Milestone 3), and model usage.
+
+All records are strictly tenant-scoped. The execution ledger's PRIMARY KEY
+`(tenant_id, idempotency_key)` enforces execution idempotency at the database
+level, and execution-state updates commit in the same transaction as their
+audit-stream writes. All SQL is parameterized; no query is string-built.
+
+### 13.3 LLM providers and cost control
+
+`OSAS_LLM_PROVIDER=mock | openai-compatible` selects the model provider. The
+mock (default) stays deterministic and network-free. The
+`openai-compatible` provider speaks plain HTTP to any OpenAI-style
+`/chat/completions` endpoint (`OSAS_LLM_BASE_URL` / `OSAS_LLM_API_KEY` /
+`OSAS_LLM_MODEL_FAST` / `OSAS_LLM_MODEL_STANDARD`); no vendor SDK is used.
+The API key is read from the environment only and is never logged or written
+to the audit stream.
+
+Task→tier routing is fixed: `classify` and `extract` use the fast model;
+`reply` and `propose` use the standard model. Callers cannot steer a task onto
+a more expensive tier, and the gateway never silently substitutes a different
+(especially more expensive) model. High-risk action decisions are always made
+by the policy engine — the model never participates.
+
+Cost discipline:
+
+- Without both price settings (`OSAS_LLM_INPUT_USD_PER_MTOKEN` /
+  `OSAS_LLM_OUTPUT_USD_PER_MTOKEN`), costs are recorded as **unknown**
+  (tokens, provider, and model are still recorded) — costs are never
+  fabricated.
+- Budgets `OSAS_LLM_DAILY_BUDGET_USD` and `OSAS_LLM_CASE_BUDGET_USD` are
+  enforced on measured spend: at 80% of a cap a `budget_warning` audit event
+  is written; at the cap, further model calls are blocked **before** any
+  provider request and a `budget_exceeded` event is recorded.
+- Provider failure, structured-output failure, or budget exhaustion degrade
+  to a human handoff or a safe template reply; execution never proceeds.
+- Structured output prefers the provider-native JSON Schema response format;
+  endpoints without support get at most one retry, and the result is
+  validated with the OSAS Schema Validator.
+
+Every model call's telemetry is persisted (in-memory and PostgreSQL stores)
+and queryable via the operator-only `GET /v1/usage` endpoint (roles
+`policy_admin` or `auditor`), filterable by tenant, date, model, and task.
+`AuditModelInfo.costUsd` is now optional (absent = unknown cost).

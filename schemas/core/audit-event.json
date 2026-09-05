@@ -15,12 +15,24 @@
     "createdAt"
   ],
   "properties": {
-    "id": { "$ref": "./common.json#/$defs/Id" },
-    "specVersion": { "$ref": "./common.json#/$defs/SpecVersion" },
-    "tenantId": { "$ref": "./common.json#/$defs/Id" },
-    "caseId": { "$ref": "./common.json#/$defs/Id" },
-    "proposalId": { "$ref": "./common.json#/$defs/Id" },
-    "approvalId": { "$ref": "./common.json#/$defs/Id" },
+    "id": {
+      "$ref": "./common.json#/$defs/Id"
+    },
+    "specVersion": {
+      "$ref": "./common.json#/$defs/SpecVersion"
+    },
+    "tenantId": {
+      "$ref": "./common.json#/$defs/Id"
+    },
+    "caseId": {
+      "$ref": "./common.json#/$defs/Id"
+    },
+    "proposalId": {
+      "$ref": "./common.json#/$defs/Id"
+    },
+    "approvalId": {
+      "$ref": "./common.json#/$defs/Id"
+    },
     "eventType": {
       "type": "string",
       "enum": [
@@ -40,6 +52,7 @@
         "handoff_resolved",
         "prompt_injection_blocked",
         "permission_overreach_blocked",
+        "budget_warning",
         "budget_exceeded",
         "model_call_recorded",
         "policy_draft_created",
@@ -51,10 +64,20 @@
     },
     "actorType": {
       "type": "string",
-      "enum": ["model", "policy_engine", "human", "system", "adapter"]
+      "enum": [
+        "model",
+        "policy_engine",
+        "human",
+        "system",
+        "adapter"
+      ]
     },
-    "actorId": { "type": "string" },
-    "policyVersion": { "type": "string" },
+    "actorId": {
+      "type": "string"
+    },
+    "policyVersion": {
+      "type": "string"
+    },
     "modelInfo": {
       "type": "object",
       "additionalProperties": false,
@@ -64,21 +87,48 @@
         "tier",
         "inputTokens",
         "outputTokens",
-        "latencyMs",
-        "costUsd"
+        "latencyMs"
       ],
       "properties": {
-        "provider": { "type": "string" },
-        "model": { "type": "string" },
-        "tier": { "type": "string", "enum": ["classify", "standard", "reasoning"] },
-        "inputTokens": { "type": "integer", "minimum": 0 },
-        "outputTokens": { "type": "integer", "minimum": 0 },
-        "latencyMs": { "type": "number", "minimum": 0 },
-        "costUsd": { "type": "number", "minimum": 0 }
+        "provider": {
+          "type": "string"
+        },
+        "model": {
+          "type": "string"
+        },
+        "tier": {
+          "type": "string",
+          "enum": [
+            "classify",
+            "standard",
+            "reasoning"
+          ]
+        },
+        "inputTokens": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "outputTokens": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "latencyMs": {
+          "type": "number",
+          "minimum": 0
+        },
+        "costUsd": {
+          "type": "number",
+          "minimum": 0,
+          "description": "USD cost; absent = unknown (no price configured). Never fabricated."
+        }
       }
     },
-    "detail": { "type": "object" },
-    "createdAt": { "$ref": "./common.json#/$defs/DateTime" },
+    "detail": {
+      "type": "object"
+    },
+    "createdAt": {
+      "$ref": "./common.json#/$defs/DateTime"
+    },
     "sequence": {
       "type": "integer",
       "minimum": 1,

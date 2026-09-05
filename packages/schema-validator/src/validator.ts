@@ -81,3 +81,23 @@ export function getValidator(): SchemaValidator {
 export function validate(schemaName: string, data: unknown): ValidationResult {
   return getValidator().validate(schemaName, data);
 }
+
+/**
+ * Validate against an inline JSON Schema (not one from the manifest) — used
+ * for LLM structured-output validation (Milestone 2).
+ */
+export function validateInline(
+  schema: Record<string, unknown>,
+  data: unknown,
+): ValidationResult {
+  const ajv = new Ajv2020({ allErrors: true, strict: false });
+  const addFormats = addFormatsCjs as unknown as FormatsPlugin;
+  addFormats(ajv);
+  const validateFn = ajv.compile(schema);
+  const valid = validateFn(data);
+  const errors: ValidationError[] = (validateFn.errors ?? []).map((e) => ({
+    path: e.instancePath ?? "",
+    message: e.message ?? "invalid",
+  }));
+  return { valid, errors };
+}

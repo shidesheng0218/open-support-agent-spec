@@ -89,27 +89,27 @@ export function registerCapabilitiesPolicyAudit(collector: ReportCollector): voi
       }));
 
     test("policy lifecycle: active version cannot be overwritten; draft->simulated->approved->active->retired", () =>
-      runCase(collector, SUITE, "immutable policy versions + lifecycle", () => {
+      runCase(collector, SUITE, "immutable policy versions + lifecycle", async () => {
         const store = new InMemoryPolicyStore();
-        store.importActive(demoPolicy("1.0.0"), "seed");
+        await store.importActive(demoPolicy("1.0.0"), "seed");
         // Same version number cannot be reused — no in-place overwrite.
-        expect(() => store.createDraft("tenant_demo", demoPolicy("1.0.0"), "admin")).toThrowError(
+        await expect(store.createDraft("tenant_demo", demoPolicy("1.0.0"), "admin")).rejects.toThrowError(
           PolicyVersionConflictError,
         );
         // Steps cannot be skipped.
-        store.createDraft("tenant_demo", demoPolicy("1.1.0"), "admin");
-        expect(() => store.activate("tenant_demo", "1.1.0", "admin")).toThrowError(
+        await store.createDraft("tenant_demo", demoPolicy("1.1.0"), "admin");
+        await expect(store.activate("tenant_demo", "1.1.0", "admin")).rejects.toThrowError(
           IllegalTransitionError,
         );
-        store.markSimulated("tenant_demo", "1.1.0");
-        store.approve("tenant_demo", "1.1.0", "admin");
-        const { activated, superseded } = store.activate("tenant_demo", "1.1.0", "admin");
+        await store.markSimulated("tenant_demo", "1.1.0");
+        await store.approve("tenant_demo", "1.1.0", "admin");
+        const { activated, superseded } = await store.activate("tenant_demo", "1.1.0", "admin");
         expect(activated.status).toBe("active");
         expect(superseded).toMatchObject({ version: "1.0.0", status: "retired" });
         // The previous version is preserved (not deleted).
-        expect(store.get("tenant_demo", "1.0.0")?.status).toBe("retired");
-        store.retire("tenant_demo", "1.1.0", "admin");
-        expect(store.getActive("tenant_demo")).toBeUndefined();
+        expect((await store.get("tenant_demo", "1.0.0"))?.status).toBe("retired");
+        await store.retire("tenant_demo", "1.1.0", "admin");
+        expect(await store.getActive("tenant_demo")).toBeUndefined();
       }));
 
     test("audit hash chain: mock adapter appends verify; tampering breaks verification", () =>

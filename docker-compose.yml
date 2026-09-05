@@ -7,6 +7,14 @@ services:
       PORT: 3001
       SEED_DEMO: "true"
       MODEL_PROVIDER: mock
+      # Auth (Milestone 2): demo by default; production must use jwt
+      # (OSAS_AUTH_MODE=jwt + OSAS_JWKS_URL/OSAS_JWT_ISSUER/OSAS_JWT_AUDIENCE).
+      OSAS_AUTH_MODE: ${OSAS_AUTH_MODE:-demo}
+      # Storage (Milestone 2): memory by default. With the postgres profile:
+      #   OSAS_STORAGE=postgres docker compose --profile postgres up --build
+      OSAS_STORAGE: ${OSAS_STORAGE:-memory}
+      DATABASE_URL: ${DATABASE_URL:-postgres://osas:osas@db:5432/osas}
+      OSAS_LLM_PROVIDER: ${OSAS_LLM_PROVIDER:-mock}
     ports:
       - "3001:3001"
 
@@ -18,3 +26,37 @@ services:
       - api
     ports:
       - "8080:80"
+
+  # Milestone 2: opt-in PostgreSQL (profile keeps the default demo db-free).
+  db:
+    image: postgres:16-alpine
+    profiles: ["postgres"]
+    environment:
+      POSTGRES_USER: osas
+      POSTGRES_PASSWORD: osas
+      POSTGRES_DB: osas
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U osas -d osas"]
+      interval: 2s
+      timeout: 3s
+      retries: 30
+    volumes:
+      - osas-pgdata:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+
+  # One-shot migration runner: `docker compose --profile postgres up migrate`.
+  migrate:
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
+    profiles: ["postgres"]
+    command: pnpm --filter @osas/store-postgres run db:migrate
+    environment:
+      DATABASE_URL: postgres://osas:osas@db:5432/osas
+    depends_on:
+      db:
+        condition: service_healthy
+
+volumes:
+  osas-pgdata:

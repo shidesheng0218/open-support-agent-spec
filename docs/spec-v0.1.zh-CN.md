@@ -571,3 +571,75 @@ Adapter 保持宽松行为（向后兼容）。
 兼容性套件新增检查：能力清单 Schema 有效性、参考实现清单声明全部 16 种能力、
 工具→能力映射、只读清单的合法声明、策略版本不可变性与生命周期合法性、
 以及审计哈希链篡改检测与跨租户隔离。
+
+## 13. v0.1.1 Milestone 2 —— 运行时基础（向后兼容）
+
+Milestone 2 补齐真实运行所需的基础：认证、持久化存储与 LLM Provider /
+成本控制。`specVersion` 仍为 `"0.1"`，所有新增均为向后兼容扩展。
+
+### 13.1 认证与租户隔离
+
+启动时通过 `OSAS_AUTH_MODE=demo | jwt` 选择认证模式：
+
+- **demo**（默认）：基于请求头的演示身份（`x-osas-role`、
+  `x-osas-actor-id`、`x-tenant-id`），仅用于本地开发与演示。当
+  `NODE_ENV=production` 时 demo 模式**禁止启动**——启动即失败关闭并报
+  明确错误。
+- **jwt**：通过 JWKS 端点验证 OIDC Bearer Token（`OSAS_JWKS_URL` /
+  `OSAS_JWT_ISSUER` / `OSAS_JWT_AUDIENCE`）。已验证 principal 的 `sub`、
+  `tenant_id`、`roles` 只取自验证后的 claims；`x-tenant-id` /
+  `x-osas-role` 头被忽略。三项配置缺失任意一项即启动失败关闭。
+
+角色为 `support_agent`、`policy_admin`、`auditor`、`system_executor`。
+外部请求永远无法获得 `execute` 权限：`system_executor` 是服务端内部
+principal，携带该角色的 Token 或请求头会被拒绝。租户隔离在路由层强制
+执行——路径中的租户参数必须与 principal 的租户一致（403
+`TENANT_MISMATCH`），因此一个租户的 JWT 无法读写另一租户的对象。
+
+### 13.2 PostgreSQL 持久化
+
+存储由 `OSAS_STORAGE=memory | postgres` 选择：
+
+- **memory**（默认）：内存存储，无需外部服务。
+- **postgres**：要求 `DATABASE_URL`；数据库不可达时启动失败关闭。迁移为
+  纯 SQL，通过 `pnpm db:migrate` 执行（另有 `db:seed`、`db:reset`——reset
+  在 `NODE_ENV=production` 下拒绝执行）。表覆盖 tenant、policy
+  versions、proposals、approvals、evidence、audit events、execution
+  records、shadow runs（语义在 Milestone 3 填充）与 model usage。
+
+所有记录严格按租户隔离。执行台账的主键 `(tenant_id, idempotency_key)`
+在数据库层面强制执行幂等；关键执行状态更新与其审计流写入在同一事务中
+提交。所有 SQL 均为参数化查询，禁止字符串拼接。
+
+### 13.3 LLM Provider 与成本控制
+
+`OSAS_LLM_PROVIDER=mock | openai-compatible` 选择模型 Provider。mock
+（默认）保持确定性与无网络依赖。`openai-compatible` 以纯 HTTP 对接任意
+OpenAI 风格 `/chat/completions` 端点（`OSAS_LLM_BASE_URL` /
+`OSAS_LLM_API_KEY` / `OSAS_LLM_MODEL_FAST` / `OSAS_LLM_MODEL_STANDARD`），
+不绑定厂商 SDK。API key 仅从环境变量读取，绝不打印、写日志或进入审计
+原文。
+
+任务→档位路由固定：`classify`、`extract` 使用 fast 模型；`reply`、
+`propose` 使用 standard 模型。调用方无法把任务引导到更贵的档位，网关也
+不会静默切换到其他（尤其是更贵的）模型。高风险动作决策始终由策略引擎
+作出——模型不参与。
+
+成本纪律：
+
+- 未同时配置价格（`OSAS_LLM_INPUT_USD_PER_MTOKEN` /
+  `OSAS_LLM_OUTPUT_USD_PER_MTOKEN`）时，成本记为 **unknown**（token、
+  provider、model 照常记录）——绝不伪造成本。
+- 预算 `OSAS_LLM_DAILY_BUDGET_USD` 与 `OSAS_LLM_CASE_BUDGET_USD` 按已计量
+  花费执行：达到上限 80% 时写入 `budget_warning` 审计事件；达到上限时，
+  后续模型调用在**触达 Provider 之前**被阻断，并记录 `budget_exceeded`
+  事件。
+- Provider 失败、结构化输出失败或预算超限时，降级为人工接管或安全模板
+  回复；绝不继续执行。
+- 结构化输出优先使用 Provider 原生 JSON Schema 响应格式；端点不支持时
+  最多重试一次，并用 OSAS Schema Validator 校验结果。
+
+每次模型调用的遥测都会持久化（内存与 PostgreSQL 两路），并可通过仅
+operator 可用的 `GET /v1/usage`（`policy_admin` 或 `auditor` 角色）按
+tenant、日期、模型、任务筛选查询。`AuditModelInfo.costUsd` 现为可选
+（缺省 = 成本未知）。

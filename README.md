@@ -103,6 +103,36 @@ docker compose up --build    # or: pnpm docker:up
 The Docker build context is the **repository root** (both Dockerfiles copy the pnpm
 workspace); there is intentionally no `.dockerignore` so the workspace layout is preserved.
 
+### Runtime configuration (Milestone 2)
+
+All knobs are env vars — see [.env.example](.env.example) for the annotated template.
+
+- **Auth** (`OSAS_AUTH_MODE`): `demo` (default; `x-osas-role` / `x-osas-actor-id` /
+  `x-tenant-id` headers) or `jwt` (OIDC Bearer tokens verified via `OSAS_JWKS_URL` /
+  `OSAS_JWT_ISSUER` / `OSAS_JWT_AUDIENCE`; tenant and roles come from verified claims,
+  `x-tenant-id` is ignored). Demo mode **fails closed** under `NODE_ENV=production`.
+  External principals can never hold `execute`; `system_executor` is internal-only.
+- **Storage** (`OSAS_STORAGE`): `memory` (default) or `postgres` (requires
+  `DATABASE_URL`; fails closed when unreachable). PostgreSQL flow:
+
+  ```bash
+  docker compose --profile postgres up -d db migrate   # start db + apply migrations
+  pnpm db:migrate && pnpm db:seed                       # or run from the host
+  OSAS_STORAGE=postgres DATABASE_URL=postgres://osas:osas@localhost:5432/osas pnpm dev:api
+  # or everything in compose:
+  OSAS_STORAGE=postgres docker compose --profile postgres up --build
+  ```
+
+  `pnpm db:reset` re-creates the schema (development only; refuses `NODE_ENV=production`).
+- **LLM** (`OSAS_LLM_PROVIDER`): `mock` (default, deterministic, network-free) or
+  `openai-compatible` (`OSAS_LLM_BASE_URL` / `OSAS_LLM_API_KEY` / `OSAS_LLM_MODEL_FAST` /
+  `OSAS_LLM_MODEL_STANDARD`). classify/extract route to the fast model, reply/propose to
+  the standard model. Without `OSAS_LLM_INPUT_USD_PER_MTOKEN` +
+  `OSAS_LLM_OUTPUT_USD_PER_MTOKEN` costs are recorded as *unknown* (never fabricated).
+  `OSAS_LLM_DAILY_BUDGET_USD` / `OSAS_LLM_CASE_BUDGET_USD`: 80% writes a
+  `budget_warning` audit event; at the cap, model calls are blocked before the provider
+  is touched. Usage is queryable via `GET /v1/usage` (policy_admin/auditor only).
+
 ## The three demo paths
 
 Open the console (http://localhost:5173 or http://localhost:8080) and pick a persona:
@@ -170,6 +200,7 @@ packages/
   model-gateway/         @osas/model-gateway    provider interface, MockModelProvider, routing, budgets
   adapter/               @osas/adapter          SupportAdapter interface + BYO adapter template
   mock-backend/          @osas/mock-backend     synthetic fixtures + MockSupportAdapter
+  store-postgres/        @osas/store-postgres   PostgreSQL stores + SQL migrations (Milestone 2)
   mcp-server/            @osas/mcp-server       16 tool definitions + stdio MCP server
 apps/
   api/                   @osas/api              Fastify 5 HTTP API (port 3001)

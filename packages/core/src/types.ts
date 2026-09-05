@@ -250,6 +250,7 @@ export type AuditEventType =
   | "prompt_injection_blocked"
   | "permission_overreach_blocked"
   | "budget_exceeded"
+  | "budget_warning"
   | "model_call_recorded"
   | "policy_draft_created"
   | "policy_simulated"
@@ -268,7 +269,8 @@ export interface AuditModelInfo {
   inputTokens: number;
   outputTokens: number;
   latencyMs: number;
-  costUsd: number;
+  /** USD cost; absent = unknown (no price configured) — never fabricated. */
+  costUsd?: number;
 }
 
 export interface AuditEvent {

@@ -4,6 +4,7 @@ import type { SupportAdapter, ToolContext } from "@osas/adapter";
 import type { ActionProposal, Customer, Evidence, TenantPolicy } from "@osas/core";
 import { PolicyVersionNotFoundError } from "@osas/policy-engine";
 import { SPEC_VERSION, PolicyAdminRequiredError, SchemaInvalidError } from "../plugins.js";
+import { assertTenantAccess } from "../auth.js";
 import { audit, resolveActivePolicy, simulateProposal } from "../domain.js";
 import { POLICY_SCHEMA, ctxFor, validateSchema } from "./basic.js";
 
@@ -13,15 +14,11 @@ import { POLICY_SCHEMA, ctxFor, validateSchema } from "./basic.js";
  * written to the tenant's audit stream.
  */
 
-// Demo-mode role carrier. Milestone 2 swaps the role source to JWT claims;
-// keep this as the single seam so only this function changes.
+// Milestone 2: the role source is the authenticated principal (demo headers
+// or JWT claims), resolved by the auth preHandler — this is the single seam.
 export function policyAdminActor(req: FastifyRequest): { actorId: string } {
-  const roleHeader = req.headers["x-osas-role"];
-  const role = Array.isArray(roleHeader) ? roleHeader[0] : roleHeader;
-  if (role !== "policy_admin") throw new PolicyAdminRequiredError();
-  const actorHeader = req.headers["x-osas-actor-id"];
-  const actorId = Array.isArray(actorHeader) ? actorHeader[0] : actorHeader;
-  return { actorId: actorId && actorId.trim() ? actorId.trim() : "policy-admin-demo" };
+  if (!req.principal.roles.includes("policy_admin")) throw new PolicyAdminRequiredError();
+  return { actorId: req.principal.actorId };
 }
 
 function bumpPatch(version: string): string {
@@ -53,6 +50,7 @@ export async function policyRoutes(app: FastifyInstance): Promise<void> {
 
   app.get("/v1/policies/:tenantId/versions", async (req) => {
     const { tenantId } = req.params as { tenantId: string };
+    assertTenantAccess(req, tenantId);
     const ctx = ctxFor(req, tenantId);
     await seedLegacy(tenantId, ctx);
     return store.list(tenantId);
@@ -60,6 +58,7 @@ export async function policyRoutes(app: FastifyInstance): Promise<void> {
 
   app.post("/v1/policies/:tenantId/drafts", async (req, reply) => {
     const { tenantId } = req.params as { tenantId: string };
+    assertTenantAccess(req, tenantId);
     const { actorId } = policyAdminActor(req);
     const ctx = ctxFor(req, tenantId);
     const body = req.body as Record<string, unknown> | undefined;
@@ -77,20 +76,20 @@ export async function policyRoutes(app: FastifyInstance): Promise<void> {
       updatedAt: now,
     };
     if (candidate.version === undefined) {
-      const versions = store.list(tenantId);
+      const versions = await store.list(tenantId);
       const latest = versions[versions.length - 1]?.version ?? "0.1.0";
       candidate.version = bumpPatch(latest);
     }
     const result = await validateSchema(POLICY_SCHEMA, candidate);
     if (!result.valid) throw new SchemaInvalidError(result.errors);
-    const draft = store.createDraft(tenantId, candidate as unknown as TenantPolicy, actorId);
+    const draft = await store.createDraft(tenantId, candidate as unknown as TenantPolicy, actorId);
     await audit(adapter, ctx, {
       eventType: "policy_draft_created",
       actorType: "human",
       actorId,
       policyVersion: draft.version,
       detail: { version: draft.version, rules: draft.rules.length },
-    });
+    }, app.auditStore);
     return reply.code(201).send(draft);
   });
 
@@ -99,6 +98,7 @@ export async function policyRoutes(app: FastifyInstance): Promise<void> {
   // lifecycle transition itself is a policy change and is audited.
   app.post("/v1/policies/:tenantId/simulate", async (req) => {
     const { tenantId } = req.params as { tenantId: string };
+    assertTenantAccess(req, tenantId);
     const { actorId } = policyAdminActor(req);
     const ctx = ctxFor(req, tenantId);
     const body = (req.body ?? {}) as {
@@ -109,7 +109,7 @@ export async function policyRoutes(app: FastifyInstance): Promise<void> {
       injectionSuspected?: boolean;
     };
     const version = asString(body.version, "version");
-    const record = store.get(tenantId, version);
+    const record = await store.get(tenantId, version);
     if (!record) {
       throw new PolicyVersionNotFoundError(tenantId, version);
     }
@@ -151,38 +151,40 @@ export async function policyRoutes(app: FastifyInstance): Promise<void> {
         : {}),
     });
     // Lifecycle: a successful simulation marks the version simulated.
-    const simulated = store.markSimulated(tenantId, version);
+    const simulated = await store.markSimulated(tenantId, version);
     await audit(adapter, ctx, {
       eventType: "policy_simulated",
       actorType: "human",
       actorId,
       policyVersion: version,
       detail: { version, decision: decision.decision, reasons: decision.reasons },
-    });
+    }, app.auditStore);
     return { decision, policyVersion: simulated };
   });
 
   app.post("/v1/policies/:tenantId/versions/:version/approve", async (req) => {
     const { tenantId, version } = req.params as { tenantId: string; version: string };
+    assertTenantAccess(req, tenantId);
     const { actorId } = policyAdminActor(req);
     const ctx = ctxFor(req, tenantId);
-    const approved = store.approve(tenantId, version, actorId);
+    const approved = await store.approve(tenantId, version, actorId);
     await audit(adapter, ctx, {
       eventType: "policy_approved",
       actorType: "human",
       actorId,
       policyVersion: version,
       detail: { version },
-    });
+    }, app.auditStore);
     return approved;
   });
 
   app.post("/v1/policies/:tenantId/versions/:version/activate", async (req) => {
     const { tenantId, version } = req.params as { tenantId: string; version: string };
+    assertTenantAccess(req, tenantId);
     const { actorId } = policyAdminActor(req);
     const ctx = ctxFor(req, tenantId);
-    const previous = store.getActive(tenantId);
-    const { activated, superseded } = store.activate(tenantId, version, actorId);
+    const previous = await store.getActive(tenantId);
+    const { activated, superseded } = await store.activate(tenantId, version, actorId);
     await audit(adapter, ctx, {
       eventType: "policy_activated",
       actorType: "human",
@@ -194,7 +196,7 @@ export async function policyRoutes(app: FastifyInstance): Promise<void> {
         previousVersion: previous?.version ?? null,
         newVersion: version,
       },
-    });
+    }, app.auditStore);
     if (superseded) {
       await audit(adapter, ctx, {
         eventType: "policy_retired",
@@ -202,23 +204,24 @@ export async function policyRoutes(app: FastifyInstance): Promise<void> {
         actorId: "osas-api",
         policyVersion: superseded.version,
         detail: { version: superseded.version, supersededBy: version },
-      });
+      }, app.auditStore);
     }
     return { activated, ...(superseded ? { superseded } : {}) };
   });
 
   app.post("/v1/policies/:tenantId/versions/:version/retire", async (req) => {
     const { tenantId, version } = req.params as { tenantId: string; version: string };
+    assertTenantAccess(req, tenantId);
     const { actorId } = policyAdminActor(req);
     const ctx = ctxFor(req, tenantId);
-    const retired = store.retire(tenantId, version, actorId);
+    const retired = await store.retire(tenantId, version, actorId);
     await audit(adapter, ctx, {
       eventType: "policy_retired",
       actorType: "human",
       actorId,
       policyVersion: version,
       detail: { version },
-    });
+    }, app.auditStore);
     return retired;
   });
 }

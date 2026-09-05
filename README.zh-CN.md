@@ -97,6 +97,36 @@ docker compose up --build    # 或：pnpm docker:up
 Docker 构建上下文为**仓库根目录**（两个 Dockerfile 都复制整个 pnpm workspace）；
 仓库刻意不提供 `.dockerignore`，以保持 workspace 目录结构完整。
 
+### 运行时配置（Milestone 2）
+
+所有配置均为环境变量——带注释的模板见 [.env.example](.env.example)。
+
+- **认证**（`OSAS_AUTH_MODE`）：`demo`（默认；`x-osas-role` / `x-osas-actor-id` /
+  `x-tenant-id` 请求头）或 `jwt`（通过 `OSAS_JWKS_URL` / `OSAS_JWT_ISSUER` /
+  `OSAS_JWT_AUDIENCE` 验证 OIDC Bearer Token；租户与角色只取自验证后的 claims，
+  `x-tenant-id` 被忽略）。在 `NODE_ENV=production` 下 demo 模式**启动即失败关闭**。
+  外部 principal 永远无法持有 `execute` 权限；`system_executor` 仅限服务端内部。
+- **存储**（`OSAS_STORAGE`）：`memory`（默认）或 `postgres`（需要 `DATABASE_URL`；
+  数据库不可达时启动失败关闭）。PostgreSQL 用法：
+
+  ```bash
+  docker compose --profile postgres up -d db migrate   # 启动数据库并执行迁移
+  pnpm db:migrate && pnpm db:seed                       # 或在宿主机上执行
+  OSAS_STORAGE=postgres DATABASE_URL=postgres://osas:osas@localhost:5432/osas pnpm dev:api
+  # 或全部走 compose：
+  OSAS_STORAGE=postgres docker compose --profile postgres up --build
+  ```
+
+  `pnpm db:reset` 重建 schema（仅限开发环境；`NODE_ENV=production` 下拒绝执行）。
+- **LLM**（`OSAS_LLM_PROVIDER`）：`mock`（默认，确定性、无网络）或
+  `openai-compatible`（`OSAS_LLM_BASE_URL` / `OSAS_LLM_API_KEY` /
+  `OSAS_LLM_MODEL_FAST` / `OSAS_LLM_MODEL_STANDARD`）。classify/extract 路由到
+  fast 模型，reply/propose 路由到 standard 模型。未同时配置
+  `OSAS_LLM_INPUT_USD_PER_MTOKEN` 与 `OSAS_LLM_OUTPUT_USD_PER_MTOKEN` 时，成本记为
+  *unknown*（绝不伪造）。`OSAS_LLM_DAILY_BUDGET_USD` / `OSAS_LLM_CASE_BUDGET_USD`：
+  达到 80% 写入 `budget_warning` 审计事件；达到上限后模型调用在触达 Provider
+  之前被阻断。用量可通过 `GET /v1/usage` 查询（仅 policy_admin/auditor）。
+
 ## 三条演示路径
 
 打开控制台（http://localhost:5173 或 http://localhost:8080），选择一个角色：
@@ -164,6 +194,7 @@ packages/
   model-gateway/         @osas/model-gateway    provider 接口、MockModelProvider、路由、预算
   adapter/               @osas/adapter          SupportAdapter 接口 + BYO Adapter 模板
   mock-backend/          @osas/mock-backend     合成 fixtures + MockSupportAdapter
+  store-postgres/        @osas/store-postgres   PostgreSQL 存储 + SQL 迁移（Milestone 2）
   mcp-server/            @osas/mcp-server       16 个工具定义 + stdio MCP 服务器
 apps/
   api/                   @osas/api              Fastify 5 HTTP API（端口 3001）

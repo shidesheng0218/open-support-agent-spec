@@ -178,6 +178,89 @@ describe("ModelGateway", () => {
       expect.objectContaining({ rejectedInjection: false }),
     );
   });
+
+  it("routes by fixed task -> tier mapping, ignoring a mismatched req.tier", async () => {
+    const seen: string[] = [];
+    const spy = fakeProvider({
+      complete: async (req) => {
+        seen.push(req.tier);
+        return { text: "ok", telemetry: { ...telemetry(0), tier: req.tier, task: req.task } };
+      },
+    });
+    const gw = new ModelGateway([spy]);
+    // classify/extract -> fast ("classify") even if the caller asks for standard
+    await gw.complete(baseReq({ task: "classify", tier: "standard" }));
+    await gw.complete(baseReq({ task: "extract", tier: "reasoning" }));
+    // reply/propose -> standard even if the caller asks for classify
+    await gw.complete(baseReq({ task: "reply", tier: "classify" }));
+    await gw.complete(baseReq({ task: "propose", tier: "reasoning" }));
+    expect(seen).toEqual(["classify", "classify", "standard", "standard"]);
+  });
+
+  it("blocks calls at the daily cap before reaching the provider", async () => {
+    const pricey = fakeProvider({
+      complete: async () => ({ text: "ok", telemetry: telemetry(0.5) }),
+    });
+    const gw = new ModelGateway([pricey], { dailyBudgetUsd: 1.0 });
+    await gw.complete(baseReq()); // 0.5
+    await gw.complete(baseReq()); // 1.0
+    const spy = vi.fn();
+    const gwBlocked = new ModelGateway([fakeProvider({ complete: spy })], { dailyBudgetUsd: 0 });
+    await expect(gwBlocked.complete(baseReq())).rejects.toBeInstanceOf(BudgetExceededError);
+    expect(spy).not.toHaveBeenCalled(); // never touches the network
+    await expect(gw.complete(baseReq())).rejects.toBeInstanceOf(BudgetExceededError);
+    expect(gw.todayCostUsd).toBeCloseTo(1.0);
+  });
+
+  it("enforces the per-case budget independently per case", async () => {
+    const pricey = fakeProvider({
+      complete: async () => ({ text: "ok", telemetry: telemetry(0.5) }),
+    });
+    const gw = new ModelGateway([pricey], { caseBudgetUsd: 0.5 });
+    await gw.complete(baseReq({ caseId: "case_a" }));
+    await expect(gw.complete(baseReq({ caseId: "case_a" }))).rejects.toBeInstanceOf(
+      BudgetExceededError,
+    );
+    // another case is unaffected
+    await gw.complete(baseReq({ caseId: "case_b" }));
+  });
+
+  it("fires onBudgetWarning once when spend crosses 80% of a cap", async () => {
+    const warnings: unknown[] = [];
+    const pricey = fakeProvider({
+      complete: async () => ({ text: "ok", telemetry: telemetry(0.45) }),
+    });
+    const gw = new ModelGateway([pricey], {
+      dailyBudgetUsd: 0.5,
+      onBudgetWarning: (w) => warnings.push(w),
+    });
+    await gw.complete(baseReq()); // 0.45 -> 90% -> warn
+    await gw.complete(baseReq()); // 0.90 -> already warned, then capped next
+    expect(warnings).toEqual([
+      expect.objectContaining({ scope: "daily", spentUsd: 0.45, capUsd: 0.5 }),
+    ]);
+  });
+
+  it("unknown-cost calls never count against budgets (no fabricated cost)", async () => {
+    const free = fakeProvider({
+      complete: async () => {
+        const t = telemetry(0.001) as { costUsd?: number } & ModelTelemetry;
+        delete t.costUsd; // price not configured -> unknown
+        return { text: "ok", telemetry: t };
+      },
+    });
+    const gw = new ModelGateway([free], { dailyBudgetUsd: 0.0001 });
+    await gw.complete(baseReq());
+    await gw.complete(baseReq()); // still allowed: measured spend is 0
+    expect(gw.cumulativeCostUsd).toBe(0);
+    expect(gw.todayCostUsd).toBe(0);
+  });
+
+  it("primeBudgets seeds counters from persisted usage", async () => {
+    const gw = new ModelGateway([new MockModelProvider()], { dailyBudgetUsd: 1.0 });
+    gw.primeBudgets({ dailyUsd: 1.5 });
+    await expect(gw.complete(baseReq())).rejects.toBeInstanceOf(BudgetExceededError);
+  });
 });
 
 describe("detectInjection", () => {

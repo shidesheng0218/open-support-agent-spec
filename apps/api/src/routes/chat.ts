@@ -3,17 +3,37 @@ import type { FastifyInstance } from "fastify";
 import { requireAdapterCapability, type SupportAdapter, type ToolContext } from "@osas/adapter";
 import type { ActionProposal, Case, Profile } from "@osas/core";
 import { detectInjection, FINANCIAL_ACTION_TYPES } from "@osas/core";
-import type { ModelTelemetry } from "@osas/model-gateway";
+import { BudgetExceededError } from "@osas/model-gateway";
+import type { ModelTelemetry, UsageStore } from "@osas/model-gateway";
 import { SchemaInvalidError } from "../plugins.js";
+import type { AuditSink } from "../domain.js";
 import { audit, resolveActivePolicy, runEvaluation, runExecution } from "../domain.js";
 import { ctxFor } from "./basic.js";
 
+// §8/Milestone 2: every model call is persisted to the UsageStore and the
+// audit stream. costUsd is omitted entirely when unknown — never fabricated.
 async function recordModelCall(
   adapter: SupportAdapter,
   ctx: ToolContext,
+  usageStore: UsageStore,
+  sink: AuditSink | undefined,
   caseId: string | undefined,
   telemetry: ModelTelemetry,
 ): Promise<void> {
+  await usageStore.record({
+    tenantId: ctx.tenantId,
+    ...(caseId ? { caseId } : {}),
+    provider: telemetry.provider,
+    model: telemetry.model,
+    tier: telemetry.tier,
+    task: telemetry.task,
+    inputTokens: telemetry.inputTokens,
+    outputTokens: telemetry.outputTokens,
+    latencyMs: telemetry.latencyMs,
+    ...(telemetry.costUsd !== undefined ? { costUsd: telemetry.costUsd } : {}),
+    truncated: telemetry.truncated,
+    createdAt: new Date().toISOString(),
+  });
   await audit(adapter, ctx, {
     caseId,
     eventType: "model_call_recorded",
@@ -26,10 +46,10 @@ async function recordModelCall(
       inputTokens: telemetry.inputTokens,
       outputTokens: telemetry.outputTokens,
       latencyMs: telemetry.latencyMs,
-      costUsd: telemetry.costUsd,
+      ...(telemetry.costUsd !== undefined ? { costUsd: telemetry.costUsd } : {}),
     },
     detail: { task: telemetry.task, truncated: telemetry.truncated },
-  });
+  }, sink);
 }
 
 // A real agent gathers evidence via tools before proposing; the mock provider
@@ -166,7 +186,7 @@ export async function chatRoutes(app: FastifyInstance): Promise<void> {
           actorType: "system",
           actorId: "osas-api",
           detail: { handoffId: handoff.id, reason: handoff.reason },
-        });
+        }, app.auditStore);
       }
       await audit(adapter, ctx, {
         caseId: body.caseId,
@@ -174,7 +194,7 @@ export async function chatRoutes(app: FastifyInstance): Promise<void> {
         actorType: "system",
         actorId: "osas-api",
         detail: { messagePreview: message.slice(0, 200) },
-      });
+      }, app.auditStore);
       return {
         reply:
           "I can't act on that message — it looks like a prompt-injection attempt. I've handed this conversation to a human agent.",
@@ -188,17 +208,75 @@ export async function chatRoutes(app: FastifyInstance): Promise<void> {
       { role: "user" as const, content: message },
     ];
 
+    // Milestone 2: provider failure, structured-output failure, or budget
+    // exhaustion degrade to a human handoff / safe template — never execute.
+    const degrade = async (err: unknown, stage: "classify" | "propose") => {
+      const messageText = err instanceof Error ? err.message : String(err);
+      if (err instanceof BudgetExceededError || (err as { name?: string }).name === "BudgetExceededError") {
+        await audit(adapter, ctx, {
+          caseId: body.caseId,
+          eventType: "budget_exceeded",
+          actorType: "system",
+          actorId: "osas-api",
+          detail: { stage, message: messageText },
+        }, app.auditStore);
+        return {
+          reply:
+            "This request can't be processed automatically right now (automation budget reached). A human agent will follow up.",
+        };
+      }
+      let handoff;
+      if (body.caseId) {
+        handoff = await adapter.createHandoff(ctx, {
+          tenantId: ctx.tenantId,
+          caseId: body.caseId,
+          reason: "other",
+          notes: `Model call failed at ${stage}: ${messageText.slice(0, 300)}`,
+        });
+        await audit(adapter, ctx, {
+          caseId: body.caseId,
+          eventType: "handoff_created",
+          actorType: "system",
+          actorId: "osas-api",
+          detail: { handoffId: handoff.id, reason: handoff.reason, stage },
+        }, app.auditStore);
+      }
+      return {
+        reply:
+          "I'm unable to process this automatically at the moment, so I've handed your request to a human agent.",
+        ...(handoff ? { handoff } : {}),
+      };
+    };
+
     // §8 flow: classify first, then propose (the mock replies with plain text
     // when the message maps to no action scenario).
-    const classification = await app.gateway.complete({ tier: "classify", task: "classify", messages });
-    await recordModelCall(adapter, ctx, body.caseId, classification.telemetry);
+    let classification;
+    try {
+      classification = await app.gateway.complete({
+        tier: "classify",
+        task: "classify",
+        messages,
+        caseId: body.caseId,
+        tenantId: ctx.tenantId,
+      });
+    } catch (err) {
+      return degrade(err, "classify");
+    }
+    await recordModelCall(adapter, ctx, app.usageStore, app.auditStore, body.caseId, classification.telemetry);
 
-    const response = await app.gateway.complete({
-      tier: "standard",
-      task: "propose",
-      messages,
-    });
-    await recordModelCall(adapter, ctx, body.caseId, response.telemetry);
+    let response;
+    try {
+      response = await app.gateway.complete({
+        tier: "standard",
+        task: "propose",
+        messages,
+        caseId: body.caseId,
+        tenantId: ctx.tenantId,
+      });
+    } catch (err) {
+      return degrade(err, "propose");
+    }
+    await recordModelCall(adapter, ctx, app.usageStore, app.auditStore, body.caseId, response.telemetry);
     const telemetry: ModelTelemetry = response.telemetry;
 
     const parsed = response.parsed as Partial<ActionProposal> | undefined;
@@ -251,16 +329,20 @@ export async function chatRoutes(app: FastifyInstance): Promise<void> {
       actorType: "model",
       actorId: telemetry.provider,
       detail: { actionType: proposal.actionType, source: "chat" },
-    });
+    }, app.auditStore);
 
     const evaluation = await runEvaluation(adapter, ctx, proposal, {
       injectionSuspected: detectInjection(JSON.stringify(proposal.params ?? {})),
       policy: await resolveActivePolicy(adapter, app.policyStore, ctx, ctx.tenantId),
+      sink: app.auditStore,
     });
 
     let execution;
     if (evaluation.decision.decision === "auto_execute") {
-      execution = await runExecution(adapter, ctx, app.executionStore, evaluation.proposal);
+      execution = await runExecution(adapter, ctx, app.executionStore, evaluation.proposal, {
+        sink: app.auditStore,
+        ...(app.pgPool ? { pgPool: app.pgPool } : {}),
+      });
     }
 
     return {

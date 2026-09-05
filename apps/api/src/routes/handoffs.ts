@@ -39,7 +39,7 @@ export async function handoffRoutes(app: FastifyInstance): Promise<void> {
       actorType: "human",
       actorId: handoff.assignedTo ?? "osas-api",
       detail: { handoffId: handoff.id, notes: body.notes },
-    });
+    }, app.auditStore);
     return handoff;
   });
 }

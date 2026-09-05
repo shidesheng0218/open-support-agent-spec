@@ -1,5 +1,7 @@
 import type { FastifyError, FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
 import type { Principal, SupportAdapter } from "@osas/adapter";
+import type { AuthHook, AuthPrincipal } from "./auth.js";
+import { ForbiddenError, TenantMismatchError, UnauthenticatedError } from "./auth.js";
 import {
   AdapterCapabilityError,
   AdapterNotFoundError,
@@ -8,10 +10,12 @@ import {
 import { IllegalTransitionError } from "@osas/core";
 import type { ExecutionStore, PolicyStore } from "@osas/policy-engine";
 import type { ModelGateway } from "@osas/model-gateway";
+import type { UsageStore } from "@osas/model-gateway";
 
 export const SPEC_VERSION = "0.1";
 export const API_VERSION = "0.1.1";
-export const DEFAULT_TENANT = "tenant_demo";
+// Canonical home is auth.ts (the auth hook owns tenant resolution).
+export { DEFAULT_TENANT } from "./auth.js";
 
 // API backend principal: only the policy engine / API layer may execute (§3).
 export const SYSTEM_PRINCIPAL: Principal = {
@@ -31,12 +35,20 @@ export const loggerOptions = {
 declare module "fastify" {
   interface FastifyRequest {
     tenantId: string;
+    /** Authenticated principal (demo headers or verified JWT claims). */
+    principal: AuthPrincipal;
   }
   interface FastifyInstance {
     adapter: SupportAdapter;
     executionStore: ExecutionStore;
     policyStore: PolicyStore;
     gateway: ModelGateway;
+    usageStore: UsageStore;
+    /** Present when OSAS_STORAGE=postgres (audit stream mirror). */
+    auditStore?: { append(event: import("@osas/core").AuditEvent): Promise<void> };
+    /** Present when OSAS_STORAGE=postgres; enables transactional execution. */
+    pgPool?: import("@osas/store-postgres").Pool;
+    authConfig: import("./auth.js").AuthConfig;
     compatReportPath?: string;
   }
 }
@@ -55,11 +67,14 @@ export class ConflictError extends Error {
   override name = "ConflictError";
 }
 
-/** Demo-mode RBAC: policy lifecycle operations require the policy_admin role. */
+/** Policy lifecycle operations require the policy_admin role (any auth mode). */
 export class PolicyAdminRequiredError extends Error {
   override name = "PolicyAdminRequiredError";
   constructor() {
-    super("policy lifecycle operations require the policy_admin role (header x-osas-role)");
+    super(
+      "policy lifecycle operations require the policy_admin role " +
+        "(demo: header x-osas-role; jwt: roles claim)",
+    );
   }
 }
 
@@ -73,18 +88,21 @@ export class PolicyImmutableError extends Error {
   }
 }
 
-export async function tenantHook(req: FastifyRequest): Promise<void> {
-  const header = req.headers["x-tenant-id"];
-  const value = Array.isArray(header) ? header[0] : header;
-  req.tenantId = value && value.trim() ? value.trim() : DEFAULT_TENANT;
-}
-
 export function errorHandler(err: FastifyError, req: FastifyRequest, reply: FastifyReply) {
   const send = (status: number, code: string, message: string, details?: unknown) =>
     reply
       .code(status)
       .send({ error: details === undefined ? { code, message } : { code, message, details } });
 
+  if (err instanceof UnauthenticatedError || err.name === "UnauthenticatedError") {
+    return send(401, "UNAUTHENTICATED", err.message);
+  }
+  if (err instanceof TenantMismatchError || err.name === "TenantMismatchError") {
+    return send(403, "TENANT_MISMATCH", err.message);
+  }
+  if (err instanceof ForbiddenError || err.name === "ForbiddenError") {
+    return send(403, "FORBIDDEN", err.message);
+  }
   if (err instanceof AdapterNotFoundError || err.name === "AdapterNotFoundError") {
     return send(404, "NOT_FOUND", err.message);
   }
@@ -125,8 +143,8 @@ export function errorHandler(err: FastifyError, req: FastifyRequest, reply: Fast
   return send(500, "INTERNAL_ERROR", "Internal server error");
 }
 
-export function registerPlugins(app: FastifyInstance): void {
-  app.addHook("preHandler", tenantHook);
+export function registerPlugins(app: FastifyInstance, authHook: AuthHook): void {
+  app.addHook("preHandler", authHook);
   app.setErrorHandler(errorHandler);
   app.setNotFoundHandler((req, reply) =>
     reply.code(404).send({ error: { code: "NOT_FOUND", message: `Route ${req.method} ${req.url} not found` } }),

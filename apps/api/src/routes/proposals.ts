@@ -73,7 +73,7 @@ export async function proposalRoutes(app: FastifyInstance): Promise<void> {
       actorType: "system",
       actorId: "osas-api",
       detail: { actionType: proposal.actionType, requestedBy: proposal.requestedBy },
-    });
+    }, app.auditStore);
     return reply.code(201).send(proposal);
   });
 
@@ -86,6 +86,7 @@ export async function proposalRoutes(app: FastifyInstance): Promise<void> {
     const outcome = await runEvaluation(adapter, ctx, proposal, {
       injectionSuspected: body.injectionSuspected,
       policy,
+      sink: app.auditStore,
     });
     return { proposal: outcome.proposal, decision: outcome.decision };
   });
@@ -96,7 +97,10 @@ export async function proposalRoutes(app: FastifyInstance): Promise<void> {
     const proposal = await adapter.getProposal(ctx, id);
     const actionCapability = EXECUTE_CAPABILITY[proposal.actionType];
     if (actionCapability) await requireAdapterCapability(adapter, ctx, actionCapability);
-    const outcome = await runExecution(adapter, ctx, app.executionStore, proposal);
+    const outcome = await runExecution(adapter, ctx, app.executionStore, proposal, {
+      sink: app.auditStore,
+      ...(app.pgPool ? { pgPool: app.pgPool } : {}),
+    });
     return { proposal: outcome.proposal, execution: outcome.execution, replayed: outcome.replayed };
   });
 
@@ -108,6 +112,6 @@ export async function proposalRoutes(app: FastifyInstance): Promise<void> {
       throw new SchemaInvalidError([{ message: 'body must be { outcome: "succeeded" | "failed", note? }' }]);
     }
     const proposal = await adapter.getProposal(ctx, id);
-    return runReconcile(adapter, ctx, proposal, body.outcome, body.note);
+    return runReconcile(adapter, ctx, proposal, body.outcome, body.note, app.auditStore);
   });
 }

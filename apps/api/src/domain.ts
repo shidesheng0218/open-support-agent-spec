@@ -15,16 +15,30 @@ import type {
 import { detectInjection } from "@osas/core";
 import { evaluateProposal, executeProposal, reconcile } from "@osas/policy-engine";
 import type { ExecutionStore, PolicyStore } from "@osas/policy-engine";
+import {
+  PostgresAuditStore,
+  PostgresExecutionStore,
+  withTransaction,
+} from "@osas/store-postgres";
+import type { Pool } from "@osas/store-postgres";
 import { ConflictError } from "./plugins.js";
 
 type AuditInput = Omit<AuditEvent, "id" | "specVersion" | "createdAt" | "tenantId">;
+
+/** Optional persistent mirror for the audit stream (PostgreSQL when OSAS_STORAGE=postgres). */
+export interface AuditSink {
+  append(event: AuditEvent): Promise<void>;
+}
 
 export async function audit(
   adapter: SupportAdapter,
   ctx: ToolContext,
   event: AuditInput,
+  sink?: AuditSink,
 ): Promise<AuditEvent> {
-  return adapter.appendAuditEvent(ctx, { tenantId: ctx.tenantId, ...event });
+  const recorded = await adapter.appendAuditEvent(ctx, { tenantId: ctx.tenantId, ...event });
+  if (sink) await sink.append(recorded);
+  return recorded;
 }
 
 /**
@@ -38,7 +52,7 @@ export async function resolveActivePolicy(
   ctx: ToolContext,
   tenantId: string,
 ): Promise<TenantPolicy> {
-  const active = store.getActive(tenantId);
+  const active = await store.getActive(tenantId);
   if (active) return active;
   const legacy = await adapter.getPolicy(ctx, tenantId);
   return store.importActive(legacy, "system:legacy-import");
@@ -109,7 +123,7 @@ export async function runEvaluation(
   adapter: SupportAdapter,
   ctx: ToolContext,
   proposal: ActionProposal,
-  opts: { injectionSuspected?: boolean; policy?: TenantPolicy } = {},
+  opts: { injectionSuspected?: boolean; policy?: TenantPolicy; sink?: AuditSink } = {},
 ): Promise<EvaluationOutcome> {
   const kase = await adapter.getCase(ctx, proposal.caseId);
   const customer = await adapter.getCustomer(ctx, kase.customerId);
@@ -135,7 +149,7 @@ export async function runEvaluation(
     actorId: "osas-api",
     policyVersion: decision.policyVersion,
     detail: { decision: decision.decision, reasons: decision.reasons },
-  });
+  }, opts.sink);
 
   const handoffs: HumanHandoff[] = [];
 
@@ -164,7 +178,7 @@ export async function runEvaluation(
         actorId: "osas-api",
         policyVersion: decision.policyVersion,
         detail: { handoffId: handoff.id, reason: handoff.reason },
-      });
+      }, opts.sink);
       if (mapping.event) {
         await audit(adapter, ctx, {
           caseId: proposal.caseId,
@@ -174,7 +188,7 @@ export async function runEvaluation(
           actorId: "osas-api",
           policyVersion: decision.policyVersion,
           detail: { code: reason.code, message: reason.message },
-        });
+        }, opts.sink);
       }
     }
     return { proposal: updated, decision, handoffs };
@@ -201,7 +215,7 @@ export async function runEvaluation(
       actorId: "osas-api",
       policyVersion: decision.policyVersion,
       detail: { reasons: decision.reasons },
-    });
+    }, opts.sink);
     return { proposal: updated, decision, approval, handoffs };
   }
 
@@ -220,13 +234,16 @@ export interface ExecutionOutcome {
 // §5: execute an approved proposal through the engine + ExecutionStore.
 // The engine is pure (in-memory transitions); persistence of the executing/
 // terminal transitions and the §5 audit events are the API layer's job.
+// When pgPool is provided (OSAS_STORAGE=postgres), the execution-record write
+// and the terminal audit mirror commit in ONE transaction (withTransaction).
 export async function runExecution(
   adapter: SupportAdapter,
   ctx: ToolContext,
   store: ExecutionStore,
   proposal: ActionProposal,
+  opts: { sink?: AuditSink; pgPool?: Pool } = {},
 ): Promise<ExecutionOutcome> {
-  const stored = store.get(ctx.tenantId, proposal.idempotencyKey);
+  const stored = await store.get(ctx.tenantId, proposal.idempotencyKey);
   if (stored) {
     return { proposal, execution: stored.result, replayed: true };
   }
@@ -244,7 +261,7 @@ export async function runExecution(
     actorType: "system",
     actorId: "osas-api",
     detail: { idempotencyKey: proposal.idempotencyKey },
-  });
+  }, opts.sink);
 
   // The engine passes only { tenantId } to the executor; wrap the adapter so
   // executeAction still receives the full system ToolContext.
@@ -252,37 +269,57 @@ export async function runExecution(
     executeAction: (_executorCtx: { tenantId: string }, p: ActionProposal) =>
       adapter.executeAction(ctx, p),
   };
-  const outcome = await executeProposal(proposal, executor, store);
-  const persisted = await adapter.updateProposalStatus(ctx, proposal.id, outcome.proposal.status);
 
-  const base = {
-    caseId: proposal.caseId,
-    proposalId: proposal.id,
-    actorType: "system" as const,
-    actorId: "osas-api",
-  };
-  if (outcome.execution.status === "succeeded") {
-    await audit(adapter, ctx, { ...base, eventType: "execution_succeeded", detail: { ...outcome.execution } });
-  } else if (outcome.execution.status === "failed") {
-    await audit(adapter, ctx, { ...base, eventType: "execution_failed", detail: { ...outcome.execution } });
-  } else {
-    // uncertain: never auto-retry — park + open reconciliation + handoff.
-    await audit(adapter, ctx, { ...base, eventType: "execution_uncertain", detail: { ...outcome.execution } });
-    await audit(adapter, ctx, { ...base, eventType: "reconciliation_opened", detail: { idempotencyKey: proposal.idempotencyKey } });
-    const handoff = await adapter.createHandoff(ctx, {
-      tenantId: ctx.tenantId,
+  // Applies the terminal proposal transition and §5 audit events; `sink`
+  // mirrors the audit stream (transaction-bound when postgres-backed).
+  const finish = async (
+    outcome: { proposal: ActionProposal; execution: ExecutionResult },
+    sink?: AuditSink,
+  ): Promise<ActionProposal> => {
+    const persisted = await adapter.updateProposalStatus(ctx, proposal.id, outcome.proposal.status);
+    const base = {
       caseId: proposal.caseId,
       proposalId: proposal.id,
-      reason: "external_uncertain",
-      notes: outcome.execution.detail,
+      actorType: "system" as const,
+      actorId: "osas-api",
+    };
+    if (outcome.execution.status === "succeeded") {
+      await audit(adapter, ctx, { ...base, eventType: "execution_succeeded", detail: { ...outcome.execution } }, sink);
+    } else if (outcome.execution.status === "failed") {
+      await audit(adapter, ctx, { ...base, eventType: "execution_failed", detail: { ...outcome.execution } }, sink);
+    } else {
+      // uncertain: never auto-retry — park + open reconciliation + handoff.
+      await audit(adapter, ctx, { ...base, eventType: "execution_uncertain", detail: { ...outcome.execution } }, sink);
+      await audit(adapter, ctx, { ...base, eventType: "reconciliation_opened", detail: { idempotencyKey: proposal.idempotencyKey } }, sink);
+      const handoff = await adapter.createHandoff(ctx, {
+        tenantId: ctx.tenantId,
+        caseId: proposal.caseId,
+        proposalId: proposal.id,
+        reason: "external_uncertain",
+        notes: outcome.execution.detail,
+      });
+      await audit(adapter, ctx, {
+        ...base,
+        eventType: "handoff_created",
+        detail: { handoffId: handoff.id, reason: handoff.reason },
+      }, sink);
+    }
+    return persisted;
+  };
+
+  if (opts.pgPool) {
+    const { outcome, persisted } = await withTransaction(opts.pgPool, async (client) => {
+      const out = await executeProposal(proposal, executor, new PostgresExecutionStore(client));
+      const persistedProposal = await finish(out, {
+        append: (event) => new PostgresAuditStore(client).append(event),
+      });
+      return { outcome: out, persisted: persistedProposal };
     });
-    await audit(adapter, ctx, {
-      ...base,
-      eventType: "handoff_created",
-      detail: { handoffId: handoff.id, reason: handoff.reason },
-    });
+    return { proposal: persisted, execution: outcome.execution, replayed: false };
   }
 
+  const outcome = await executeProposal(proposal, executor, store);
+  const persisted = await finish(outcome, opts.sink);
   return { proposal: persisted, execution: outcome.execution, replayed: false };
 }
 
@@ -293,6 +330,7 @@ export async function runReconcile(
   proposal: ActionProposal,
   outcome: "succeeded" | "failed",
   note?: string,
+  sink?: AuditSink,
 ): Promise<ActionProposal> {
   const resolved = reconcile(proposal, outcome); // throws ReconcileStatusError -> 409
   const updated = await adapter.updateProposalStatus(ctx, proposal.id, resolved.status);
@@ -303,6 +341,6 @@ export async function runReconcile(
     actorType: "human",
     actorId: ctx.principal.actorId,
     detail: { outcome, note },
-  });
+  }, sink);
   return updated;
 }

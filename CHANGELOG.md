@@ -30,6 +30,50 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   web `/healthz`.
 
 
+## [0.1.1] — Milestone 2: authentication, PostgreSQL persistence, LLM providers and cost control
+
+### Added
+
+- **Authentication & tenant isolation** (`OSAS_AUTH_MODE`): `demo` (header-driven
+  principals, default; fails closed under `NODE_ENV=production`) and `jwt`
+  (OIDC Bearer tokens verified against `OSAS_JWKS_URL` / `OSAS_JWT_ISSUER` /
+  `OSAS_JWT_AUDIENCE` via `jose`; `sub` / `tenant_id` / `roles` from verified
+  claims, `x-tenant-id` ignored). Roles `support_agent` / `policy_admin` /
+  `auditor` / `system_executor`; external requests can never obtain `execute`,
+  and tokens/headers claiming `system_executor` are rejected. Route-layer tenant
+  matching (403 `TENANT_MISMATCH`). `/health` stays anonymous for probes.
+- **PostgreSQL storage** (`OSAS_STORAGE=postgres`, `@osas/store-postgres`):
+  SQL migrations + `pnpm db:migrate` / `db:seed` / `db:reset` (reset is
+  development-only), tenant-scoped tables for tenants, policy versions,
+  proposals, approvals, evidence, audit events, execution records, shadow runs
+  and model usage; `(tenant_id, idempotency_key)` enforces execution
+  idempotency; execution state + audit mirror commit in one transaction;
+  startup fails closed when the database is unreachable. `docker compose`
+  gains opt-in `db` + one-shot `migrate` services under the `postgres` profile.
+- **LLM provider & cost control** (`OSAS_LLM_PROVIDER`): `OpenAICompatibleProvider`
+  (plain HTTP, no vendor SDK; key from env only, never logged/audited; fixed
+  task→tier routing: classify/extract→fast, reply/propose→standard; native
+  JSON-Schema structured output with at most one fallback retry, validated via
+  the OSAS Schema Validator). Costs are recorded as unknown unless both price
+  settings are present (never fabricated). Daily/per-case budgets block calls
+  pre-flight at the cap and write `budget_warning` audit events at 80%.
+  Provider/structured-output/budget failures degrade to a safe template or
+  human handoff — never execution. Model telemetry persists through the new
+  `UsageStore` (in-memory + Postgres) and is queryable via operator-only
+  `GET /v1/usage` (filters: tenant, date, model, task).
+- New audit event type `budget_warning`; `AuditModelInfo.costUsd` is now
+  optional (absent = unknown cost) in types and `schemas/core/audit-event.json`.
+- `.env.example` template documenting every `OSAS_*` variable (no secrets).
+
+### Changed
+
+- `ExecutionStore` and `PolicyStore` interfaces are now async (Promise-based)
+  to support real storage backends; all callers and tests updated.
+- The Milestone 1 `x-osas-role` seam (`policyAdminActor`) now reads the
+  authenticated principal; demo mode keeps the header experience.
+- The API Docker image runs `NODE_ENV=demo` + `OSAS_AUTH_MODE=demo` by default
+  (production deployments must configure jwt auth).
+
 ## [0.1.1] — Milestone 1: capability declaration, policy versioning, audit integrity
 
 ### Added

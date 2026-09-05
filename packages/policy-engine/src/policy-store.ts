@@ -36,21 +36,25 @@ export class PolicyVersionConflictError extends Error {
   }
 }
 
+/**
+ * Async since Milestone 2: backed by either memory (tests, local dev) or
+ * PostgreSQL (@osas/store-postgres). All data is tenant-isolated.
+ */
 export interface PolicyStore {
-  list(tenantId: string): PolicyVersionRecord[];
-  get(tenantId: string, version: string): PolicyVersionRecord | undefined;
-  getActive(tenantId: string): PolicyVersionRecord | undefined;
+  list(tenantId: string): Promise<PolicyVersionRecord[]>;
+  get(tenantId: string, version: string): Promise<PolicyVersionRecord | undefined>;
+  getActive(tenantId: string): Promise<PolicyVersionRecord | undefined>;
   /** Seed an already-active policy (e.g. an adapter's legacy policy). Idempotent per version. */
-  importActive(policy: TenantPolicy, actorId: string): PolicyVersionRecord;
-  createDraft(tenantId: string, policy: TenantPolicy, actorId: string): PolicyVersionRecord;
-  markSimulated(tenantId: string, version: string): PolicyVersionRecord;
-  approve(tenantId: string, version: string, actorId: string): PolicyVersionRecord;
+  importActive(policy: TenantPolicy, actorId: string): Promise<PolicyVersionRecord>;
+  createDraft(tenantId: string, policy: TenantPolicy, actorId: string): Promise<PolicyVersionRecord>;
+  markSimulated(tenantId: string, version: string): Promise<PolicyVersionRecord>;
+  approve(tenantId: string, version: string, actorId: string): Promise<PolicyVersionRecord>;
   activate(
     tenantId: string,
     version: string,
     actorId: string,
-  ): { activated: PolicyVersionRecord; superseded?: PolicyVersionRecord };
-  retire(tenantId: string, version: string, actorId: string): PolicyVersionRecord;
+  ): Promise<{ activated: PolicyVersionRecord; superseded?: PolicyVersionRecord }>;
+  retire(tenantId: string, version: string, actorId: string): Promise<PolicyVersionRecord>;
 }
 
 const clone = <T>(value: T): T => structuredClone(value);
@@ -89,21 +93,21 @@ export class InMemoryPolicyStore implements PolicyStore {
     return clone(updated);
   }
 
-  list(tenantId: string): PolicyVersionRecord[] {
+  async list(tenantId: string): Promise<PolicyVersionRecord[]> {
     return clone([...this.versionsOf(tenantId).values()]);
   }
 
-  get(tenantId: string, version: string): PolicyVersionRecord | undefined {
+  async get(tenantId: string, version: string): Promise<PolicyVersionRecord | undefined> {
     const found = this.versionsOf(tenantId).get(version);
     return found ? clone(found) : undefined;
   }
 
-  getActive(tenantId: string): PolicyVersionRecord | undefined {
+  async getActive(tenantId: string): Promise<PolicyVersionRecord | undefined> {
     const found = [...this.versionsOf(tenantId).values()].find((v) => v.status === "active");
     return found ? clone(found) : undefined;
   }
 
-  importActive(policy: TenantPolicy, actorId: string): PolicyVersionRecord {
+  async importActive(policy: TenantPolicy, actorId: string): Promise<PolicyVersionRecord> {
     const versions = this.versionsOf(policy.tenantId);
     const existing = versions.get(policy.version);
     if (existing) return clone(existing);
@@ -120,7 +124,11 @@ export class InMemoryPolicyStore implements PolicyStore {
     return clone(record);
   }
 
-  createDraft(tenantId: string, policy: TenantPolicy, actorId: string): PolicyVersionRecord {
+  async createDraft(
+    tenantId: string,
+    policy: TenantPolicy,
+    actorId: string,
+  ): Promise<PolicyVersionRecord> {
     const versions = this.versionsOf(tenantId);
     if (versions.has(policy.version)) {
       throw new PolicyVersionConflictError(
@@ -143,22 +151,22 @@ export class InMemoryPolicyStore implements PolicyStore {
     return clone(record);
   }
 
-  markSimulated(tenantId: string, version: string): PolicyVersionRecord {
+  async markSimulated(tenantId: string, version: string): Promise<PolicyVersionRecord> {
     return this.transition(tenantId, version, "simulated", { simulatedAt: nowIso() });
   }
 
-  approve(tenantId: string, version: string, actorId: string): PolicyVersionRecord {
+  async approve(tenantId: string, version: string, actorId: string): Promise<PolicyVersionRecord> {
     return this.transition(tenantId, version, "approved", {
       approvedBy: actorId,
       approvedAt: nowIso(),
     });
   }
 
-  activate(
+  async activate(
     tenantId: string,
     version: string,
     actorId: string,
-  ): { activated: PolicyVersionRecord; superseded?: PolicyVersionRecord } {
+  ): Promise<{ activated: PolicyVersionRecord; superseded?: PolicyVersionRecord }> {
     const activated = this.transition(tenantId, version, "active", {
       activatedBy: actorId,
       activatedAt: nowIso(),
@@ -176,7 +184,7 @@ export class InMemoryPolicyStore implements PolicyStore {
     return { activated, ...(superseded ? { superseded } : {}) };
   }
 
-  retire(tenantId: string, version: string, actorId: string): PolicyVersionRecord {
+  async retire(tenantId: string, version: string, actorId: string): Promise<PolicyVersionRecord> {
     return this.transition(tenantId, version, "retired", {
       retiredBy: actorId,
       retiredAt: nowIso(),

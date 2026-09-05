@@ -19,7 +19,10 @@
     "start:api": "pnpm --filter @osas/api run start",
     "verify": "bash scripts/verify.sh",
     "docker:up": "docker compose up --build",
-    "docker:down": "docker compose down"
+    "docker:down": "docker compose down",
+    "db:migrate": "pnpm --filter @osas/store-postgres run db:migrate",
+    "db:seed": "pnpm --filter @osas/store-postgres run db:seed",
+    "db:reset": "pnpm --filter @osas/store-postgres run db:reset"
   },
   "devDependencies": {
     "@types/node": "^22.9.0",

@@ -40,7 +40,7 @@ export async function approvalRoutes(app: FastifyInstance): Promise<void> {
       actorId: body.approverId,
       policyVersion: approval.policyVersion,
       detail: { decision: body.decision, comment: body.comment },
-    });
+    }, app.auditStore);
 
     const proposal = await adapter.getProposal(ctx, approval.proposalId);
     let execution: unknown;
@@ -48,7 +48,10 @@ export async function approvalRoutes(app: FastifyInstance): Promise<void> {
       // §5: human approval -> approved -> execute through the engine.
       await adapter.updateProposalStatus(ctx, proposal.id, "approved");
       const approved = await adapter.getProposal(ctx, proposal.id);
-      execution = await runExecution(adapter, ctx, app.executionStore, approved);
+      execution = await runExecution(adapter, ctx, app.executionStore, approved, {
+        sink: app.auditStore,
+        ...(app.pgPool ? { pgPool: app.pgPool } : {}),
+      });
     } else {
       await adapter.updateProposalStatus(ctx, proposal.id, "rejected");
     }

@@ -14,6 +14,7 @@ import {
   SYSTEM_PRINCIPAL,
 } from "../plugins.js";
 import { REPO_ROOT } from "../paths.js";
+import { assertTenantAccess } from "../auth.js";
 import { collectEvidence, resolveActivePolicy } from "../domain.js";
 
 const PROPOSAL_SCHEMA = "core/action-proposal";
@@ -153,6 +154,7 @@ export async function basicRoutes(app: FastifyInstance): Promise<void> {
 
   app.get("/v1/policies/:tenantId", async (req) => {
     const { tenantId } = req.params as { tenantId: string };
+    assertTenantAccess(req, tenantId);
     const ctx = ctxFor(req, tenantId);
     return resolveActivePolicy(adapter, app.policyStore, ctx, tenantId);
   });
@@ -161,6 +163,7 @@ export async function basicRoutes(app: FastifyInstance): Promise<void> {
   // lifecycle (drafts -> simulate -> approve -> activate), never in place.
   app.put("/v1/policies/:tenantId", async (req) => {
     const { tenantId } = req.params as { tenantId: string };
+    assertTenantAccess(req, tenantId);
     throw new PolicyImmutableError(tenantId);
   });
 

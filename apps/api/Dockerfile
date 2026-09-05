@@ -21,10 +21,17 @@ RUN pnpm build
 # A failing compat suite fails the image build — releases must be green.
 RUN pnpm --filter @osas/compat-suite test
 
-ENV NODE_ENV=production \
+# Milestone 2: demo auth fails closed under NODE_ENV=production. This image
+# is the reference DEMO, so it ships NODE_ENV=demo + OSAS_AUTH_MODE=demo.
+# Real deployments must set NODE_ENV=production and OSAS_AUTH_MODE=jwt with
+# OSAS_JWKS_URL / OSAS_JWT_ISSUER / OSAS_JWT_AUDIENCE.
+ENV NODE_ENV=demo \
     PORT=3001 \
     SEED_DEMO=true \
-    MODEL_PROVIDER=mock
+    MODEL_PROVIDER=mock \
+    OSAS_AUTH_MODE=demo \
+    OSAS_STORAGE=memory \
+    OSAS_LLM_PROVIDER=mock
 
 EXPOSE 3001
 

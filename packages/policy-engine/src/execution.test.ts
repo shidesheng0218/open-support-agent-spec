@@ -29,7 +29,7 @@ describe("executeProposal — §5", () => {
     expect(out.execution.status).toBe("succeeded");
     expect(out.replayed).toBe(false);
     expect(adapter.executeAction).toHaveBeenCalledTimes(1);
-    expect(store.get("tenant_demo", "idem_1")?.status).toBe("executed");
+    expect((await store.get("tenant_demo", "idem_1"))?.status).toBe("executed");
   });
 
   it("approved → failed on adapter failure, result stored", async () => {
@@ -38,7 +38,7 @@ describe("executeProposal — §5", () => {
     const out = await executeProposal(approvedProposal(), adapter, store);
     expect(out.proposal.status).toBe("failed");
     expect(out.execution.status).toBe("failed");
-    expect(store.get("tenant_demo", "idem_1")?.status).toBe("failed");
+    expect((await store.get("tenant_demo", "idem_1"))?.status).toBe("failed");
   });
 
   it("uncertain → reconciliation_required, never retried, nothing stored", async () => {
@@ -48,7 +48,7 @@ describe("executeProposal — §5", () => {
     expect(out.proposal.status).toBe("reconciliation_required");
     expect(out.execution.status).toBe("uncertain");
     expect(adapter.executeAction).toHaveBeenCalledTimes(1);
-    expect(store.get("tenant_demo", "idem_1")).toBeUndefined();
+    expect(await store.get("tenant_demo", "idem_1")).toBeUndefined();
   });
 
   it("replay with the same idempotency key returns the stored result without calling the adapter again", async () => {

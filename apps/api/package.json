@@ -20,7 +20,9 @@
     "@osas/model-gateway": "workspace:*",
     "@osas/policy-engine": "workspace:*",
     "@osas/schema-validator": "workspace:*",
-    "fastify": "^5.2.0"
+    "@osas/store-postgres": "workspace:*",
+    "fastify": "^5.2.0",
+    "jose": "^6.2.11"
   },
   "devDependencies": {
     "tsx": "^4.19.2"
