@@ -1,0 +1,18 @@
+{
+  "id": "prop_1",
+  "specVersion": "0.1",
+  "tenantId": "tenant_demo",
+  "caseId": "case_1",
+  "profile": "ecommerce",
+  "actionType": "refund",
+  "reasonCode": "damaged",
+  "params": { "orderId": "ord_small" },
+  "requestedPermission": "request-approval",
+  "requestedBy": { "actorType": "model", "actorId": "model_mock-local" },
+  "amount": { "currency": "USD", "minorUnits": 2500 },
+  "evidenceIds": ["ev_1"],
+  "idempotencyKey": "ik_prop_1",
+  "status": "proposed",
+  "createdAt": "2026-01-15T10:01:00Z",
+  "updatedAt": "2026-01-15T10:01:00Z"
+}

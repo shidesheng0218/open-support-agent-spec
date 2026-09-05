@@ -1,0 +1,45 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://open-support-agent.dev/schemas/core/human-handoff.json",
+  "title": "HumanHandoff",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "id",
+    "specVersion",
+    "tenantId",
+    "caseId",
+    "reason",
+    "status",
+    "createdAt",
+    "updatedAt"
+  ],
+  "properties": {
+    "id": { "$ref": "./common.json#/$defs/Id" },
+    "specVersion": { "$ref": "./common.json#/$defs/SpecVersion" },
+    "tenantId": { "$ref": "./common.json#/$defs/Id" },
+    "caseId": { "$ref": "./common.json#/$defs/Id" },
+    "proposalId": { "$ref": "./common.json#/$defs/Id" },
+    "reason": {
+      "type": "string",
+      "enum": [
+        "identity_unverified",
+        "insufficient_evidence",
+        "duplicate_request",
+        "over_threshold",
+        "region_blocked",
+        "policy_conflict",
+        "external_uncertain",
+        "prompt_injection_suspected",
+        "customer_requested",
+        "other"
+      ]
+    },
+    "status": { "type": "string", "enum": ["open", "claimed", "resolved"] },
+    "assignedTo": { "type": "string" },
+    "notes": { "type": "string" },
+    "resolvedAt": { "$ref": "./common.json#/$defs/DateTime" },
+    "createdAt": { "$ref": "./common.json#/$defs/DateTime" },
+    "updatedAt": { "$ref": "./common.json#/$defs/DateTime" }
+  }
+}

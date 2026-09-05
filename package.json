@@ -1,0 +1,28 @@
+{
+  "name": "open-support-agent-spec",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Open Support Agent Spec (OSAS) v0.1 — open interoperability spec for customer-support agents, with a TypeScript reference implementation.",
+  "license": "Apache-2.0",
+  "packageManager": "pnpm@11.7.0",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "build": "pnpm -r run build",
+    "typecheck": "pnpm -r run typecheck",
+    "test": "pnpm run build && pnpm -r run test",
+    "test:compat": "pnpm --filter @osas/compat-suite run test",
+    "test:e2e": "pnpm --filter @osas/e2e run test",
+    "dev:api": "pnpm --filter @osas/api run dev",
+    "dev:web": "pnpm --filter @osas/web run dev",
+    "start:api": "pnpm --filter @osas/api run start",
+    "docker:up": "docker compose up --build",
+    "docker:down": "docker compose down"
+  },
+  "devDependencies": {
+    "@types/node": "^22.9.0",
+    "typescript": "^5.6.3",
+    "vitest": "^2.1.8"
+  }
+}

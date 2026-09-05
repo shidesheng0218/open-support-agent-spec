@@ -1,0 +1,12 @@
+{
+  "id": "inv_001",
+  "specVersion": "0.1",
+  "tenantId": "tenant_demo",
+  "customerId": "cus_verified",
+  "subscriptionId": "sub_active",
+  "amount": { "currency": "USD", "minorUnits": 9900 },
+  "status": "paid",
+  "issuedAt": "2026-01-01T00:00:00Z",
+  "dueAt": "2026-01-15T00:00:00Z",
+  "createdAt": "2026-01-01T00:00:00Z"
+}

@@ -1,0 +1,25 @@
+{
+  "id": "pol_demo",
+  "specVersion": "0.1",
+  "tenantId": "tenant_demo",
+  "version": "1.0.0",
+  "effectiveFrom": "2026-01-01T00:00:00Z",
+  "duplicateWindowSeconds": 86400,
+  "maxEvidenceAgeSeconds": 604800,
+  "budget": { "dailyUsdCap": 500 },
+  "rules": [
+    {
+      "actionType": "refund",
+      "reasonCodes": ["damaged", "wrong_item", "not_received", "other"],
+      "decision": "auto_execute",
+      "maxAmount": { "currency": "USD", "minorUnits": 5000 },
+      "requireVerifiedIdentity": true,
+      "identityMaxAgeSeconds": 7776000,
+      "allowedRegions": ["US", "CA", "GB", "DE", "FR", "JP", "AU"],
+      "blockedRegions": ["IR", "KP", "CU"]
+    }
+  ],
+  "defaultDecision": "block",
+  "createdAt": "2026-01-01T00:00:00Z",
+  "updatedAt": "2026-01-01T00:00:00Z"
+}

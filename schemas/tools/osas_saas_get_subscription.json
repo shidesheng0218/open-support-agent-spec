@@ -1,0 +1,11 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://open-support-agent.dev/schemas/tools/osas_saas_get_subscription.json",
+  "title": "osas_saas_get_subscription input",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["id"],
+  "properties": {
+    "id": { "$ref": "../core/common.json#/$defs/Id" }
+  }
+}

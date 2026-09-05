@@ -1,0 +1,30 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://open-support-agent.dev/schemas/profiles/ecommerce/shipment.json",
+  "title": "Shipment",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "id",
+    "specVersion",
+    "tenantId",
+    "orderId",
+    "carrier",
+    "status",
+    "createdAt"
+  ],
+  "properties": {
+    "id": { "$ref": "../../core/common.json#/$defs/Id" },
+    "specVersion": { "$ref": "../../core/common.json#/$defs/SpecVersion" },
+    "tenantId": { "$ref": "../../core/common.json#/$defs/Id" },
+    "orderId": { "$ref": "../../core/common.json#/$defs/Id" },
+    "carrier": { "type": "string" },
+    "trackingNumber": { "type": "string" },
+    "status": {
+      "type": "string",
+      "enum": ["label_created", "in_transit", "out_for_delivery", "delivered", "exception"]
+    },
+    "eta": { "$ref": "../../core/common.json#/$defs/DateTime" },
+    "createdAt": { "$ref": "../../core/common.json#/$defs/DateTime" }
+  }
+}

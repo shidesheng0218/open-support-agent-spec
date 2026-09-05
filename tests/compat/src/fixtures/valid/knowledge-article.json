@@ -1,0 +1,10 @@
+{
+  "id": "kb_refund_policy",
+  "specVersion": "0.1",
+  "tenantId": "tenant_demo",
+  "title": "Refund policy",
+  "body": "Refunds under $50 for damaged or wrong items are auto-approved for verified customers.",
+  "tags": ["refund", "policy"],
+  "createdAt": "2026-01-01T00:00:00Z",
+  "updatedAt": "2026-01-01T00:00:00Z"
+}

@@ -1,0 +1,66 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://open-support-agent.dev/schemas/core/tenant-policy.json",
+  "title": "TenantPolicy",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "id",
+    "specVersion",
+    "tenantId",
+    "version",
+    "effectiveFrom",
+    "duplicateWindowSeconds",
+    "maxEvidenceAgeSeconds",
+    "rules",
+    "defaultDecision",
+    "createdAt",
+    "updatedAt"
+  ],
+  "properties": {
+    "id": { "$ref": "./common.json#/$defs/Id" },
+    "specVersion": { "$ref": "./common.json#/$defs/SpecVersion" },
+    "tenantId": { "$ref": "./common.json#/$defs/Id" },
+    "version": { "type": "string" },
+    "effectiveFrom": { "$ref": "./common.json#/$defs/DateTime" },
+    "duplicateWindowSeconds": { "type": "integer", "minimum": 0 },
+    "maxEvidenceAgeSeconds": { "type": "integer", "minimum": 0 },
+    "budget": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "dailyUsdCap": { "type": "number", "minimum": 0 }
+      }
+    },
+    "rules": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["actionType", "decision"],
+        "properties": {
+          "actionType": { "$ref": "./common.json#/$defs/ActionType" },
+          "reasonCodes": { "type": "array", "items": { "type": "string" } },
+          "decision": {
+            "type": "string",
+            "enum": ["auto_execute", "require_approval", "block"]
+          },
+          "maxAmount": { "$ref": "./common.json#/$defs/Money" },
+          "requireVerifiedIdentity": { "type": "boolean" },
+          "identityMaxAgeSeconds": { "type": "integer", "minimum": 0 },
+          "allowedRegions": {
+            "type": "array",
+            "items": { "$ref": "./common.json#/$defs/Region" }
+          },
+          "blockedRegions": {
+            "type": "array",
+            "items": { "$ref": "./common.json#/$defs/Region" }
+          }
+        }
+      }
+    },
+    "defaultDecision": { "const": "block" },
+    "createdAt": { "$ref": "./common.json#/$defs/DateTime" },
+    "updatedAt": { "$ref": "./common.json#/$defs/DateTime" }
+  }
+}

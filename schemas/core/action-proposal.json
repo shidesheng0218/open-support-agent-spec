@@ -1,0 +1,73 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://open-support-agent.dev/schemas/core/action-proposal.json",
+  "title": "ActionProposal",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "id",
+    "specVersion",
+    "tenantId",
+    "caseId",
+    "profile",
+    "actionType",
+    "reasonCode",
+    "params",
+    "requestedPermission",
+    "requestedBy",
+    "evidenceIds",
+    "idempotencyKey",
+    "status",
+    "createdAt",
+    "updatedAt"
+  ],
+  "properties": {
+    "id": { "$ref": "./common.json#/$defs/Id" },
+    "specVersion": { "$ref": "./common.json#/$defs/SpecVersion" },
+    "tenantId": { "$ref": "./common.json#/$defs/Id" },
+    "caseId": { "$ref": "./common.json#/$defs/Id" },
+    "profile": { "$ref": "./common.json#/$defs/Profile" },
+    "actionType": { "$ref": "./common.json#/$defs/ActionType" },
+    "reasonCode": { "type": "string" },
+    "params": { "type": "object" },
+    "requestedPermission": { "$ref": "./common.json#/$defs/Permission" },
+    "requestedBy": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["actorType", "actorId"],
+      "properties": {
+        "actorType": { "$ref": "./common.json#/$defs/ActorType" },
+        "actorId": { "type": "string" },
+        "model": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["provider", "model"],
+          "properties": {
+            "provider": { "type": "string" },
+            "model": { "type": "string" }
+          }
+        }
+      }
+    },
+    "amount": { "$ref": "./common.json#/$defs/Money" },
+    "evidenceIds": { "type": "array", "items": { "$ref": "./common.json#/$defs/Id" } },
+    "idempotencyKey": { "type": "string", "minLength": 1 },
+    "status": {
+      "type": "string",
+      "enum": [
+        "proposed",
+        "policy_rejected",
+        "pending_approval",
+        "approved",
+        "rejected",
+        "executing",
+        "executed",
+        "failed",
+        "reconciliation_required"
+      ]
+    },
+    "policyDecision": { "$ref": "./common.json#/$defs/PolicyDecision" },
+    "createdAt": { "$ref": "./common.json#/$defs/DateTime" },
+    "updatedAt": { "$ref": "./common.json#/$defs/DateTime" }
+  }
+}

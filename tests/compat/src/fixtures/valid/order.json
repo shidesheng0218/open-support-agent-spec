@@ -1,0 +1,18 @@
+{
+  "id": "ord_small",
+  "specVersion": "0.1",
+  "tenantId": "tenant_demo",
+  "customerId": "cus_verified",
+  "status": "delivered",
+  "items": [
+    {
+      "sku": "SKU-001",
+      "name": "Widget",
+      "qty": 1,
+      "unitPrice": { "currency": "USD", "minorUnits": 2500 }
+    }
+  ],
+  "total": { "currency": "USD", "minorUnits": 2500 },
+  "region": "US",
+  "createdAt": "2026-01-10T08:00:00Z"
+}

@@ -1,0 +1,16 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://open-support-agent.dev/schemas/tools/osas_saas_create_plan_change_request.json",
+  "title": "osas_saas_create_plan_change_request input",
+  "description": "Proposal shortcut: drafts a plan_change ActionProposal server-side (status proposed, requestedPermission request-approval). Clients MUST NOT supply requestedPermission/requestedBy.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["caseId", "subscriptionId", "newPlan", "idempotencyKey"],
+  "properties": {
+    "caseId": { "$ref": "../core/common.json#/$defs/Id" },
+    "subscriptionId": { "$ref": "../core/common.json#/$defs/Id" },
+    "newPlan": { "type": "string" },
+    "reasonCode": { "type": "string" },
+    "idempotencyKey": { "type": "string", "minLength": 1 }
+  }
+}

@@ -1,0 +1,11 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://open-support-agent.dev/schemas/tools/osas_ecom_get_shipment.json",
+  "title": "osas_ecom_get_shipment input",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["id"],
+  "properties": {
+    "id": { "$ref": "../core/common.json#/$defs/Id" }
+  }
+}

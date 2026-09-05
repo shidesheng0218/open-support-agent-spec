@@ -1,0 +1,17 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://open-support-agent.dev/schemas/tools/osas_saas_create_credit_request.json",
+  "title": "osas_saas_create_credit_request input",
+  "description": "Proposal shortcut: drafts a credit_apply ActionProposal server-side (status proposed, requestedPermission request-approval). Clients MUST NOT supply requestedPermission/requestedBy.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["caseId", "customerId", "amount", "reasonCode", "idempotencyKey"],
+  "properties": {
+    "caseId": { "$ref": "../core/common.json#/$defs/Id" },
+    "customerId": { "$ref": "../core/common.json#/$defs/Id" },
+    "amount": { "$ref": "../core/common.json#/$defs/Money" },
+    "reasonCode": { "type": "string", "enum": ["service_outage", "goodwill", "billing_error"] },
+    "evidenceIds": { "type": "array", "items": { "$ref": "../core/common.json#/$defs/Id" } },
+    "idempotencyKey": { "type": "string", "minLength": 1 }
+  }
+}

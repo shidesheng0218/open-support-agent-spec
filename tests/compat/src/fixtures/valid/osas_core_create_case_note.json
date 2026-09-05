@@ -1,0 +1,6 @@
+{
+  "caseId": "case_1",
+  "body": "Customer reported the item arrived damaged.",
+  "evidenceIds": ["ev_1"],
+  "idempotencyKey": "ik_note_1"
+}

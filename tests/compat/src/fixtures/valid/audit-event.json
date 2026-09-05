@@ -1,0 +1,13 @@
+{
+  "id": "audit_1",
+  "specVersion": "0.1",
+  "tenantId": "tenant_demo",
+  "caseId": "case_1",
+  "proposalId": "prop_1",
+  "eventType": "policy_evaluated",
+  "actorType": "policy_engine",
+  "actorId": "policy-engine",
+  "policyVersion": "1.0.0",
+  "detail": { "decision": "auto_execute" },
+  "createdAt": "2026-01-15T10:02:00Z"
+}

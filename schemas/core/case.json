@@ -1,0 +1,43 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://open-support-agent.dev/schemas/core/case.json",
+  "title": "Case",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "id",
+    "specVersion",
+    "tenantId",
+    "customerId",
+    "profile",
+    "channel",
+    "subject",
+    "status",
+    "priority",
+    "assigneeType",
+    "tags",
+    "evidenceIds",
+    "createdAt",
+    "updatedAt"
+  ],
+  "properties": {
+    "id": { "$ref": "./common.json#/$defs/Id" },
+    "specVersion": { "$ref": "./common.json#/$defs/SpecVersion" },
+    "tenantId": { "$ref": "./common.json#/$defs/Id" },
+    "customerId": { "$ref": "./common.json#/$defs/Id" },
+    "profile": { "$ref": "./common.json#/$defs/Profile" },
+    "channel": { "type": "string", "enum": ["email", "chat", "phone", "social", "api"] },
+    "subject": { "type": "string" },
+    "status": {
+      "type": "string",
+      "enum": ["open", "pending_agent", "pending_customer", "resolved", "closed"]
+    },
+    "priority": { "type": "string", "enum": ["low", "normal", "high", "urgent"] },
+    "assigneeType": { "type": "string", "enum": ["agent", "human", "none"] },
+    "tags": { "type": "array", "items": { "type": "string" } },
+    "evidenceIds": { "type": "array", "items": { "$ref": "./common.json#/$defs/Id" } },
+    "closedAt": { "$ref": "./common.json#/$defs/DateTime" },
+    "createdAt": { "$ref": "./common.json#/$defs/DateTime" },
+    "updatedAt": { "$ref": "./common.json#/$defs/DateTime" }
+  }
+}

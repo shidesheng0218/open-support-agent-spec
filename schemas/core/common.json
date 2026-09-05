@@ -1,0 +1,61 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://open-support-agent.dev/schemas/core/common.json",
+  "title": "OSAS common definitions",
+  "description": "Shared $defs reused across all OSAS schemas via relative $ref.",
+  "$defs": {
+    "SpecVersion": { "const": "0.1" },
+    "Id": { "type": "string", "minLength": 1 },
+    "DateTime": { "type": "string", "format": "date-time" },
+    "Currency": { "type": "string", "pattern": "^[A-Z]{3}$" },
+    "Region": { "type": "string", "pattern": "^[A-Z]{2}$" },
+    "Money": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["currency", "minorUnits"],
+      "properties": {
+        "currency": { "$ref": "#/$defs/Currency" },
+        "minorUnits": { "type": "integer", "minimum": 0 }
+      }
+    },
+    "Permission": { "type": "string", "enum": ["read", "draft", "request-approval", "execute"] },
+    "Profile": { "type": "string", "enum": ["core", "ecommerce", "saas"] },
+    "ActorType": { "type": "string", "enum": ["model", "human", "system"] },
+    "ActionType": {
+      "type": "string",
+      "enum": [
+        "create_note",
+        "create_escalation",
+        "refund",
+        "return_request",
+        "reshipment",
+        "cancel_order",
+        "credit_apply",
+        "subscription_cancel",
+        "plan_change"
+      ]
+    },
+    "PolicyDecision": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["decision", "reasons", "policyVersion", "evaluatedAt"],
+      "properties": {
+        "decision": { "type": "string", "enum": ["auto_execute", "require_approval", "block"] },
+        "reasons": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["code", "message"],
+            "properties": {
+              "code": { "type": "string" },
+              "message": { "type": "string" }
+            }
+          }
+        },
+        "policyVersion": { "type": "string" },
+        "evaluatedAt": { "$ref": "#/$defs/DateTime" }
+      }
+    }
+  }
+}

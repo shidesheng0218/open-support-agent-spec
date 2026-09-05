@@ -1,0 +1,8 @@
+{
+  "id": "note_1",
+  "specVersion": "0.1",
+  "tenantId": "tenant_demo",
+  "caseId": "case_1",
+  "body": "Customer reported the item arrived damaged; photos attached.",
+  "createdAt": "2026-01-15T10:05:00Z"
+}

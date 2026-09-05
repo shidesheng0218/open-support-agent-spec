@@ -1,0 +1,8 @@
+{
+  "caseId": "case_credit",
+  "customerId": "cus_verified",
+  "amount": { "currency": "USD", "minorUnits": 1000 },
+  "reasonCode": "goodwill",
+  "evidenceIds": ["ev_1"],
+  "idempotencyKey": "ik_credit_1"
+}

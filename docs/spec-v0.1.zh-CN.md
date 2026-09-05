@@ -1,0 +1,490 @@
+# Open Support Agent Spec（OSAS）v0.1 —— 草案
+
+[English version](spec-v0.1.md)
+
+**状态：** 草案（Draft）
+**规范版本：** `0.1`（`SPEC_VERSION = "0.1"`）
+**许可证：** Apache-2.0
+
+本文档是 OSAS v0.1 的规范性文本。OSAS 是一份面向客服场景 AI Agent 的开放互操作规范。
+
+> **权威性声明。** [`schemas/`](../schemas/) 目录下的 JSON Schema（JSON Schema
+> draft 2020-12，清单见 `schemas/manifest.json`）是本文档所定义全部数据结构的
+> 机器可校验权威形式。**当文字描述与 Schema 不一致时，以 Schema 为准。**
+> 除非明确说明，所有对象均适用 `additionalProperties: false`。
+
+> **草案声明。** 这是一份开放规范草案，并非已确立的行业标准。在 v1.0 之前可能发生
+> 不兼容变更（见 [GOVERNANCE.md](../GOVERNANCE.md)）。
+
+本文档中的关键词 **必须（MUST）**、**不得（MUST NOT）**、**应该（SHOULD）**、
+**不应该（SHOULD NOT）**、**可以（MAY）** 按 RFC 2119 / RFC 8174 解释。
+
+---
+
+## 1. 范围与约定
+
+OSAS 定义：(a) 客服工作的核心领域模型；(b) 按 Profile 划分的扩展对象；(c) 权限阶梯与
+拦截一切写入的确定性策略求值算法；(d) 执行、幂等与对账规则；(e) 工具表面（MCP）与
+模型网关契约；(f) 对实现的安全要求。
+
+全局约定：
+
+- **金额** 为 `{ currency: string, minorUnits: integer }`，其中 `currency` 是
+  ISO 4217 三位大写字母代码。**不得**使用浮点数表示金额。
+- **时间戳** 为 ISO 8601 字符串（`format: "date-time"`）。
+- **ID** 为不透明字符串。实现**不得**对 ID 结构赋予语义。
+- 所有持久化对象都有 `id: string`、`specVersion: "0.1"`（Schema 层 `const`）和
+  `createdAt: date-time`；大多数还有 `updatedAt`。
+- Profile：`Profile = "core" | "ecommerce" | "saas"`。
+
+## 2. 核心领域模型
+
+### 2.1 Case（工单）
+
+客服工作的基本单元。
+
+| 字段 | 类型 | 必填 | 说明 |
+|---|---|---|---|
+| `tenantId` | string | 是 | 所属租户 |
+| `customerId` | string | 是 | 客户引用 |
+| `profile` | Profile | 是 | 所属 Profile |
+| `channel` | enum | 是 | `email` \| `chat` \| `phone` \| `social` \| `api` |
+| `subject` | string | 是 | 简短主题 |
+| `status` | CaseStatus | 是 | 见 §3.1 |
+| `priority` | enum | 是 | `low` \| `normal` \| `high` \| `urgent` |
+| `assigneeType` | enum | 是 | `agent` \| `human` \| `none` |
+| `tags` | string[] | 是 | 自由标签 |
+| `evidenceIds` | string[] | 是 | 关联证据 |
+| `closedAt` | date-time | 否 | 关闭时间 |
+
+### 2.2 Customer（客户）
+
+| 字段 | 类型 | 必填 | 说明 |
+|---|---|---|---|
+| `tenantId` | string | 是 | 所属租户 |
+| `displayName` | string | 是 | 显示名 |
+| `email` | string | 否 | 联系邮箱（日志中须脱敏，§9） |
+| `phone` | string | 否 | 联系电话（日志中须脱敏，§9） |
+| `locale` | string | 否 | 偏好语言 |
+| `region` | string | 是 | ISO 3166-1 alpha-2 地区码 |
+| `identityVerification` | object | 是 | `{ status: "verified"\|"unverified"\|"expired", method?, verifiedAt?, expiresAt? }` |
+| `tags` | string[] | 是 | 自由标签 |
+
+### 2.3 Evidence（证据）
+
+证据将建议锚定在可信业务数据上。
+
+| 字段 | 类型 | 必填 | 说明 |
+|---|---|---|---|
+| `tenantId` | string | 是 | 所属租户 |
+| `caseId` | string | 否 | 关联工单 |
+| `kind` | enum | 是 | `order` \| `shipment` \| `subscription` \| `invoice` \| `knowledge` \| `conversation` \| `policy` \| `identity` \| `other` |
+| `source` | object | 是 | `{ system, recordType, recordId, url? }` |
+| `summary` | string | 是 | 人类可读摘要 |
+| `data` | object | 是 | 结构化载荷 |
+| `retrievedAt` | date-time | 是 | 证据获取时间 |
+| `expiresAt` | date-time | 否 | 硬性过期时间 |
+
+**金融类**动作（§2.4）的每条建议结论**必须**引用至少一条证据。新鲜度按 `expiresAt`
+与策略的 `maxEvidenceAgeSeconds`（自 `retrievedAt` 起算）评估；见 §5 第 10 步。
+
+### 2.4 ActionProposal（动作建议）
+
+Agent 改变业务状态的**唯一**途径。建议是一条结构化、可审计的请求，必须先通过
+策略求值（§5）才能执行。
+
+| 字段 | 类型 | 必填 | 说明 |
+|---|---|---|---|
+| `tenantId` | string | 是 | 所属租户 |
+| `caseId` | string | 是 | 关联工单 |
+| `profile` | Profile | 是 | **必须**与 `actionType` 所属 Profile 一致（§2.5） |
+| `actionType` | ActionType | 是 | 动作类型 |
+| `reasonCode` | string | 是 | 原因码（与策略规则的 `reasonCodes` 匹配） |
+| `params` | object | 是 | 动作特定参数 |
+| `requestedPermission` | Permission | 是 | 请求的权限（§4） |
+| `requestedBy` | object | 是 | `{ actorType: "model"\|"human"\|"system", actorId, model?: { provider, model } }` |
+| `amount` | Money | 否 | 金融类 actionType 必填 |
+| `evidenceIds` | string[] | 是 | 支撑证据（金融类动作 ≥1） |
+| `idempotencyKey` | string | 是 | 执行去重键（§6） |
+| `status` | ProposalStatus | 是 | 见 §3.2 |
+| `policyDecision` | PolicyDecision | 否 | 最近一次求值结果（§5） |
+
+### 2.5 动作类型与 Profile
+
+| Profile | ActionType 取值 |
+|---|---|
+| core | `create_note`、`create_escalation` |
+| ecommerce | `refund`、`return_request`、`reshipment`、`cancel_order` |
+| saas | `credit_apply`、`subscription_cancel`、`plan_change` |
+
+`profile` **必须**与 actionType 所属 Profile 一致（参考实现中以 `ACTION_TYPE_PROFILE`
+映射表达）。不一致构成 `PROFILE_MISMATCH` 违规（§5 第 3 步），并在 Schema 层同样被拒绝。
+
+**金融类 actionType**：`refund`、`reshipment`、`credit_apply`。这三类要求提供 `amount`
+并引用至少一条证据。
+
+### 2.6 Approval（审批）
+
+| 字段 | 类型 | 必填 | 说明 |
+|---|---|---|---|
+| `tenantId` | string | 是 | 所属租户 |
+| `proposalId` | string | 是 | 被审批的建议 |
+| `status` | enum | 是 | `pending` \| `approved` \| `rejected` |
+| `approverId` | string | 否 | 做出决定的人 |
+| `comment` | string | 否 | 审批备注 |
+| `policyVersion` | string | 是 | 发起审批时的策略版本 |
+| `requestedAt` | date-time | 是 | 发起时间 |
+| `decidedAt` | date-time | 否 | 决定时间 |
+
+### 2.7 TenantPolicy 与 PolicyRule（租户策略与规则）
+
+按租户求值的确定性规则手册。
+
+| 字段 | 类型 | 必填 | 说明 |
+|---|---|---|---|
+| `tenantId` | string | 是 | 所属租户 |
+| `version` | string | 是 | 语义化版本字符串；每次更新递增 |
+| `effectiveFrom` | date-time | 是 | 生效时间 |
+| `duplicateWindowSeconds` | integer | 是 | 重复检测窗口（§5 第 6 步） |
+| `maxEvidenceAgeSeconds` | integer | 是 | 自 `retrievedAt` 起算的证据最大年龄（§5 第 10 步） |
+| `budget` | object | 否 | `{ dailyUsdCap?: number }` 模型预算提示 |
+| `rules` | PolicyRule[] | 是 | 求值规则 |
+| `defaultDecision` | const | 是 | 恒为 `"block"` —— 未匹配的动作一律阻断 |
+
+`PolicyRule`：
+
+| 字段 | 类型 | 必填 | 说明 |
+|---|---|---|---|
+| `actionType` | ActionType | 是 | 规则管辖的动作 |
+| `reasonCodes` | string[] | 否 | `reasonCode` 允许列表；缺省 = 任意 |
+| `decision` | enum | 是 | `auto_execute` \| `require_approval` \| `block` |
+| `maxAmount` | Money | 否 | 自动执行金额上限（§5 第 7 步） |
+| `requireVerifiedIdentity` | boolean | 否 | 要求已验证身份 |
+| `identityMaxAgeSeconds` | integer | 否 | 身份验证最大年龄 |
+| `allowedRegions` | string[] | 否 | 地区允许列表（缺省 = 全部允许） |
+| `blockedRegions` | string[] | 否 | 地区禁止列表 |
+
+### 2.8 AuditEvent（审计事件）
+
+每个关键步骤都会产生一条只追加的审计事件。
+
+| 字段 | 类型 | 必填 | 说明 |
+|---|---|---|---|
+| `tenantId` | string | 是 | 所属租户 |
+| `caseId` / `proposalId` / `approvalId` | string | 否 | 关联引用 |
+| `eventType` | AuditEventType | 是 | 见下 |
+| `actorType` | enum | 是 | `model` \| `policy_engine` \| `human` \| `system` \| `adapter` |
+| `actorId` | string | 是 | 动作主体 |
+| `policyVersion` | string | 否 | 当时生效的策略版本 |
+| `modelInfo` | object | 否 | `{ provider, model, tier, inputTokens, outputTokens, latencyMs, costUsd }` |
+| `detail` | object | 是 | 事件特定载荷 |
+
+`AuditEventType` 取值：`proposal_created`、`proposal_validated`、
+`proposal_validation_failed`、`policy_evaluated`、`approval_requested`、
+`approval_decided`、`execution_started`、`execution_succeeded`、`execution_failed`、
+`execution_uncertain`、`reconciliation_opened`、`reconciliation_resolved`、
+`handoff_created`、`handoff_resolved`、`prompt_injection_blocked`、
+`permission_overreach_blocked`、`budget_exceeded`、`model_call_recorded`。
+
+### 2.9 HumanHandoff（人工接管）
+
+| 字段 | 类型 | 必填 | 说明 |
+|---|---|---|---|
+| `tenantId` | string | 是 | 所属租户 |
+| `caseId` | string | 是 | 关联工单 |
+| `proposalId` | string | 否 | 关联建议 |
+| `reason` | HandoffReason | 是 | 见下 |
+| `status` | enum | 是 | `open` \| `claimed` \| `resolved` |
+| `assignedTo` | string | 否 | 认领人 |
+| `notes` | string | 否 | 处理备注 |
+| `resolvedAt` | date-time | 否 | 解决时间 |
+
+`HandoffReason` 取值：`identity_unverified`、`insufficient_evidence`、
+`duplicate_request`、`over_threshold`、`region_blocked`、`policy_conflict`、
+`external_uncertain`、`prompt_injection_suspected`、`customer_requested`、`other`。
+
+### 2.10 Profile 扩展对象
+
+Schema 位于 `schemas/profiles/`。
+
+**Order**（ecommerce）：`tenantId`、`customerId`、
+`status: "pending"|"paid"|"fulfilled"|"shipped"|"delivered"|"refunded"|"cancelled"`、
+`items: [{ sku, name, qty: integer, unitPrice: Money }]`、`total: Money`、`region`、
+`createdAt`。
+
+**Shipment**（ecommerce）：`tenantId`、`orderId`、`carrier`、`trackingNumber?`、
+`status: "label_created"|"in_transit"|"out_for_delivery"|"delivered"|"exception"`、`eta?`。
+
+**Subscription**（saas）：`tenantId`、`customerId`、`plan`、
+`status: "trialing"|"active"|"past_due"|"cancelled"`、`mrr: Money`、`renewsAt`。
+
+**Invoice**（saas）：`tenantId`、`customerId`、`subscriptionId?`、`amount: Money`、
+`status: "open"|"paid"|"void"`、`issuedAt`、`dueAt?`。
+
+**CreditBalance**（saas）：`tenantId`、`customerId`、`balance: Money`。
+
+**KnowledgeArticle**（core）：`tenantId`、`title`、`body`、`tags: string[]`。
+
+**CaseNote / Escalation**（core）：简单记录
+`{ id, specVersion, tenantId, caseId, body|reason, createdAt }`。
+
+## 3. 状态机
+
+### 3.1 CaseStatus
+
+取值：`open`、`pending_agent`、`pending_customer`、`resolved`、`closed`。
+
+| From ↓ / To → | open | pending_agent | pending_customer | resolved | closed |
+|---|---|---|---|---|---|
+| open | — | ✓ | ✓ | — | ✓ |
+| pending_agent | — | — | ✓ | ✓ | ✓ |
+| pending_customer | — | ✓ | — | ✓ | ✓ |
+| resolved | — | ✓ | — | — | ✓ |
+| closed | — | — | — | — | — |
+
+`closed` 为终态。实现**必须**拒绝任何未标记 ✓ 的迁移
+（参考实现：`canTransitionCase` / `transitionCase`，非法迁移抛错）。
+
+### 3.2 ProposalStatus
+
+取值：`proposed`、`policy_rejected`、`pending_approval`、`approved`、`rejected`、
+`executing`、`executed`、`failed`、`reconciliation_required`。
+
+| From ↓ / To → | policy_rejected | pending_approval | approved | rejected | executing | executed | failed | reconciliation_required |
+|---|---|---|---|---|---|---|---|---|
+| proposed | ✓ | ✓ | ✓ | — | — | — | — | — |
+| pending_approval | — | — | ✓ | ✓ | — | — | — | — |
+| approved | — | — | — | — | ✓ | — | — | — |
+| executing | — | — | — | — | — | ✓ | ✓ | ✓ |
+| reconciliation_required | — | — | — | — | — | ✓ | ✓ | — |
+| policy_rejected / rejected / executed / failed | — | — | — | — | — | — | — | — |
+
+`policy_rejected`、`rejected`、`executed`、`failed` 为终态。被拒绝或失败的建议
+**不得**原地重试 —— **禁止盲目重试**：新的尝试 = **携带新 `idempotencyKey` 的新建议**
+（参考实现：`canTransitionProposal` / `transitionProposal`）。
+
+## 4. 权限阶梯
+
+`read < draft < request-approval < execute`（有序数组 `PERMISSIONS`；
+`permissionAtLeast(a, b)` 用于比较）。
+
+| 权限 | 授予能力 |
+|---|---|
+| `read` | 读取工单、客户、Profile 对象、知识库 |
+| `draft` | 创建工单备注、升级单与动作建议 |
+| `request-approval` | 提交须经审批才能执行的建议 |
+| `execute` | 对后端执行建议 |
+
+规范性规则：
+
+1. **模型主体的权限上限为 `request-approval`。** 当建议的
+   `requestedPermission: "execute"` 且 `requestedBy.actorType === "model"` 时构成
+   策略违规：决策 `block`，原因 `PERMISSION_OVERREACH`，建议置为 `policy_rejected`，
+   创建原因码为 `policy_conflict` 的 `HumanHandoff`，并产生
+   `permission_overreach_blocked` 类型的 `AuditEvent`。
+2. **只有策略引擎 / API 后端**可以把建议推进到 `executing`，且只能在
+   `auto_execute` 决策或人工批准之后。
+3. **模型绝不持有后端凭据。** 所有读写都经由 Adapter 完成，并携带 `Principal`：
+   `Permission = "read"|"draft"|"request-approval"|"execute"`；
+   `Principal = { actorType: "model"|"human"|"system", actorId: string, permission: Permission }`；
+   每次 Adapter 调用都携带 `ToolContext = { tenantId, principal }`。
+
+## 5. 策略求值算法（确定性）
+
+```
+evaluateProposal(proposal, ctx: {
+  customer: Customer,
+  evidence: Evidence[],
+  policy: TenantPolicy,
+  recentProposals: ActionProposal[],
+  injectionSuspected: boolean
+}) → PolicyDecision
+
+PolicyDecision = {
+  decision: "auto_execute" | "require_approval" | "block",
+  reasons: [{ code: string, message: string }],
+  policyVersion: string,
+  evaluatedAt: date-time
+}
+```
+
+算法收集**全部**适用原因；最终决策取最严重者：
+`block` > `require_approval` > `auto_execute`。按序执行以下步骤：
+
+1. **`PERMISSION_OVERREACH`** —— 模型主体请求 `execute`（§4）→ 阻断。
+2. **`PROMPT_INJECTION_SUSPECTED`** —— `ctx.injectionSuspected` 为真 → 阻断，
+   并创建人工接管（`prompt_injection_suspected`）、产生 `prompt_injection_blocked`
+   事件。
+3. **`PROFILE_MISMATCH`** —— actionType 不属于 `proposal.profile` → 阻断
+   （Schema 层同样拒绝）。
+4. **`NO_RULE`** —— 无规则匹配 `actionType` → 阻断（默认决策为 `block`）。
+5. **`REASON_CODE_NOT_ALLOWED`** —— 命中的规则有 `reasonCodes` 列表且建议的
+   `reasonCode` 不在其中 → 阻断。
+6. **`DUPLICATE_REQUEST`** —— 存在另一条具有相同 `tenantId` + `caseId` +
+   `actionType` 且 `params` 深度相等的建议，创建于 `duplicateWindowSeconds` 之内，
+   状态为 `executing` / `executed` / `pending_approval` / `approved`
+   → 阻断 + 人工接管（`duplicate_request`）。
+7. **`OVER_THRESHOLD`** —— 存在 `amount`、规则有 `maxAmount` 且金额超出（同币种）
+   → 升级为 `require_approval`。金额与上限**币种不一致**时，以原因
+   `CURRENCY_MISMATCH` 升级为 `require_approval`。
+8. **`IDENTITY_REQUIRED` / `IDENTITY_UNVERIFIED`** —— 规则要求
+   `requireVerifiedIdentity` 而客户身份不是 `verified`，或验证时间早于
+   `identityMaxAgeSeconds` → 阻断 + 人工接管（`identity_unverified`）。
+9. **`REGION_BLOCKED`** —— `customer.region` ∈ 规则 `blockedRegions`
+   → 阻断 + 人工接管（`region_blocked`）。**`REGION_UNLISTED`** —— 规则有
+   `allowedRegions` 且 region ∉ 列表 → `require_approval`。
+10. **`INSUFFICIENT_EVIDENCE`** —— 金融类 actionType 无 `evidenceIds` → 阻断 +
+    人工接管（`insufficient_evidence`）。**`EVIDENCE_STALE`** —— 任一引用证据已过期
+    （`expiresAt` < 当前时间）或自 `retrievedAt` 起超过 `maxEvidenceAgeSeconds`
+    → `require_approval`。
+11. 否则采用命中规则的 `decision`（`auto_execute` 或 `require_approval`）。
+
+副作用（由引擎或 API 层执行）：
+
+- `block` → 建议变为 `policy_rejected`，并按上述位置创建人工接管。
+- `require_approval` → 建议变为 `pending_approval`；创建 `Approval`
+  （`status: "pending"`，携带 `policyVersion`）；产生 `approval_requested` 事件。
+- `auto_execute` → 建议变为 `approved`，可进入执行（§6）。
+
+每次求值**必须**产生携带 `policyVersion` 的 `policy_evaluated` 审计事件。
+
+## 6. 执行、幂等与对账
+
+`ExecutionResult = { status: "succeeded"|"failed"|"uncertain", externalRef?: string, detail?: string }`。
+
+规则：
+
+1. 执行以 `(tenantId, idempotencyKey)` 为键存入 **ExecutionStore**。以相同键重放的
+   请求**必须**返回已存储的结果并标记 `replayed: true`，且**不得**产生任何副作用
+   （不得重复退款、不得重复关单）。
+2. `executeProposal(proposal, adapter, store)` 要求状态为 `approved`。它把建议推进到
+   `executing`（产生 `execution_started`），然后调用 `adapter.executeAction`：
+   - `succeeded` → `executed` + `execution_succeeded`；存储结果。
+   - `failed` → `failed` + `execution_failed`；存储结果。
+   - `uncertain`（如超时、后端结果未知）→ `reconciliation_required` +
+     `execution_uncertain` + `reconciliation_opened` +
+     `HumanHandoff(external_uncertain)`。**绝不自动重试。**
+3. `reconcile(proposalId, outcome)` 仅允许从 `reconciliation_required` 发起，把建议
+   推进到 `executed` 或 `failed`，并产生 `reconciliation_resolved`。对账是人工驱动
+   的恢复路径，不是自动重试。
+
+## 7. 工具 Profile（MCP）
+
+Agent 只能通过 16 个 MCP 工具与后端交互。每个工具的输入 Schema 位于
+`schemas/tools/<tool_name>.json`；工具元数据为纯数据导出
+`TOOL_DEFINITIONS: ToolDefinition[]`，其中
+`ToolDefinition = { name, profile, description, inputSchema, adapterMethod, permissionRequired }`。
+
+| # | 工具 | Profile | Adapter 方法 |
+|---|---|---|---|
+| 1 | `osas_core_get_case` | core | `getCase` |
+| 2 | `osas_core_search_cases` | core | `searchCases` |
+| 3 | `osas_core_get_customer` | core | `getCustomer` |
+| 4 | `osas_core_search_knowledge` | core | `searchKnowledge` |
+| 5 | `osas_core_create_case_note` | core | `createCaseNote` |
+| 6 | `osas_core_create_escalation` | core | `createEscalation` |
+| 7 | `osas_core_create_action_proposal` | core | `createActionProposal` |
+| 8 | `osas_ecom_get_order` | ecommerce | `getOrder` |
+| 9 | `osas_ecom_list_orders` | ecommerce | `listOrders` |
+| 10 | `osas_ecom_get_shipment` | ecommerce | `getShipment` |
+| 11 | `osas_saas_get_subscription` | saas | `getSubscription` |
+| 12 | `osas_saas_list_invoices` | saas | `listInvoices` |
+| 13 | `osas_saas_get_credit_balance` | saas | `getCreditBalance` |
+| 14 | `osas_saas_create_credit_request` | saas | `createActionProposal` |
+| 15 | `osas_saas_create_cancellation_request` | saas | `createActionProposal` |
+| 16 | `osas_saas_create_plan_change_request` | saas | `createActionProposal` |
+
+规范性规则：
+
+- 三个 `*_request` SaaS 工具（以及基于相同路径构建的电商退款/退货快捷工具）通过
+  `createActionProposal` 构造状态为 `proposed`、`requestedPermission` 为
+  `request-approval` 的 `ActionProposal`；它们**绝不执行**。
+- `executeAction` **绝不**注册为 MCP 工具。执行只能发生在策略求值之后，由策略引擎 /
+  API 触发（§5、§6）。
+- `TOOL_DEFINITIONS`、Adapter 方法与 `schemas/tools/*.json` 的一一映射由兼容性套件
+  强制校验。
+- 工具输出为 `{ content: [{ type: "text", text: JSON.stringify(result, null, 2) }], structuredContent: result }`。
+- Adapter 错误映射为 `AdapterNotFoundError`（→ API 404）与
+  `AdapterPermissionError`（→ API 403）。
+
+## 8. 模型网关
+
+网关把 Agent 与 provider 细节隔离，并强制执行成本与输出限制。
+
+```ts
+type ModelTier = "classify" | "standard" | "reasoning";
+type ModelTask = "classify" | "extract" | "reply" | "propose";
+
+interface ModelRequest {
+  tier: ModelTier; task: ModelTask;
+  messages: { role: "system"|"user"|"assistant"; content: string }[];
+  outputSchema?: Record<string, unknown>;
+  maxOutputTokens?: number;
+}
+interface ModelTelemetry {
+  provider: string; model: string; tier: ModelTier; task: ModelTask;
+  inputTokens: number; outputTokens: number; latencyMs: number; costUsd: number;
+  truncated: boolean;
+}
+interface ModelResponse { text: string; parsed?: unknown; telemetry: ModelTelemetry }
+interface ModelProvider {
+  name: string;
+  supports(tier: ModelTier): boolean;
+  complete(req: ModelRequest): Promise<ModelResponse>;
+}
+```
+
+规范性要求：
+
+1. **按任务的输出上限**（由网关强制执行；触发时设置 `truncated`）：
+   `classify` 256、`extract` 512、`reply` 1024、`propose` 1024 tokens。
+2. **路由**：每个 tier 路由到配置的 provider；provider 未知或失败时，网关降级到下一个
+   支持该 tier 的 provider。
+3. **预算**：累计 `costUsd`；超出配置上限时抛出 `BudgetExceededError` 并产生
+   `budget_exceeded` 审计事件（经由遥测钩子）。
+4. **遥测**：每次模型调用都以完整 `ModelTelemetry` 结构记录
+   （`model_call_recorded`）；遥测同时以 `modelInfo` 嵌入审计事件。
+5. **注入筛查**：网关输入使用共享的 `detectInjection(text)` 函数筛查（§9）；可疑输入
+   在遥测上标记 `rejectedInjection`，并作为 `injectionSuspected` 传入策略求值
+   （§5 第 2 步）。
+
+参考实现 `MockModelProvider`（`name = "mock-local"`）是确定性的（相同输入 → 相同输出；
+伪 token/延迟由字符串哈希导出）、不使用网络、成本近似为零，是默认 provider
+（`MODEL_PROVIDER=mock`）。
+
+## 9. 安全要求
+
+符合本规范的实现**必须**：
+
+1. **模型层不持有任何凭据。** 模型绝不获得后端凭据；所有后端访问都经由 Adapter 并
+   携带显式 `Principal`（§4）。
+2. **防御提示注入。** 所有不可信文本（客户消息、知识库文章、工具输出）都使用共享
+   注入检测进行筛查 —— 至少包括以下大小写不敏感模式：
+   "ignore (all|previous|above) instructions"、"system prompt"、"you are now"、
+   "do anything now"、"无视(之前|以上|所有)指令"、"立即执行退款"。可疑输入按 §5 第 2 步
+   阻断建议并产生 `prompt_injection_blocked`。
+3. **日志脱敏 PII。** 日志管道**必须**至少脱敏 `req.headers.authorization`、
+   `*.email`、`*.phone` 以及自由文本正文。除经由配置的 Adapter 外，客户数据**不得**
+   离开进程。
+4. **禁止盲目重试。** 终态建议绝不重新执行；新的尝试需要携带新 `idempotencyKey` 的
+   新建议（§3.2、§6）。`uncertain` 结果进入对账，绝不自动重试。
+5. **先校验后行动。** Schema 校验失败的建议**必须**被拒绝（API：`422 SCHEMA_INVALID`），
+   且**不得**执行。
+6. **默认拒绝。** 策略默认决策为 `block`；未被匹配规则显式允许的一切都被阻断
+   （§5 第 4 步）。
+
+## 10. 版本管理
+
+- `specVersion: "0.1"` 是每个持久化对象上的 Schema 级常量。
+- OSAS 对规范、Schema 与参考实现包采用同步的语义化版本管理
+  （见 [GOVERNANCE.md](../GOVERNANCE.md)）。
+- 在 v0.x 期间任何变更都可能不兼容；破坏性变更与新语义一律需要 RFC
+  （见 [rfcs/](../rfcs/)）。
+
+## 11. 一致性（Conformance）
+
+实现只有在通过对应 Profile 的兼容性套件（`@osas/compat-suite`）后，才能声明该
+Profile（`core`、`ecommerce`、`saas`）的**兼容性**。套件校验：Schema 有效/无效样例
+校验、跨 Profile 的 actionType 规则、工具定义 ↔ Adapter 方法 ↔ 输入 Schema 的一一
+映射、状态机合法性表、策略求值矩阵、幂等与对账行为。套件输出机器可读报告
+（`{ specVersion, runAt, suites: [{ name, passed, failed, cases: [...] }], ok: boolean }`）。

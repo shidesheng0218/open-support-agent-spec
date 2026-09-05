@@ -1,0 +1,11 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://open-support-agent.dev/schemas/tools/osas_saas_list_invoices.json",
+  "title": "osas_saas_list_invoices input",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["customerId"],
+  "properties": {
+    "customerId": { "$ref": "../core/common.json#/$defs/Id" }
+  }
+}

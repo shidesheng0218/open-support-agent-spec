@@ -1,0 +1,32 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://open-support-agent.dev/schemas/core/approval.json",
+  "title": "Approval",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "id",
+    "specVersion",
+    "tenantId",
+    "proposalId",
+    "status",
+    "policyVersion",
+    "requestedAt",
+    "createdAt",
+    "updatedAt"
+  ],
+  "properties": {
+    "id": { "$ref": "./common.json#/$defs/Id" },
+    "specVersion": { "$ref": "./common.json#/$defs/SpecVersion" },
+    "tenantId": { "$ref": "./common.json#/$defs/Id" },
+    "proposalId": { "$ref": "./common.json#/$defs/Id" },
+    "status": { "type": "string", "enum": ["pending", "approved", "rejected"] },
+    "approverId": { "type": "string" },
+    "comment": { "type": "string" },
+    "policyVersion": { "type": "string" },
+    "requestedAt": { "$ref": "./common.json#/$defs/DateTime" },
+    "decidedAt": { "$ref": "./common.json#/$defs/DateTime" },
+    "createdAt": { "$ref": "./common.json#/$defs/DateTime" },
+    "updatedAt": { "$ref": "./common.json#/$defs/DateTime" }
+  }
+}

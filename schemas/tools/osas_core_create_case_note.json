@@ -1,0 +1,14 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://open-support-agent.dev/schemas/tools/osas_core_create_case_note.json",
+  "title": "osas_core_create_case_note input",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["caseId", "body", "idempotencyKey"],
+  "properties": {
+    "caseId": { "$ref": "../core/common.json#/$defs/Id" },
+    "body": { "type": "string" },
+    "evidenceIds": { "type": "array", "items": { "$ref": "../core/common.json#/$defs/Id" } },
+    "idempotencyKey": { "type": "string", "minLength": 1 }
+  }
+}

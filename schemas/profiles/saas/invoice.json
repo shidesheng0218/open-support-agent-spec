@@ -1,0 +1,29 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://open-support-agent.dev/schemas/profiles/saas/invoice.json",
+  "title": "Invoice",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "id",
+    "specVersion",
+    "tenantId",
+    "customerId",
+    "amount",
+    "status",
+    "issuedAt",
+    "createdAt"
+  ],
+  "properties": {
+    "id": { "$ref": "../../core/common.json#/$defs/Id" },
+    "specVersion": { "$ref": "../../core/common.json#/$defs/SpecVersion" },
+    "tenantId": { "$ref": "../../core/common.json#/$defs/Id" },
+    "customerId": { "$ref": "../../core/common.json#/$defs/Id" },
+    "subscriptionId": { "$ref": "../../core/common.json#/$defs/Id" },
+    "amount": { "$ref": "../../core/common.json#/$defs/Money" },
+    "status": { "type": "string", "enum": ["open", "paid", "void"] },
+    "issuedAt": { "$ref": "../../core/common.json#/$defs/DateTime" },
+    "dueAt": { "$ref": "../../core/common.json#/$defs/DateTime" },
+    "createdAt": { "$ref": "../../core/common.json#/$defs/DateTime" }
+  }
+}

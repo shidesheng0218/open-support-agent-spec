@@ -1,0 +1,32 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://open-support-agent.dev/schemas/profiles/saas/subscription.json",
+  "title": "Subscription",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "id",
+    "specVersion",
+    "tenantId",
+    "customerId",
+    "plan",
+    "status",
+    "mrr",
+    "renewsAt",
+    "createdAt"
+  ],
+  "properties": {
+    "id": { "$ref": "../../core/common.json#/$defs/Id" },
+    "specVersion": { "$ref": "../../core/common.json#/$defs/SpecVersion" },
+    "tenantId": { "$ref": "../../core/common.json#/$defs/Id" },
+    "customerId": { "$ref": "../../core/common.json#/$defs/Id" },
+    "plan": { "type": "string" },
+    "status": {
+      "type": "string",
+      "enum": ["trialing", "active", "past_due", "cancelled"]
+    },
+    "mrr": { "$ref": "../../core/common.json#/$defs/Money" },
+    "renewsAt": { "$ref": "../../core/common.json#/$defs/DateTime" },
+    "createdAt": { "$ref": "../../core/common.json#/$defs/DateTime" }
+  }
+}

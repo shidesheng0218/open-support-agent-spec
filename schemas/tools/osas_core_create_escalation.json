@@ -1,0 +1,13 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://open-support-agent.dev/schemas/tools/osas_core_create_escalation.json",
+  "title": "osas_core_create_escalation input",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["caseId", "reason", "idempotencyKey"],
+  "properties": {
+    "caseId": { "$ref": "../core/common.json#/$defs/Id" },
+    "reason": { "type": "string" },
+    "idempotencyKey": { "type": "string", "minLength": 1 }
+  }
+}

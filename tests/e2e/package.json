@@ -1,0 +1,14 @@
+{
+  "name": "@osas/e2e",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "tsc --noEmit -p tsconfig.json",
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "test": "if [ \"$E2E\" = \"1\" ]; then playwright test; else echo 'e2e skipped (set E2E=1 with docker compose up)'; fi"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.49.1"
+  }
+}

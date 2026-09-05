@@ -1,0 +1,11 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://open-support-agent.dev/schemas/tools/osas_core_get_customer.json",
+  "title": "osas_core_get_customer input",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["id"],
+  "properties": {
+    "id": { "$ref": "../core/common.json#/$defs/Id" }
+  }
+}

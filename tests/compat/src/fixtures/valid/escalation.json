@@ -1,0 +1,8 @@
+{
+  "id": "esc_1",
+  "specVersion": "0.1",
+  "tenantId": "tenant_demo",
+  "caseId": "case_1",
+  "reason": "Customer asks for a supervisor review of the refund decision.",
+  "createdAt": "2026-01-15T10:06:00Z"
+}

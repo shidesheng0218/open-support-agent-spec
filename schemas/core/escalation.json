@@ -1,0 +1,16 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://open-support-agent.dev/schemas/core/escalation.json",
+  "title": "Escalation",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["id", "specVersion", "tenantId", "caseId", "reason", "createdAt"],
+  "properties": {
+    "id": { "$ref": "./common.json#/$defs/Id" },
+    "specVersion": { "$ref": "./common.json#/$defs/SpecVersion" },
+    "tenantId": { "$ref": "./common.json#/$defs/Id" },
+    "caseId": { "$ref": "./common.json#/$defs/Id" },
+    "reason": { "type": "string" },
+    "createdAt": { "$ref": "./common.json#/$defs/DateTime" }
+  }
+}

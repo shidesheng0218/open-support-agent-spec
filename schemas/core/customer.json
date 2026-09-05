@@ -1,0 +1,42 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://open-support-agent.dev/schemas/core/customer.json",
+  "title": "Customer",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "id",
+    "specVersion",
+    "tenantId",
+    "displayName",
+    "region",
+    "identityVerification",
+    "tags",
+    "createdAt",
+    "updatedAt"
+  ],
+  "properties": {
+    "id": { "$ref": "./common.json#/$defs/Id" },
+    "specVersion": { "$ref": "./common.json#/$defs/SpecVersion" },
+    "tenantId": { "$ref": "./common.json#/$defs/Id" },
+    "displayName": { "type": "string" },
+    "email": { "type": "string" },
+    "phone": { "type": "string" },
+    "locale": { "type": "string" },
+    "region": { "$ref": "./common.json#/$defs/Region" },
+    "identityVerification": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["status"],
+      "properties": {
+        "status": { "type": "string", "enum": ["verified", "unverified", "expired"] },
+        "method": { "type": "string" },
+        "verifiedAt": { "$ref": "./common.json#/$defs/DateTime" },
+        "expiresAt": { "$ref": "./common.json#/$defs/DateTime" }
+      }
+    },
+    "tags": { "type": "array", "items": { "type": "string" } },
+    "createdAt": { "$ref": "./common.json#/$defs/DateTime" },
+    "updatedAt": { "$ref": "./common.json#/$defs/DateTime" }
+  }
+}

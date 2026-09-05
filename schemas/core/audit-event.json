@@ -1,0 +1,78 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://open-support-agent.dev/schemas/core/audit-event.json",
+  "title": "AuditEvent",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "id",
+    "specVersion",
+    "tenantId",
+    "eventType",
+    "actorType",
+    "actorId",
+    "detail",
+    "createdAt"
+  ],
+  "properties": {
+    "id": { "$ref": "./common.json#/$defs/Id" },
+    "specVersion": { "$ref": "./common.json#/$defs/SpecVersion" },
+    "tenantId": { "$ref": "./common.json#/$defs/Id" },
+    "caseId": { "$ref": "./common.json#/$defs/Id" },
+    "proposalId": { "$ref": "./common.json#/$defs/Id" },
+    "approvalId": { "$ref": "./common.json#/$defs/Id" },
+    "eventType": {
+      "type": "string",
+      "enum": [
+        "proposal_created",
+        "proposal_validated",
+        "proposal_validation_failed",
+        "policy_evaluated",
+        "approval_requested",
+        "approval_decided",
+        "execution_started",
+        "execution_succeeded",
+        "execution_failed",
+        "execution_uncertain",
+        "reconciliation_opened",
+        "reconciliation_resolved",
+        "handoff_created",
+        "handoff_resolved",
+        "prompt_injection_blocked",
+        "permission_overreach_blocked",
+        "budget_exceeded",
+        "model_call_recorded"
+      ]
+    },
+    "actorType": {
+      "type": "string",
+      "enum": ["model", "policy_engine", "human", "system", "adapter"]
+    },
+    "actorId": { "type": "string" },
+    "policyVersion": { "type": "string" },
+    "modelInfo": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "provider",
+        "model",
+        "tier",
+        "inputTokens",
+        "outputTokens",
+        "latencyMs",
+        "costUsd"
+      ],
+      "properties": {
+        "provider": { "type": "string" },
+        "model": { "type": "string" },
+        "tier": { "type": "string", "enum": ["classify", "standard", "reasoning"] },
+        "inputTokens": { "type": "integer", "minimum": 0 },
+        "outputTokens": { "type": "integer", "minimum": 0 },
+        "latencyMs": { "type": "number", "minimum": 0 },
+        "costUsd": { "type": "number", "minimum": 0 }
+      }
+    },
+    "detail": { "type": "object" },
+    "createdAt": { "$ref": "./common.json#/$defs/DateTime" }
+  }
+}

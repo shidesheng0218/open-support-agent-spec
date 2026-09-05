@@ -1,0 +1,106 @@
+import { describe, expect, it } from "vitest";
+import { Client } from "@modelcontextprotocol/sdk/client/index.js";
+import { InMemoryTransport } from "@modelcontextprotocol/sdk/inMemory.js";
+import type { Principal } from "@osas/adapter";
+import { MockSupportAdapter } from "@osas/mock-backend";
+import { buildMcpServer } from "./server.js";
+import { TOOL_DEFINITIONS } from "./tool-definitions.js";
+
+const DEMO_PRINCIPAL: Principal = {
+  actorType: "model",
+  actorId: "test-model",
+  permission: "request-approval",
+};
+
+type ToolContent = { type: string; text: string }[];
+const textContent = (result: unknown): ToolContent =>
+  (result as { content: unknown }).content as ToolContent;
+
+async function connectedClient(principal: Principal = DEMO_PRINCIPAL) {
+  const adapter = new MockSupportAdapter();
+  const server = buildMcpServer(adapter, principal);
+  const [clientTransport, serverTransport] = InMemoryTransport.createLinkedPair();
+  const client = new Client({ name: "test-client", version: "0.0.0" });
+  await Promise.all([client.connect(clientTransport), server.connect(serverTransport)]);
+  return { adapter, server, client };
+}
+
+describe("buildMcpServer", () => {
+  it("constructs an McpServer without connecting", () => {
+    const server = buildMcpServer(new MockSupportAdapter(), DEMO_PRINCIPAL);
+    expect(server).toBeDefined();
+    expect(typeof server.connect).toBe("function");
+  });
+
+  it("lists all 16 tools over the wire", async () => {
+    const { client, server } = await connectedClient();
+    const { tools } = await client.listTools();
+    expect(tools.map((t) => t.name).sort()).toEqual(
+      TOOL_DEFINITIONS.map((d) => d.name).sort(),
+    );
+    const getCase = tools.find((t) => t.name === "osas_core_get_case");
+    expect(getCase?.inputSchema).toMatchObject({ type: "object", required: ["id"] });
+    expect(tools.some((t) => t.name.toLowerCase().includes("execute"))).toBe(false);
+    await server.close();
+  });
+
+  it("invokes osas_core_get_case and returns case data", async () => {
+    const { client, server } = await connectedClient();
+    const result = await client.callTool({
+      name: "osas_core_get_case",
+      arguments: { id: "case_refund" },
+    });
+    expect(result.isError).toBeFalsy();
+    const data = result.structuredContent as Record<string, unknown>;
+    expect(data.id).toBe("case_refund");
+    expect(data.customerId).toBe("cus_verified");
+    expect(textContent(result)[0]).toMatchObject({ type: "text" });
+    expect(textContent(result)[0]!.text).toContain('"case_refund"');
+    await server.close();
+  });
+
+  it("invokes a proposal shortcut and creates a proposed credit_apply proposal", async () => {
+    const { client, server } = await connectedClient();
+    const result = await client.callTool({
+      name: "osas_saas_create_credit_request",
+      arguments: {
+        caseId: "case_credit",
+        customerId: "cus_verified",
+        amount: { currency: "USD", minorUnits: 2500 },
+        reasonCode: "service_outage",
+        idempotencyKey: "idem-credit-1",
+      },
+    });
+    expect(result.isError).toBeFalsy();
+    const proposal = result.structuredContent as Record<string, unknown>;
+    expect(proposal.actionType).toBe("credit_apply");
+    expect(proposal.status).toBe("proposed");
+    expect(proposal.requestedPermission).toBe("request-approval");
+    expect(proposal.profile).toBe("saas");
+    expect(proposal.id).toMatch(/^prop_\d+$/);
+    await server.close();
+  });
+
+  it("enforces permissionRequired for the principal", async () => {
+    const readOnly: Principal = { actorType: "model", actorId: "ro", permission: "read" };
+    const { client, server } = await connectedClient(readOnly);
+    const result = await client.callTool({
+      name: "osas_core_create_case_note",
+      arguments: { caseId: "case_refund", body: "hi", idempotencyKey: "k1" },
+    });
+    expect(result.isError).toBe(true);
+    expect(textContent(result)[0]!.text).toContain("PERMISSION_DENIED");
+    await server.close();
+  });
+
+  it("surfaces adapter NOT_FOUND errors as tool errors", async () => {
+    const { client, server } = await connectedClient();
+    const result = await client.callTool({
+      name: "osas_core_get_case",
+      arguments: { id: "case_missing" },
+    });
+    expect(result.isError).toBe(true);
+    expect(textContent(result)[0]!.text).toContain("NOT_FOUND");
+    await server.close();
+  });
+});

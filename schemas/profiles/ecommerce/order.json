@@ -1,0 +1,45 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://open-support-agent.dev/schemas/profiles/ecommerce/order.json",
+  "title": "Order",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "id",
+    "specVersion",
+    "tenantId",
+    "customerId",
+    "status",
+    "items",
+    "total",
+    "region",
+    "createdAt"
+  ],
+  "properties": {
+    "id": { "$ref": "../../core/common.json#/$defs/Id" },
+    "specVersion": { "$ref": "../../core/common.json#/$defs/SpecVersion" },
+    "tenantId": { "$ref": "../../core/common.json#/$defs/Id" },
+    "customerId": { "$ref": "../../core/common.json#/$defs/Id" },
+    "status": {
+      "type": "string",
+      "enum": ["pending", "paid", "fulfilled", "shipped", "delivered", "refunded", "cancelled"]
+    },
+    "items": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["sku", "name", "qty", "unitPrice"],
+        "properties": {
+          "sku": { "type": "string" },
+          "name": { "type": "string" },
+          "qty": { "type": "integer", "minimum": 1 },
+          "unitPrice": { "$ref": "../../core/common.json#/$defs/Money" }
+        }
+      }
+    },
+    "total": { "$ref": "../../core/common.json#/$defs/Money" },
+    "region": { "$ref": "../../core/common.json#/$defs/Region" },
+    "createdAt": { "$ref": "../../core/common.json#/$defs/DateTime" }
+  }
+}

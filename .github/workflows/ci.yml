@@ -1,0 +1,98 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  build-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm typecheck
+      - run: pnpm test
+      - run: pnpm build
+
+  compat:
+    runs-on: ubuntu-latest
+    needs: build-test
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm --filter @osas/compat-suite test
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: compat-report
+          path: tests/compat/report/latest.json
+          if-no-files-found: warn
+
+  docker:
+    runs-on: ubuntu-latest
+    needs: build-test
+    steps:
+      - uses: actions/checkout@v4
+      - run: docker compose build
+      - run: docker compose up -d
+      - name: Wait for API health
+        run: |
+          for i in $(seq 1 60); do
+            if curl -fsS http://localhost:3001/health; then exit 0; fi
+            sleep 2
+          done
+          echo "API did not become healthy" >&2
+          docker compose logs
+          exit 1
+      - name: Assert health payload
+        run: |
+          curl -fsS http://localhost:3001/health | grep -q '"status":"ok"'
+          curl -fsS http://localhost:3001/health | grep -q '"specVersion":"0.1"'
+      - name: Assert API endpoints
+        run: |
+          curl -fsS http://localhost:3001/v1/meta/tools | grep -q 'osas_core_get_case'
+          curl -fsS http://localhost:3001/v1/cases | grep -q 'tenant_demo'
+      - name: Assert web console served through nginx proxy
+        run: |
+          curl -fsS http://localhost:8080/ | grep -qi 'html'
+          curl -fsS http://localhost:8080/health | grep -q '"status":"ok"'
+      - run: docker compose down
+        if: always()
+
+  e2e:
+    runs-on: ubuntu-latest
+    needs: docker
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm build
+      - run: pnpm --filter @osas/e2e exec playwright install --with-deps chromium
+      - run: docker compose up -d
+      - name: Wait for API health
+        run: |
+          for i in $(seq 1 60); do
+            if curl -fsS http://localhost:3001/health > /dev/null; then exit 0; fi
+            sleep 2
+          done
+          echo "API did not become healthy" >&2
+          exit 1
+      - run: E2E=1 pnpm test:e2e
+      - run: docker compose down
+        if: always()

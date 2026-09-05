@@ -1,0 +1,46 @@
+# Changelog
+
+All notable changes to this project are documented in this file.
+
+The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
+and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+
+## [0.1.0] - 2026-09-05
+
+First public draft of the Open Support Agent Spec (OSAS). **Draft status — not a
+stable release; interfaces may change before v1.0.**
+
+### Added
+
+- Normative specification v0.1 in English and Chinese (`docs/spec-v0.1.md`,
+  `docs/spec-v0.1.zh-CN.md`): core domain model, state machines, permission ladder,
+  deterministic policy evaluation algorithm, execution/idempotency/reconciliation
+  rules, MCP tool profiles, model gateway contract, and security requirements.
+- Authoritative JSON Schemas (draft 2020-12) under `schemas/` with
+  `schemas/manifest.json`: 8 core objects plus `common.json`, `ecommerce` and `saas`
+  profile objects, and one input schema per MCP tool (16 tools).
+- TypeScript reference implementation (pnpm monorepo, ESM, strict TS):
+  - `@osas/core` — types, enums, state machines, `detectInjection`, id helpers.
+  - `@osas/schema-validator` — Ajv v8 + ajv-formats loader/validator over `schemas/`.
+  - `@osas/policy-engine` — TenantPolicy evaluation, permission ladder enforcement,
+    execution orchestration with idempotency and reconciliation.
+  - `@osas/model-gateway` — provider interface, deterministic `MockModelProvider`,
+    tier routing, output caps, budgets, telemetry.
+  - `@osas/adapter` — `SupportAdapter` interface, errors, and a BYO adapter template.
+  - `@osas/mock-backend` — synthetic fixtures and `MockSupportAdapter`.
+  - `@osas/mcp-server` — `TOOL_DEFINITIONS` (16 tools) and stdio MCP server.
+  - `@osas/api` — Fastify 5 HTTP API on port 3001 with seeded demo tenant.
+  - `@osas/web` — React 18 + Vite console on port 5173 with developer / agent /
+    platform paths and three one-click `/demo` scenarios.
+- Compatibility suite `@osas/compat-suite` covering schema validation, cross-profile
+  action-type rules, tool/adapter/schema 1:1 mapping, state-machine legality, the
+  policy evaluation matrix, and idempotency/reconciliation, emitting a
+  machine-readable report to `tests/compat/report/latest.json`.
+- Playwright smoke suite `@osas/e2e` (opt-in via `E2E=1`).
+- Governance and project documents: README (EN/ZH), CONTRIBUTING (EN/ZH),
+  CODE_OF_CONDUCT (Contributor Covenant 2.1), SECURITY, GOVERNANCE,
+  RFC template and RFC 0001 (`rfcs/0000-template.md`, `rfcs/0001-v0.1-core.md`).
+- CI workflow (`.github/workflows/ci.yml`): `build-test`, `compat` (with report
+  artifact), `docker`, and `e2e` jobs on push/PR to `main`.
+- Docker support: `docker-compose.yml`, `apps/api/Dockerfile`, `apps/web/Dockerfile`,
+  `apps/web/nginx.conf` — console on http://localhost:8080, API on :3001.

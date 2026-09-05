@@ -1,0 +1,17 @@
+{
+  "id": "ev_1",
+  "specVersion": "0.1",
+  "tenantId": "tenant_demo",
+  "caseId": "case_1",
+  "kind": "order",
+  "source": {
+    "system": "mock-shop",
+    "recordType": "order",
+    "recordId": "ord_small",
+    "url": "https://example.com/orders/ord_small"
+  },
+  "summary": "Order ord_small, $25.00 USD, delivered.",
+  "data": { "orderId": "ord_small", "status": "delivered" },
+  "retrievedAt": "2026-01-15T09:59:00Z",
+  "createdAt": "2026-01-15T09:59:00Z"
+}

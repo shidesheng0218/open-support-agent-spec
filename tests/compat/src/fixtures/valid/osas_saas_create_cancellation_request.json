@@ -1,0 +1,6 @@
+{
+  "caseId": "case_1",
+  "subscriptionId": "sub_active",
+  "reasonCode": "other",
+  "idempotencyKey": "ik_cancel_1"
+}

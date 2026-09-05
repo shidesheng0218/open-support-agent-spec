@@ -1,0 +1,54 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://open-support-agent.dev/schemas/core/evidence.json",
+  "title": "Evidence",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "id",
+    "specVersion",
+    "tenantId",
+    "kind",
+    "source",
+    "summary",
+    "data",
+    "retrievedAt",
+    "createdAt"
+  ],
+  "properties": {
+    "id": { "$ref": "./common.json#/$defs/Id" },
+    "specVersion": { "$ref": "./common.json#/$defs/SpecVersion" },
+    "tenantId": { "$ref": "./common.json#/$defs/Id" },
+    "caseId": { "$ref": "./common.json#/$defs/Id" },
+    "kind": {
+      "type": "string",
+      "enum": [
+        "order",
+        "shipment",
+        "subscription",
+        "invoice",
+        "knowledge",
+        "conversation",
+        "policy",
+        "identity",
+        "other"
+      ]
+    },
+    "source": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["system", "recordType", "recordId"],
+      "properties": {
+        "system": { "type": "string" },
+        "recordType": { "type": "string" },
+        "recordId": { "type": "string" },
+        "url": { "type": "string" }
+      }
+    },
+    "summary": { "type": "string" },
+    "data": { "type": "object" },
+    "retrievedAt": { "$ref": "./common.json#/$defs/DateTime" },
+    "expiresAt": { "$ref": "./common.json#/$defs/DateTime" },
+    "createdAt": { "$ref": "./common.json#/$defs/DateTime" }
+  }
+}

@@ -1,0 +1,15 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://open-support-agent.dev/schemas/tools/osas_core_search_cases.json",
+  "title": "osas_core_search_cases input",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "customerId": { "$ref": "../core/common.json#/$defs/Id" },
+    "status": {
+      "type": "string",
+      "enum": ["open", "pending_agent", "pending_customer", "resolved", "closed"]
+    },
+    "q": { "type": "string" }
+  }
+}

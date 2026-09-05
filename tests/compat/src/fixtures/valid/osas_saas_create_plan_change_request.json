@@ -1,0 +1,7 @@
+{
+  "caseId": "case_1",
+  "subscriptionId": "sub_active",
+  "newPlan": "pro",
+  "reasonCode": "other",
+  "idempotencyKey": "ik_plan_1"
+}

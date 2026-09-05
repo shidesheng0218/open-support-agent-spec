@@ -1,0 +1,11 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://open-support-agent.dev/schemas/tools/osas_ecom_list_orders.json",
+  "title": "osas_ecom_list_orders input",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["customerId"],
+  "properties": {
+    "customerId": { "$ref": "../core/common.json#/$defs/Id" }
+  }
+}

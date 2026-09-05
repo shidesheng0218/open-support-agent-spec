@@ -1,0 +1,11 @@
+{
+  "id": "handoff_1",
+  "specVersion": "0.1",
+  "tenantId": "tenant_demo",
+  "caseId": "case_1",
+  "proposalId": "prop_1",
+  "reason": "identity_unverified",
+  "status": "open",
+  "createdAt": "2026-01-15T10:03:00Z",
+  "updatedAt": "2026-01-15T10:03:00Z"
+}

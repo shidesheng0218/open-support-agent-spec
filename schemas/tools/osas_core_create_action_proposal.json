@@ -1,0 +1,19 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://open-support-agent.dev/schemas/tools/osas_core_create_action_proposal.json",
+  "title": "osas_core_create_action_proposal input",
+  "description": "Draft an ActionProposal (status proposed). tenantId, requestedPermission (request-approval) and requestedBy are set server-side from ToolContext — clients MUST NOT supply them.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["caseId", "profile", "actionType", "reasonCode", "params", "idempotencyKey"],
+  "properties": {
+    "caseId": { "$ref": "../core/common.json#/$defs/Id" },
+    "profile": { "$ref": "../core/common.json#/$defs/Profile" },
+    "actionType": { "$ref": "../core/common.json#/$defs/ActionType" },
+    "reasonCode": { "type": "string" },
+    "params": { "type": "object" },
+    "amount": { "$ref": "../core/common.json#/$defs/Money" },
+    "evidenceIds": { "type": "array", "items": { "$ref": "../core/common.json#/$defs/Id" } },
+    "idempotencyKey": { "type": "string", "minLength": 1 }
+  }
+}

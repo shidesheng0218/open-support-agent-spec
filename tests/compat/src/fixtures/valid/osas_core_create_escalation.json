@@ -1,0 +1,5 @@
+{
+  "caseId": "case_1",
+  "reason": "Customer requests a supervisor review.",
+  "idempotencyKey": "ik_esc_1"
+}

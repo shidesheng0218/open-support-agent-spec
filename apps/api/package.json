@@ -1,0 +1,28 @@
+{
+  "name": "@osas/api",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "main": "./dist/index.js",
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "test": "vitest run",
+    "dev": "tsx watch src/index.ts",
+    "start": "node dist/index.js"
+  },
+  "dependencies": {
+    "@fastify/cors": "^10.0.2",
+    "@osas/adapter": "workspace:*",
+    "@osas/core": "workspace:*",
+    "@osas/mcp-server": "workspace:*",
+    "@osas/mock-backend": "workspace:*",
+    "@osas/model-gateway": "workspace:*",
+    "@osas/policy-engine": "workspace:*",
+    "@osas/schema-validator": "workspace:*",
+    "fastify": "^5.2.0"
+  },
+  "devDependencies": {
+    "tsx": "^4.19.2"
+  }
+}

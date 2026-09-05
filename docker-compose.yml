@@ -1,0 +1,20 @@
+services:
+  api:
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
+    environment:
+      PORT: 3001
+      SEED_DEMO: "true"
+      MODEL_PROVIDER: mock
+    ports:
+      - "3001:3001"
+
+  web:
+    build:
+      context: .
+      dockerfile: apps/web/Dockerfile
+    depends_on:
+      - api
+    ports:
+      - "8080:80"

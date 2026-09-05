@@ -1,0 +1,16 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://open-support-agent.dev/schemas/profiles/saas/credit-balance.json",
+  "title": "CreditBalance",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["id", "specVersion", "tenantId", "customerId", "balance", "createdAt"],
+  "properties": {
+    "id": { "$ref": "../../core/common.json#/$defs/Id" },
+    "specVersion": { "$ref": "../../core/common.json#/$defs/SpecVersion" },
+    "tenantId": { "$ref": "../../core/common.json#/$defs/Id" },
+    "customerId": { "$ref": "../../core/common.json#/$defs/Id" },
+    "balance": { "$ref": "../../core/common.json#/$defs/Money" },
+    "createdAt": { "$ref": "../../core/common.json#/$defs/DateTime" }
+  }
+}

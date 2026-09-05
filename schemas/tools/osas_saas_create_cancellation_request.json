@@ -1,0 +1,15 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://open-support-agent.dev/schemas/tools/osas_saas_create_cancellation_request.json",
+  "title": "osas_saas_create_cancellation_request input",
+  "description": "Proposal shortcut: drafts a subscription_cancel ActionProposal server-side (status proposed, requestedPermission request-approval). Clients MUST NOT supply requestedPermission/requestedBy.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["caseId", "subscriptionId", "idempotencyKey"],
+  "properties": {
+    "caseId": { "$ref": "../core/common.json#/$defs/Id" },
+    "subscriptionId": { "$ref": "../core/common.json#/$defs/Id" },
+    "reasonCode": { "type": "string" },
+    "idempotencyKey": { "type": "string", "minLength": 1 }
+  }
+}
