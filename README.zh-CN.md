@@ -2,7 +2,7 @@
 
 [![License: Apache-2.0](https://img.shields.io/badge/License-Apache--2.0-blue.svg)](LICENSE)
 [![Spec: v0.1 Draft](https://img.shields.io/badge/spec-v0.1%20Draft-orange.svg)](docs/spec-v0.1.zh-CN.md)
-[![CI](https://github.com/open-support-agent/open-support-agent-spec/actions/workflows/ci.yml/badge.svg)](https://github.com/open-support-agent/open-support-agent-spec/actions/workflows/ci.yml)
+[![CI](https://github.com/shidesheng0218/open-support-agent-spec/actions/workflows/ci.yml/badge.svg)](https://github.com/shidesheng0218/open-support-agent-spec/actions/workflows/ci.yml)
 
 [English](README.md)
 
