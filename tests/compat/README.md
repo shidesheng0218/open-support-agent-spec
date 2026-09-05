@@ -62,8 +62,11 @@ Each run writes `tests/compat/report/latest.json`:
 - `ok: true` ⇔ zero failed cases across all suites.
 - Every case has `name`, `ok`, and (on failure) `detail` with the assertion message.
 - The API serves this file at `GET /v1/compat/report`; the web console renders it under `/platform`.
-- The file is **committed** so demos work out of the box; CI regenerates it on every run
-  (`.github/workflows/ci.yml`, `compat` job).
+- The file is a **generated artifact** (it carries a `runAt` timestamp): it is gitignored and NOT
+  tracked in git, so a run does not dirty the working tree. It is produced locally by
+  `pnpm --filter @osas/compat-suite test` and in CI on every run (`.github/workflows/ci.yml`,
+  `compat` job), where it is also uploaded as a workflow artifact. A fresh clone returns 404
+  from `/v1/compat/report` until the suite has been run once.
 
 ## Layout
 

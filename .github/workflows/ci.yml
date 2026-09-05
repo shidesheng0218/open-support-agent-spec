@@ -93,6 +93,15 @@ jobs:
           done
           echo "API did not become healthy" >&2
           exit 1
-      - run: E2E=1 pnpm test:e2e
+      - name: Wait for web
+        run: |
+          for i in $(seq 1 60); do
+            if curl -fsS http://localhost:8080/health > /dev/null; then exit 0; fi
+            sleep 2
+          done
+          echo "Web console did not become healthy" >&2
+          docker compose logs
+          exit 1
+      - run: E2E=1 E2E_BASE_URL=http://localhost:8080 pnpm test:e2e
       - run: docker compose down
         if: always()

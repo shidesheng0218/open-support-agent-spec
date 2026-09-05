@@ -7,8 +7,17 @@ test("console loads with nav and health badge", async ({ page }) => {
   await page.goto("/");
   const nav = page.getByTestId("nav");
   await expect(nav).toBeVisible();
-  for (const label of ["Overview", "Developer", "Agent", "Platform", "Demo"]) {
-    await expect(nav.getByText(label, { exact: true })).toBeVisible();
+  const routes = [
+    ["Overview", "/"],
+    ["Developer", "/developer"],
+    ["Agent", "/agent"],
+    ["Platform", "/platform"],
+    ["Demo", "/demo"],
+  ] as const;
+  for (const [label, href] of routes) {
+    const link = nav.getByRole("link", { name: new RegExp(`^${label}`) });
+    await expect(link).toBeVisible();
+    await expect(link).toHaveAttribute("href", href);
   }
   await expect(page.getByTestId("status-ok")).toBeVisible();
 });
@@ -27,6 +36,8 @@ test("demo scenario 1 auto-executes the refund", async ({ page }) => {
   await expect(card).toBeVisible();
   await card.getByTestId("run-refund-auto").click();
   // proposal reaches terminal executed status via policy auto_execute
-  await expect(card.getByTestId("status-executed")).toBeVisible({ timeout: 30_000 });
+  await expect(
+    card.getByTestId("scenario-status-refund-auto").getByTestId("status-executed"),
+  ).toBeVisible({ timeout: 30_000 });
   await expect(card.getByTestId("timeline-refund-auto")).toContainText("Execution");
 });
