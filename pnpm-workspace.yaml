@@ -3,5 +3,5 @@ packages:
   - "apps/*"
   - "tests/*"
 
-onlyBuiltDependencies:
-  - esbuild
+allowBuilds:
+  esbuild: true
