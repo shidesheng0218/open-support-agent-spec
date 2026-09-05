@@ -678,3 +678,90 @@ Every model call's telemetry is persisted (in-memory and PostgreSQL stores)
 and queryable via the operator-only `GET /v1/usage` endpoint (roles
 `policy_admin` or `auditor`), filterable by tenant, date, model, and task.
 `AuditModelInfo.costUsd` is now optional (absent = unknown cost).
+
+## 14. v0.1.1 Milestone 3 — Shadow Mode and reference adapters (backward compatible)
+
+Milestone 3 adds the Shadow Mode runtime and two reference adapters
+(Zendesk ticketing, read-only Shopify commerce). `specVersion` remains
+`"0.1"`; all additions are backward-compatible extensions.
+
+### 14.1 Execution mode
+
+`OSAS_EXECUTION_MODE=shadow | live` (default `shadow`).
+
+- **shadow**: the runtime may only create proposals, run policy simulation,
+  record what would have been auto-executed (ShadowRun), and accept
+  human-written final outcomes.
+- **live**: startup MUST refuse with the explicit error
+  `LIVE_EXECUTION_NOT_AVAILABLE_IN_V0_1_1`. Live execution capability
+  requires a future RFC.
+
+Shadow Mode NEVER marks a proposal `executed`: the execute endpoint refuses
+(409) any proposal that has a ShadowRun, and a valid (policy-passing) action
+only ever produces a Proposal + ShadowRun — the refund/cancel write path is
+never invoked.
+
+### 14.2 ShadowRun
+
+New core object (`schemas/core/shadow-run.json`), stored per tenant
+(in-memory or the `shadow_runs` PostgreSQL table):
+
+| field | meaning |
+|---|---|
+| `proposalId` | the simulated proposal |
+| `policyDecision` | the deterministic §4 decision |
+| `wouldAutoExecute` | exactly `policyDecision.decision === "auto_execute"` |
+| `suggestedAction` | actionType/reasonCode/params/amount — record-only, never executed |
+| `humanOutcome` | `accepted` \| `rejected` \| `modified` \| `pending` |
+| `humanComment` / `externalReference` | reviewer notes and external ticket/ref link |
+| `createdAt` / `reviewedAt` | lifecycle timestamps |
+
+Creation and every human accept/reject/modify are audited
+(`shadow_run_created`, `shadow_run_reviewed` — new AuditEvent types, covered
+by the hash chain). Reviewed ShadowRuns are final; re-reviewing is a 409
+conflict. Because `wouldAutoExecute` derives from the §4 decision, prompt
+injection, unverified/expired identity, stale evidence, over-threshold
+amounts and duplicate requests can never reach `wouldAutoExecute: true`.
+
+New API endpoints:
+
+- `POST /v1/proposals/:id/shadow-run` — simulate + record (201); the
+  proposal is left untouched.
+- `POST /v1/shadow-runs/:id/review` — `{ outcome, humanComment?,
+  externalReference? }`, roles `support_agent` / `policy_admin`.
+- `GET /v1/shadow-runs` (+ `GET /v1/shadow-runs/:id`) — with embedded
+  proposal and evidence for console display.
+
+The console gains a Shadow page: pending reviews, the agent's suggested
+action, policy reasons, original evidence links, and the audit-chain
+verification result. It deliberately has no live-execute UI.
+
+### 14.3 Zendesk reference adapter (`@osas/zendesk-adapter`)
+
+Tickets ↔ Case, requesters ↔ Customer, internal notes
+(`comment.public = false`), human escalations (ticket assigned to the
+configured default group). Evidence sources carry the Zendesk ticket/user id
+and the agent-console URL. All writes use idempotency keys (in-process
+replay cache + `X-Idempotency-Key` header). Endpoint, credentials and the
+default escalation group come from env (`ZENDESK_BASE_URL` /
+`ZENDESK_SUBDOMAIN`, `ZENDESK_EMAIL`, `ZENDESK_API_TOKEN`,
+`ZENDESK_ESCALATION_GROUP_ID`); an unconfigured adapter fails closed with
+`ZENDESK_NOT_CONFIGURED` and never fakes success.
+
+### 14.4 Shopify reference adapter (`@osas/shopify-adapter`)
+
+Read-only: orders, per-customer orders, fulfillments (→ Shipment logistics
+status). Orders, logistics and refund eligibility convert to OSAS Evidence
+(source = Shopify id + admin URL). `buildRefundProposalDraft()` prices a
+refund Proposal from live data: refundable amount (total minus recorded
+refunds), currency, order status and evidence. There is NO refund write
+path: `executeAction` always throws `CAPABILITY_UNSUPPORTED` without any
+HTTP call, and the manifest does not declare `ecommerce.refund.execute`.
+Adding real refund execution requires an independent RFC. Config via env
+(`SHOPIFY_SHOP_DOMAIN`, `SHOPIFY_ADMIN_ACCESS_TOKEN`, optional
+`SHOPIFY_API_VERSION`); missing credentials fail closed.
+
+Both adapters route all third-party traffic through an injectable HTTP
+client, so their test suites run with mock HTTP and no external
+credentials. The demo Docker environment keeps the Mock Adapter and
+requires no Zendesk/Shopify tokens.

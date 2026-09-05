@@ -29,6 +29,9 @@ importers:
       '@osas/core':
         specifier: workspace:*
         version: link:../../packages/core
+      '@osas/ecommerce-shadow':
+        specifier: workspace:*
+        version: link:../../packages/ecommerce-shadow
       '@osas/mcp-server':
         specifier: workspace:*
         version: link:../../packages/mcp-server
@@ -91,6 +94,16 @@ importers:
 
   packages/core: {}
 
+  packages/ecommerce-shadow:
+    dependencies:
+      '@osas/core':
+        specifier: workspace:*
+        version: link:../core
+    devDependencies:
+      vitest:
+        specifier: ^2.1.8
+        version: 2.1.9(@types/node@22.20.1)
+
   packages/mcp-server:
     dependencies:
       '@modelcontextprotocol/sdk':
@@ -142,11 +155,27 @@ importers:
         specifier: ^3.0.1
         version: 3.0.1(ajv@8.20.0)
 
+  packages/shopify-adapter:
+    dependencies:
+      '@osas/adapter':
+        specifier: workspace:*
+        version: link:../adapter
+      '@osas/core':
+        specifier: workspace:*
+        version: link:../core
+    devDependencies:
+      vitest:
+        specifier: ^2.1.8
+        version: 2.1.9(@types/node@22.20.1)
+
   packages/store-postgres:
     dependencies:
       '@osas/core':
         specifier: workspace:*
         version: link:../core
+      '@osas/ecommerce-shadow':
+        specifier: workspace:*
+        version: link:../ecommerce-shadow
       '@osas/model-gateway':
         specifier: workspace:*
         version: link:../model-gateway
@@ -163,6 +192,19 @@ importers:
       tsx:
         specifier: ^4.19.2
         version: 4.23.13
+
+  packages/zendesk-adapter:
+    dependencies:
+      '@osas/adapter':
+        specifier: workspace:*
+        version: link:../adapter
+      '@osas/core':
+        specifier: workspace:*
+        version: link:../core
+    devDependencies:
+      vitest:
+        specifier: ^2.1.8
+        version: 2.1.9(@types/node@22.20.1)
 
   tests/compat:
     dependencies:

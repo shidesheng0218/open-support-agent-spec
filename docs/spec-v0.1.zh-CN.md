@@ -643,3 +643,81 @@ OpenAI 风格 `/chat/completions` 端点（`OSAS_LLM_BASE_URL` /
 operator 可用的 `GET /v1/usage`（`policy_admin` 或 `auditor` 角色）按
 tenant、日期、模型、任务筛选查询。`AuditModelInfo.costUsd` 现为可选
 （缺省 = 成本未知）。
+
+## 14. v0.1.1 Milestone 3 —— Shadow Mode 与参考 Adapter（向后兼容）
+
+Milestone 3 新增 Shadow Mode 运行时与两个参考 Adapter（Zendesk 工单、
+只读 Shopify 电商）。`specVersion` 仍为 `"0.1"`；所有新增均为向后兼容
+扩展。
+
+### 14.1 执行模式
+
+`OSAS_EXECUTION_MODE=shadow | live`（默认 `shadow`）。
+
+- **shadow**：运行时只能创建 Proposal、运行策略模拟、记录"如果允许自动
+  执行将执行什么"（ShadowRun），并接受人工写入的最终处理结果。
+- **live**：启动必须拒绝并输出明确错误
+  `LIVE_EXECUTION_NOT_AVAILABLE_IN_V0_1_1`。真实执行能力须经未来的 RFC
+  决定。
+
+Shadow Mode 绝不把 Proposal 标记为 `executed`：执行端点会拒绝（409）任何
+已有 ShadowRun 的 Proposal；一个通过策略的有效动作只会产生 Proposal +
+ShadowRun —— 退款/取消订单的写路径绝不会被调用。
+
+### 14.2 ShadowRun
+
+新的核心对象（`schemas/core/shadow-run.json`），按租户存储（内存或
+PostgreSQL `shadow_runs` 表）：
+
+| 字段 | 含义 |
+|---|---|
+| `proposalId` | 被模拟的 Proposal |
+| `policyDecision` | §4 确定性策略判定 |
+| `wouldAutoExecute` | 严格等于 `policyDecision.decision === "auto_execute"` |
+| `suggestedAction` | actionType/reasonCode/params/amount —— 仅记录，绝不执行 |
+| `humanOutcome` | `accepted` \| `rejected` \| `modified` \| `pending` |
+| `humanComment` / `externalReference` | 审核人评语与外部单据链接 |
+| `createdAt` / `reviewedAt` | 生命周期时间戳 |
+
+创建与每次人工接受/拒绝/修改都会写入审计（新增 AuditEvent 类型
+`shadow_run_created`、`shadow_run_reviewed`，纳入哈希链）。已审核的
+ShadowRun 为终态，重复审核返回 409。由于 `wouldAutoExecute` 派生自 §4
+判定，注入攻击、身份未验证/过期、证据过期、金额超限、重复请求这五类
+场景永远无法进入 `wouldAutoExecute: true`。
+
+新增 API 端点：
+
+- `POST /v1/proposals/:id/shadow-run` —— 模拟并记录（201）；Proposal
+  保持不变。
+- `POST /v1/shadow-runs/:id/review` —— `{ outcome, humanComment?,
+  externalReference? }`，限 `support_agent` / `policy_admin` 角色。
+- `GET /v1/shadow-runs`（及 `GET /v1/shadow-runs/:id`）—— 内嵌
+  Proposal 与证据，供控制台展示。
+
+控制台新增 Shadow 页面：待人工审核、Agent 建议动作、策略理由、原始证据
+链接与审计链校验结果，刻意不提供任何 live execute UI。
+
+### 14.3 Zendesk 参考 Adapter（`@osas/zendesk-adapter`）
+
+工单 ↔ Case、请求人 ↔ Customer、内部备注（`comment.public = false`）、
+人工升级（工单指派到配置的默认组）。证据 source 携带 Zendesk 工单/用户
+ID 与坐席控制台 URL。所有写入使用幂等键（进程内回放缓存 +
+`X-Idempotency-Key` 头）。端点、凭证与默认升级组通过环境变量配置
+（`ZENDESK_BASE_URL` / `ZENDESK_SUBDOMAIN`、`ZENDESK_EMAIL`、
+`ZENDESK_API_TOKEN`、`ZENDESK_ESCALATION_GROUP_ID`）；未配置凭证时失败即
+关闭（`ZENDESK_NOT_CONFIGURED`），绝不伪造成功。
+
+### 14.4 Shopify 参考 Adapter（`@osas/shopify-adapter`）
+
+只读：订单、按客户查询订单、履约（→ Shipment 物流状态）。订单、物流与
+退款资格转换为 OSAS Evidence（source = Shopify ID + admin URL）。
+`buildRefundProposalDraft()` 基于实时数据为退款 Proposal 定价：可退金额
+（总额减去已记录退款）、币种、订单状态与证据。**没有退款写路径**：
+`executeAction` 永远抛出 `CAPABILITY_UNSUPPORTED` 且不发任何 HTTP 调用，
+清单中也不声明 `ecommerce.refund.execute`。未来执行能力须独立 RFC 决定。
+配置经由环境变量（`SHOPIFY_SHOP_DOMAIN`、`SHOPIFY_ADMIN_ACCESS_TOKEN`、
+可选 `SHOPIFY_API_VERSION`）；凭证缺失时失败即关闭。
+
+两个 Adapter 的所有第三方流量都经过可注入 HTTP 客户端，因此其测试套件
+使用 mock HTTP 运行、无需任何外部凭证。演示 Docker 环境保留 Mock
+Adapter，不需要 Zendesk/Shopify Token。

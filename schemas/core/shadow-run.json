@@ -1,0 +1,46 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://open-support-agent.dev/schemas/core/shadow-run.json",
+  "title": "ShadowRun",
+  "description": "Shadow Mode record (v0.1.1 Milestone 3): the simulated policy decision for one proposal, whether it would have auto-executed, and the eventual human outcome. Shadow Mode never executes the suggested action and never marks the proposal executed.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "id",
+    "specVersion",
+    "tenantId",
+    "proposalId",
+    "policyDecision",
+    "wouldAutoExecute",
+    "suggestedAction",
+    "humanOutcome",
+    "createdAt"
+  ],
+  "properties": {
+    "id": { "$ref": "./common.json#/$defs/Id" },
+    "specVersion": { "$ref": "./common.json#/$defs/SpecVersion" },
+    "tenantId": { "$ref": "./common.json#/$defs/Id" },
+    "proposalId": { "$ref": "./common.json#/$defs/Id" },
+    "policyDecision": { "$ref": "./common.json#/$defs/PolicyDecision" },
+    "wouldAutoExecute": { "type": "boolean" },
+    "suggestedAction": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["actionType", "reasonCode", "params"],
+      "properties": {
+        "actionType": { "$ref": "./common.json#/$defs/ActionType" },
+        "reasonCode": { "type": "string" },
+        "params": { "type": "object" },
+        "amount": { "$ref": "./common.json#/$defs/Money" }
+      }
+    },
+    "humanOutcome": {
+      "type": "string",
+      "enum": ["accepted", "rejected", "modified", "pending"]
+    },
+    "humanComment": { "type": "string" },
+    "externalReference": { "type": "string" },
+    "createdAt": { "$ref": "./common.json#/$defs/DateTime" },
+    "reviewedAt": { "$ref": "./common.json#/$defs/DateTime" }
+  }
+}

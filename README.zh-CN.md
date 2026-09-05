@@ -127,6 +127,19 @@ Docker 构建上下文为**仓库根目录**（两个 Dockerfile 都复制整个
   达到 80% 写入 `budget_warning` 审计事件；达到上限后模型调用在触达 Provider
   之前被阻断。用量可通过 `GET /v1/usage` 查询（仅 policy_admin/auditor）。
 
+### 运行时配置（Milestone 3）
+
+- **执行模式**（`OSAS_EXECUTION_MODE`）：`shadow`（默认）是唯一支持的模式——
+  Proposal 只做模拟，ShadowRun 记录"如果允许自动执行将执行什么"，最终结果由
+  人工写入。`live` **拒绝启动**（`LIVE_EXECUTION_NOT_AVAILABLE_IN_V0_1_1`）；
+  真实执行能力须经未来的 RFC 决定。
+- **参考 Adapter**（未配置时失败即关闭；演示环境不需要）：Zendesk
+  （`ZENDESK_BASE_URL`/`ZENDESK_SUBDOMAIN`、`ZENDESK_EMAIL`、
+  `ZENDESK_API_TOKEN`、`ZENDESK_ESCALATION_GROUP_ID`）与只读 Shopify
+  （`SHOPIFY_SHOP_DOMAIN`、`SHOPIFY_ADMIN_ACCESS_TOKEN`、可选
+  `SHOPIFY_API_VERSION`）。详见
+  [docs/zendesk-shopify-shadow.zh-CN.md](docs/zendesk-shopify-shadow.zh-CN.md)。
+
 ## 三条演示路径
 
 打开控制台（http://localhost:5173 或 http://localhost:8080），选择一个角色：
@@ -193,6 +206,9 @@ packages/
   policy-engine/         @osas/policy-engine    TenantPolicy 求值、权限阶梯、执行编排
   model-gateway/         @osas/model-gateway    provider 接口、MockModelProvider、路由、预算
   adapter/               @osas/adapter          SupportAdapter 接口 + BYO Adapter 模板
+  zendesk-adapter/       @osas/zendesk-adapter  Zendesk 工单参考 Adapter（Milestone 3）
+  shopify-adapter/       @osas/shopify-adapter  只读 Shopify 参考 Adapter（Milestone 3）
+  ecommerce-shadow/      @osas/ecommerce-shadow Shadow Mode：ShadowRun、存储、执行模式
   mock-backend/          @osas/mock-backend     合成 fixtures + MockSupportAdapter
   store-postgres/        @osas/store-postgres   PostgreSQL 存储 + SQL 迁移（Milestone 2）
   mcp-server/            @osas/mcp-server       16 个工具定义 + stdio MCP 服务器
@@ -238,11 +254,15 @@ docs/  rfcs/  .github/workflows/  docker-compose.yml
 `@osas/adapter` 的 `SupportAdapter` 接口即可 —— 从
 `packages/adapter/templates/byo-adapter.template.ts` 开始，每个方法都有 TODO 指引。
 Adapter 抛出 `AdapterNotFoundError`（→ API 404）/ `AdapterPermissionError`（→ 403），
-每次调用都会收到包含租户与调用主体（Principal）的 `ToolContext`。
+每次调用都会收到包含租户与调用主体（Principal）的 `ToolContext`。详见
+[Adapter 开发指南](docs/adapter-guide.zh-CN.md)；`@osas/zendesk-adapter` 与
+`@osas/shopify-adapter` 是完整的参考实现。
 
 ## 文档
 
 - 规范：[docs/spec-v0.1.zh-CN.md](docs/spec-v0.1.zh-CN.md) · [English](docs/spec-v0.1.md)
+- Adapter 开发指南：[docs/adapter-guide.zh-CN.md](docs/adapter-guide.zh-CN.md) · [English](docs/adapter-guide.md)
+- Zendesk + Shopify Shadow Mode：[docs/zendesk-shopify-shadow.zh-CN.md](docs/zendesk-shopify-shadow.zh-CN.md) · [English](docs/zendesk-shopify-shadow.md)
 - 工程契约：[CONTRACTS.md](CONTRACTS.md)
 - 贡献指南：[CONTRIBUTING.zh-CN.md](CONTRIBUTING.zh-CN.md) · [English](CONTRIBUTING.md)
 - 治理：[GOVERNANCE.md](GOVERNANCE.md)

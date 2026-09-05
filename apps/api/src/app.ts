@@ -15,10 +15,17 @@ import {
   PostgresAuditStore,
   PostgresExecutionStore,
   PostgresPolicyStore,
+  PostgresShadowRunStore,
   PostgresUsageStore,
   assertConnectable,
   createPool,
 } from "@osas/store-postgres";
+import {
+  InMemoryShadowRunStore,
+  loadExecutionMode,
+  type ExecutionModeConfig,
+  type ShadowRunStore,
+} from "@osas/ecommerce-shadow";
 import { createSeededAdapter } from "./seed.js";
 import { SYSTEM_PRINCIPAL, loggerOptions, registerPlugins } from "./plugins.js";
 import { createAuthHook, loadAuthConfig, type AuthConfig } from "./auth.js";
@@ -43,6 +50,10 @@ export interface BuildAppOptions {
   llm?: LlmConfig;
   gateway?: ModelGateway;
   usageStore?: UsageStore;
+  /** Explicit execution mode (tests). Default: loadExecutionMode(env) — fails closed on "live". */
+  executionMode?: ExecutionModeConfig;
+  /** Explicit ShadowRun store (tests). Default: memory or Postgres by storage mode. */
+  shadowRunStore?: ShadowRunStore;
   /** Env override for config loading (tests); defaults to process.env. */
   env?: NodeJS.ProcessEnv;
 }
@@ -87,11 +98,16 @@ export async function buildApp(opts: BuildAppOptions = {}): Promise<FastifyInsta
   const auth = opts.auth ?? loadAuthConfig(env);
   const storage = opts.storage ?? loadStorageConfig(env);
   const llm = opts.llm ?? loadLlmConfig(env);
+  // v0.1.1: OSAS_EXECUTION_MODE — only "shadow" exists; "live" aborts startup
+  // with LIVE_EXECUTION_NOT_AVAILABLE_IN_V0_1_1.
+  const executionMode = opts.executionMode ?? loadExecutionMode(env);
   const adapter = opts.adapter ?? createSeededAdapter();
   const app = Fastify({ logger: opts.logger === false ? false : loggerOptions });
   await app.register(cors, { origin: true });
   app.decorate("adapter", adapter);
+  app.decorate("executionMode", executionMode);
 
+  let shadowRunStore: ShadowRunStore = opts.shadowRunStore ?? new InMemoryShadowRunStore();
   let usageStore: UsageStore = opts.usageStore ?? new InMemoryUsageStore();
   if (storage.mode === "postgres") {
     // Startup must connect — fail closed otherwise.
@@ -102,6 +118,7 @@ export async function buildApp(opts: BuildAppOptions = {}): Promise<FastifyInsta
     app.decorate("auditStore", new PostgresAuditStore(pool));
     app.decorate("pgPool", pool);
     if (!opts.usageStore) usageStore = new PostgresUsageStore(pool);
+    if (!opts.shadowRunStore) shadowRunStore = new PostgresShadowRunStore(pool);
     app.addHook("onClose", async () => {
       await pool.end();
     });
@@ -110,6 +127,7 @@ export async function buildApp(opts: BuildAppOptions = {}): Promise<FastifyInsta
     app.decorate("policyStore", new InMemoryPolicyStore());
   }
   app.decorate("usageStore", usageStore);
+  app.decorate("shadowRunStore", shadowRunStore);
 
   const onBudgetWarning = createBudgetWarningAuditor(adapter, app.log);
 

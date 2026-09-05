@@ -133,6 +133,20 @@ All knobs are env vars — see [.env.example](.env.example) for the annotated te
   `budget_warning` audit event; at the cap, model calls are blocked before the provider
   is touched. Usage is queryable via `GET /v1/usage` (policy_admin/auditor only).
 
+### Runtime configuration (Milestone 3)
+
+- **Execution mode** (`OSAS_EXECUTION_MODE`): `shadow` (default) is the only
+  supported mode — proposals are simulated, ShadowRuns record what would have
+  been auto-executed, and humans write final outcomes. `live` **refuses to
+  start** (`LIVE_EXECUTION_NOT_AVAILABLE_IN_V0_1_1`); live execution requires a
+  future RFC.
+- **Reference adapters** (fail closed when unconfigured; never required by the
+  demo): Zendesk (`ZENDESK_BASE_URL`/`ZENDESK_SUBDOMAIN`, `ZENDESK_EMAIL`,
+  `ZENDESK_API_TOKEN`, `ZENDESK_ESCALATION_GROUP_ID`) and read-only Shopify
+  (`SHOPIFY_SHOP_DOMAIN`, `SHOPIFY_ADMIN_ACCESS_TOKEN`, optional
+  `SHOPIFY_API_VERSION`). See
+  [docs/zendesk-shopify-shadow.md](docs/zendesk-shopify-shadow.md).
+
 ## The three demo paths
 
 Open the console (http://localhost:5173 or http://localhost:8080) and pick a persona:
@@ -199,6 +213,9 @@ packages/
   policy-engine/         @osas/policy-engine    TenantPolicy evaluation, permission ladder, execution
   model-gateway/         @osas/model-gateway    provider interface, MockModelProvider, routing, budgets
   adapter/               @osas/adapter          SupportAdapter interface + BYO adapter template
+  zendesk-adapter/       @osas/zendesk-adapter  Zendesk ticketing reference adapter (Milestone 3)
+  shopify-adapter/       @osas/shopify-adapter  read-only Shopify reference adapter (Milestone 3)
+  ecommerce-shadow/      @osas/ecommerce-shadow Shadow Mode: ShadowRun, stores, execution mode
   mock-backend/          @osas/mock-backend     synthetic fixtures + MockSupportAdapter
   store-postgres/        @osas/store-postgres   PostgreSQL stores + SQL migrations (Milestone 2)
   mcp-server/            @osas/mcp-server       16 tool definitions + stdio MCP server
@@ -244,11 +261,15 @@ The reference backend is an in-memory mock. To connect real systems (helpdesk, c
 billing), implement the `SupportAdapter` interface from `@osas/adapter` — start from
 `packages/adapter/templates/byo-adapter.template.ts`, which has TODOs for every method.
 Adapters throw `AdapterNotFoundError` (→ API 404) / `AdapterPermissionError` (→ 403) and
-receive a `ToolContext` with the tenant and calling principal on every call.
+receive a `ToolContext` with the tenant and calling principal on every call. See the
+[adapter development guide](docs/adapter-guide.md); `@osas/zendesk-adapter` and
+`@osas/shopify-adapter` are complete reference implementations.
 
 ## Documentation
 
 - Specification: [docs/spec-v0.1.md](docs/spec-v0.1.md) · [中文规范](docs/spec-v0.1.zh-CN.md)
+- Adapter development guide: [docs/adapter-guide.md](docs/adapter-guide.md) · [中文](docs/adapter-guide.zh-CN.md)
+- Zendesk + Shopify Shadow Mode: [docs/zendesk-shopify-shadow.md](docs/zendesk-shopify-shadow.md) · [中文](docs/zendesk-shopify-shadow.zh-CN.md)
 - Engineering contracts: [CONTRACTS.md](CONTRACTS.md)
 - Contributing: [CONTRIBUTING.md](CONTRIBUTING.md) · [中文](CONTRIBUTING.zh-CN.md)
 - Governance: [GOVERNANCE.md](GOVERNANCE.md)

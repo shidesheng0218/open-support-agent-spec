@@ -31,6 +31,7 @@ import type {
   Profile,
   ProposalStatus,
   SaasActionType,
+  ShadowRunOutcome,
   ShipmentStatus,
   SubscriptionStatus,
   Transport,
@@ -121,6 +122,15 @@ export const AUDIT_EVENT_TYPES: readonly AuditEventType[] = [
   "policy_approved",
   "policy_activated",
   "policy_retired",
+  "shadow_run_created",
+  "shadow_run_reviewed",
+];
+
+export const SHADOW_RUN_OUTCOMES: readonly ShadowRunOutcome[] = [
+  "accepted",
+  "rejected",
+  "modified",
+  "pending",
 ];
 
 export const AUDIT_ACTOR_TYPES: readonly AuditActorType[] = [

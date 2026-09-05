@@ -9,6 +9,42 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **Shadow Mode (Milestone 3)**: `OSAS_EXECUTION_MODE=shadow | live` (default
+  `shadow`; `live` refuses startup with `LIVE_EXECUTION_NOT_AVAILABLE_IN_V0_1_1`).
+  New `ShadowRun` core object + `schemas/core/shadow-run.json`
+  (`proposalId`, `policyDecision`, `wouldAutoExecute`, `suggestedAction`,
+  `humanOutcome` accepted/rejected/modified/pending, `humanComment`,
+  `externalReference`, `createdAt`/`reviewedAt`), new package
+  `@osas/ecommerce-shadow` (planning/review logic, `ShadowRunStore` seam,
+  in-memory store, execution-mode loader), `PostgresShadowRunStore` +
+  migration `0002_shadow_runs_milestone3.sql`, and API endpoints
+  `POST /v1/proposals/:id/shadow-run`, `POST /v1/shadow-runs/:id/review`,
+  `GET /v1/shadow-runs[/:id]`. Creation and human accept/reject/modify write
+  hash-chained `shadow_run_created` / `shadow_run_reviewed` audit events;
+  reviewed ShadowRuns are final (409 on re-review); proposals under shadow
+  review can never be executed (409) and are never marked `executed`.
+- **Console Shadow page** (`/shadow`): pending human reviews, the agent's
+  suggested action, policy reasons, original evidence links and audit-chain
+  verification status — deliberately no live-execute UI.
+- **`@osas/zendesk-adapter`** reference adapter: tickets ↔ Case, requesters ↔
+  Customer, internal notes, escalations to a configured default group,
+  evidence capture with Zendesk ids + agent URLs as sources, idempotency-key
+  replay + `X-Idempotency-Key` header, env config (`ZENDESK_BASE_URL` /
+  `ZENDESK_SUBDOMAIN` / `ZENDESK_EMAIL` / `ZENDESK_API_TOKEN` /
+  `ZENDESK_ESCALATION_GROUP_ID`), fail closed (`ZENDESK_NOT_CONFIGURED`)
+  without credentials.
+- **`@osas/shopify-adapter`** read-only reference adapter: orders,
+  per-customer orders and fulfillments → OSAS Order/Shipment/Evidence;
+  `buildRefundProposalDraft()` prices refund Proposals (refundable amount,
+  currency, order status, evidence) from live data. No refund write path:
+  `executeAction` always throws `CAPABILITY_UNSUPPORTED` without any HTTP
+  call; real refund execution requires a future RFC. Fail closed
+  (`SHOPIFY_NOT_CONFIGURED`) without credentials.
+- Docs: [docs/adapter-guide.md](docs/adapter-guide.md) (+ zh-CN) and
+  [docs/zendesk-shopify-shadow.md](docs/zendesk-shopify-shadow.md) (+ zh-CN);
+  spec §14; both adapters test against mock HTTP only — no external
+  credentials needed anywhere, and the demo Docker environment keeps the
+  Mock Adapter.
 - Root `pnpm verify` script (`scripts/verify.sh`): one-command release gate running
   typecheck, unit/contract tests, the compat suite, `docker compose` build + boot,
   API/web health checks, and Playwright E2E against the Docker stack

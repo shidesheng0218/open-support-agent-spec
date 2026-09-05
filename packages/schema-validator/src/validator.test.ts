@@ -148,11 +148,12 @@ describe("schemas dir resolution + manifest", () => {
     }
   });
 
-  it("manifest covers 13 core + 5 profile + 16 tool schemas", () => {
+  it("manifest covers 14 core + 5 profile + 16 tool schemas", () => {
     const manifest = loadManifest();
     expect(manifest.specVersion).toBe(SPEC_VERSION);
-    expect(manifest.schemas).toHaveLength(34);
+    expect(manifest.schemas).toHaveLength(35);
     expect(listSchemas().map((s) => s.name)).toContain("core/capability-manifest");
+    expect(listSchemas().map((s) => s.name)).toContain("core/shadow-run");
     expect(listSchemas().map((s) => s.name)).toContain("tools/osas_core_get_case");
     expect(loadSchema("core/case")).toMatchObject({ title: "Case" });
     expect(() => loadSchema("nope/nope")).toThrow(/Unknown schema/);

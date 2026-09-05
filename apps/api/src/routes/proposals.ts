@@ -2,7 +2,7 @@ import { randomUUID } from "node:crypto";
 import type { FastifyInstance } from "fastify";
 import { requireAdapterCapability, type SupportAdapter } from "@osas/adapter";
 import type { Capability, ActionProposal, ProposalStatus } from "@osas/core";
-import { SPEC_VERSION, SchemaInvalidError } from "../plugins.js";
+import { SPEC_VERSION, SchemaInvalidError, ConflictError } from "../plugins.js";
 import { audit, resolveActivePolicy, runEvaluation, runExecution, runReconcile } from "../domain.js";
 import { PROPOSAL_SCHEMA, ctxFor, validateSchema } from "./basic.js";
 
@@ -97,6 +97,15 @@ export async function proposalRoutes(app: FastifyInstance): Promise<void> {
     const proposal = await adapter.getProposal(ctx, id);
     const actionCapability = EXECUTE_CAPABILITY[proposal.actionType];
     if (actionCapability) await requireAdapterCapability(adapter, ctx, actionCapability);
+    // Shadow Mode (Milestone 3): a proposal under shadow review can never be
+    // marked executed by the runtime — the human outcome is the final record.
+    const shadowRuns = await app.shadowRunStore.list(ctx.tenantId, { proposalId: id });
+    if (shadowRuns.length > 0) {
+      throw new ConflictError(
+        `Proposal ${id} has ${shadowRuns.length} ShadowRun(s); in Shadow Mode its outcome is ` +
+          "written by human review (POST /v1/shadow-runs/:id/review), never by execution",
+      );
+    }
     const outcome = await runExecution(adapter, ctx, app.executionStore, proposal, {
       sink: app.auditStore,
       ...(app.pgPool ? { pgPool: app.pgPool } : {}),

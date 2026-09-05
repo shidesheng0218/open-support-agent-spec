@@ -27,7 +27,8 @@
     "@osas/core": "workspace:*",
     "@osas/policy-engine": "workspace:*",
     "pg": "^8.13.1",
-    "@osas/model-gateway": "workspace:*"
+    "@osas/model-gateway": "workspace:*",
+    "@osas/ecommerce-shadow": "workspace:*"
   },
   "devDependencies": {
     "@types/pg": "^8.11.10",

@@ -256,7 +256,9 @@ export type AuditEventType =
   | "policy_simulated"
   | "policy_approved"
   | "policy_activated"
-  | "policy_retired";
+  | "policy_retired"
+  | "shadow_run_created"
+  | "shadow_run_reviewed";
 
 export type AuditActorType = "model" | "policy_engine" | "human" | "system" | "adapter";
 
@@ -503,6 +505,45 @@ export interface Escalation {
   caseId: string;
   reason: string;
   createdAt: IsoDateTime;
+}
+
+/* ---------------- ShadowRun (v0.1.1 Milestone 3) ---------------- */
+
+export type ShadowRunOutcome = "accepted" | "rejected" | "modified" | "pending";
+
+/**
+ * What the agent WOULD have executed if live execution were allowed.
+ * Record-only — Shadow Mode never executes it and never transitions the
+ * proposal to "executed".
+ */
+export interface SuggestedAction {
+  actionType: ActionType;
+  reasonCode: string;
+  params: Record<string, unknown>;
+  amount?: Money;
+}
+
+/**
+ * ShadowRun — the Shadow Mode record of a simulated policy decision for one
+ * proposal: what the policy engine decided, whether it would have
+ * auto-executed, and the eventual human outcome. Human accept/reject/modify
+ * all land on the audit stream (shadow_run_created / shadow_run_reviewed).
+ */
+export interface ShadowRun {
+  id: string;
+  specVersion: SpecVersion;
+  tenantId: string;
+  proposalId: string;
+  policyDecision: PolicyDecision;
+  /** True only when policyDecision.decision === "auto_execute". */
+  wouldAutoExecute: boolean;
+  suggestedAction: SuggestedAction;
+  humanOutcome: ShadowRunOutcome;
+  humanComment?: string;
+  /** External ticket/_ref link recorded by the human reviewer. */
+  externalReference?: string;
+  createdAt: IsoDateTime;
+  reviewedAt?: IsoDateTime;
 }
 
 /* ---------------- Execution (CONTRACTS.md §5) ---------------- */

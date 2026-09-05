@@ -15,6 +15,7 @@
     "@fastify/cors": "^10.0.2",
     "@osas/adapter": "workspace:*",
     "@osas/core": "workspace:*",
+    "@osas/ecommerce-shadow": "workspace:*",
     "@osas/mcp-server": "workspace:*",
     "@osas/mock-backend": "workspace:*",
     "@osas/model-gateway": "workspace:*",

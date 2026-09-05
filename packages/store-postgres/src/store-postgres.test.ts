@@ -1,7 +1,7 @@
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { randomUUID } from "node:crypto";
 import type { Pool } from "pg";
-import type { AuditEvent, TenantPolicy } from "@osas/core";
+import type { AuditEvent, ShadowRun, TenantPolicy } from "@osas/core";
 import { PolicyVersionConflictError, type PolicyStore } from "@osas/policy-engine";
 import type { UsageStore } from "@osas/model-gateway";
 import { createPool, withTransaction } from "./pool.js";
@@ -10,6 +10,7 @@ import { PostgresExecutionStore } from "./execution-store.js";
 import { PostgresPolicyStore } from "./policy-store.js";
 import { PostgresAuditStore } from "./audit-store.js";
 import { PostgresUsageStore } from "./usage-store.js";
+import { PostgresShadowRunStore } from "./shadow-store.js";
 
 // Gated: without DATABASE_URL the whole suite skips, keeping `pnpm test`
 // free of network/service dependencies. With it (e.g. a throwaway docker
@@ -229,5 +230,48 @@ run("store-postgres (requires DATABASE_URL)", () => {
     expect(found?.eventHash).toBe("a".repeat(64));
     expect(found?.sequence).toBe(7);
     expect(await store.list(tenantB, {})).toEqual([]);
+  });
+
+  it("shadow run store: create/get/list/save with human review, tenant isolation", async () => {
+    const store = new PostgresShadowRunStore(pool);
+    const run: ShadowRun = {
+      id: `shadow_${randomUUID()}`,
+      specVersion: "0.1",
+      tenantId: tenant,
+      proposalId: "prop_pg_shadow",
+      policyDecision: {
+        decision: "require_approval",
+        reasons: [{ code: "OVER_THRESHOLD", message: "over threshold" }],
+        policyVersion: "1.0.0",
+        evaluatedAt: new Date().toISOString(),
+      },
+      wouldAutoExecute: false,
+      suggestedAction: {
+        actionType: "refund",
+        reasonCode: "damaged_item",
+        params: { orderId: "order_1" },
+        amount: { currency: "USD", minorUnits: 15000 },
+      },
+      humanOutcome: "pending",
+      createdAt: new Date().toISOString(),
+    };
+    await store.create(run);
+    expect((await store.get(tenant, run.id))?.humanOutcome).toBe("pending");
+    expect(await store.get(tenantB, run.id)).toBeUndefined();
+    expect(await store.list(tenant, { proposalId: "prop_pg_shadow" })).toHaveLength(1);
+    expect(await store.list(tenant, { humanOutcome: "accepted" })).toHaveLength(0);
+
+    const reviewed: ShadowRun = {
+      ...run,
+      humanOutcome: "accepted",
+      humanComment: "verified with warehouse",
+      externalReference: "zd-ticket-42",
+      reviewedAt: new Date().toISOString(),
+    };
+    await store.save(reviewed);
+    const got = await store.get(tenant, run.id);
+    expect(got?.humanOutcome).toBe("accepted");
+    expect(got?.externalReference).toBe("zd-ticket-42");
+    expect(await store.list(tenant, { humanOutcome: "accepted" })).toHaveLength(1);
   });
 });

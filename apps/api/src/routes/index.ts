@@ -6,6 +6,7 @@ import { handoffRoutes } from "./handoffs.js";
 import { chatRoutes } from "./chat.js";
 import { policyRoutes } from "./policies.js";
 import { usageRoutes } from "./usage.js";
+import { shadowRoutes } from "./shadow.js";
 
 export async function registerRoutes(app: FastifyInstance): Promise<void> {
   await app.register(basicRoutes);
@@ -15,4 +16,5 @@ export async function registerRoutes(app: FastifyInstance): Promise<void> {
   await app.register(chatRoutes);
   await app.register(policyRoutes);
   await app.register(usageRoutes);
+  await app.register(shadowRoutes);
 }

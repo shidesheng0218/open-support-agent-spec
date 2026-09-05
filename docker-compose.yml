@@ -15,6 +15,8 @@ services:
       OSAS_STORAGE: ${OSAS_STORAGE:-memory}
       DATABASE_URL: ${DATABASE_URL:-postgres://osas:osas@db:5432/osas}
       OSAS_LLM_PROVIDER: ${OSAS_LLM_PROVIDER:-mock}
+      # Execution mode (Milestone 3): shadow only; "live" refuses to start.
+      OSAS_EXECUTION_MODE: ${OSAS_EXECUTION_MODE:-shadow}
     ports:
       - "3001:3001"
 

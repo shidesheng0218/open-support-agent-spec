@@ -182,3 +182,48 @@ export interface CompatReport {
   }[];
   ok: boolean;
 }
+
+/* ---------------- Shadow Mode (v0.1.1 Milestone 3) ---------------- */
+
+export type ShadowRunOutcome = "accepted" | "rejected" | "modified" | "pending";
+
+export interface ShadowRun {
+  id: string;
+  specVersion: string;
+  tenantId: string;
+  proposalId: string;
+  policyDecision: PolicyDecision;
+  wouldAutoExecute: boolean;
+  suggestedAction: {
+    actionType: string;
+    reasonCode: string;
+    params: Record<string, unknown>;
+    amount?: Money;
+  };
+  humanOutcome: ShadowRunOutcome;
+  humanComment?: string;
+  externalReference?: string;
+  createdAt: string;
+  reviewedAt?: string;
+}
+
+export interface EvidenceRecord {
+  id: string;
+  kind: string;
+  summary: string;
+  source: { system: string; recordType: string; recordId: string; url?: string };
+}
+
+/** GET /v1/shadow-runs item + POST shadow-run/review responses. */
+export interface ShadowRunEnvelope {
+  shadowRun: ShadowRun;
+  proposal?: ActionProposal;
+  evidence: EvidenceRecord[];
+}
+
+export interface AuditChainVerification {
+  tenantId: string;
+  intact: boolean;
+  chainLength: number;
+  firstError?: { eventId: string; reason: string };
+}

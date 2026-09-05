@@ -55,6 +55,7 @@ export async function basicRoutes(app: FastifyInstance): Promise<void> {
     return {
       specVersion: SPEC_VERSION,
       version: API_VERSION,
+      executionMode: app.executionMode.mode,
       capabilities: manifest,
       endpoints: {
         capabilities: "/v1/capabilities",

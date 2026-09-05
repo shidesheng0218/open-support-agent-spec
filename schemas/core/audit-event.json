@@ -59,7 +59,9 @@
         "policy_simulated",
         "policy_approved",
         "policy_activated",
-        "policy_retired"
+        "policy_retired",
+        "shadow_run_created",
+        "shadow_run_reviewed"
       ]
     },
     "actorType": {

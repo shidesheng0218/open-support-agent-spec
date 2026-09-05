@@ -42,6 +42,10 @@ declare module "fastify" {
     adapter: SupportAdapter;
     executionStore: ExecutionStore;
     policyStore: PolicyStore;
+    /** Milestone 3: ShadowRun persistence (memory or Postgres). */
+    shadowRunStore: import("@osas/ecommerce-shadow").ShadowRunStore;
+    /** Milestone 3: always "shadow" in v0.1.1 — "live" aborts startup. */
+    executionMode: import("@osas/ecommerce-shadow").ExecutionModeConfig;
     gateway: ModelGateway;
     usageStore: UsageStore;
     /** Present when OSAS_STORAGE=postgres (audit stream mirror). */
@@ -109,6 +113,9 @@ export function errorHandler(err: FastifyError, req: FastifyRequest, reply: Fast
   if (err.name === "PolicyVersionNotFoundError") {
     return send(404, "NOT_FOUND", err.message);
   }
+  if (err.name === "ShadowRunNotFoundError") {
+    return send(404, "NOT_FOUND", err.message);
+  }
   if (err instanceof AdapterPermissionError || err.name === "AdapterPermissionError") {
     return send(403, "FORBIDDEN", err.message);
   }
@@ -131,7 +138,8 @@ export function errorHandler(err: FastifyError, req: FastifyRequest, reply: Fast
     err.name === "ConflictError" ||
     err.name === "ExecutionStatusError" || // policy-engine §5 status guards
     err.name === "ReconcileStatusError" ||
-    err.name === "PolicyVersionConflictError"
+    err.name === "PolicyVersionConflictError" ||
+    err.name === "ShadowRunAlreadyReviewedError" // reviewed ShadowRuns are final
   ) {
     return send(409, "CONFLICT", err.message);
   }

@@ -14,6 +14,7 @@
     { "name": "core/knowledge-article", "profile": "core", "path": "core/knowledge-article.json" },
     { "name": "core/case-note", "profile": "core", "path": "core/case-note.json" },
     { "name": "core/escalation", "profile": "core", "path": "core/escalation.json" },
+    { "name": "core/shadow-run", "profile": "core", "path": "core/shadow-run.json" },
     { "name": "profiles/ecommerce/order", "profile": "ecommerce", "path": "profiles/ecommerce/order.json" },
     { "name": "profiles/ecommerce/shipment", "profile": "ecommerce", "path": "profiles/ecommerce/shipment.json" },
     { "name": "profiles/saas/subscription", "profile": "saas", "path": "profiles/saas/subscription.json" },

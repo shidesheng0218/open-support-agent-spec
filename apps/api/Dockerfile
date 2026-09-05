@@ -31,7 +31,8 @@ ENV NODE_ENV=demo \
     MODEL_PROVIDER=mock \
     OSAS_AUTH_MODE=demo \
     OSAS_STORAGE=memory \
-    OSAS_LLM_PROVIDER=mock
+    OSAS_LLM_PROVIDER=mock \
+    OSAS_EXECUTION_MODE=shadow
 
 EXPOSE 3001
 
