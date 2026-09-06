@@ -147,6 +147,37 @@ All knobs are env vars — see [.env.example](.env.example) for the annotated te
   `SHOPIFY_API_VERSION`). See
   [docs/zendesk-shopify-shadow.md](docs/zendesk-shopify-shadow.md).
 
+### Runtime configuration (Milestone 4)
+
+- **Conformance mode** (`OSAS_CONFORMANCE_MODE=true` + `OSAS_CONFORMANCE_KEY`):
+  enables the test-only endpoints `POST /v1/conformance/reset`,
+  `POST /v1/conformance/fixtures/load`, `GET /v1/conformance/snapshot` (each
+  requires the `X-OSAS-Conformance-Key` header). **NEVER enable in
+  production** — startup fails closed when `NODE_ENV=production`, and when the
+  key is missing. CI enables it only for the throwaway Docker environment.
+  See [docs/conformance.md](docs/conformance.md).
+
+## Black-box compatibility & evaluation (Milestone 4)
+
+- **`pnpm osas:compat -- --target http://localhost:3001`** — `@osas/compat-runner`,
+  a black-box conformance runner that speaks only HTTP to the target: discovery
+  (`/.well-known/osas`, specVersion, Capability Manifest), tool/schema
+  validation, policy-simulation results, and — when a conformance key is
+  configured (`OSAS_CONFORMANCE_MODE=true` + `OSAS_CONFORMANCE_KEY`, or
+  `--conformance-key`) — the stateful suite (policy lifecycle state machine,
+  idempotent execution, permission/tenant isolation, audit-chain integrity).
+  Prints a machine-readable JSON report; exit code is non-zero on any failure.
+- **`pnpm eval:policy`** — fully offline evaluation of the policy engine over
+  the 120 synthetic cases in `evals/cases/` (30 refunds, 20 returns,
+  15 reshipments, 15 cancellations, 20 general inquiries, 20 security
+  boundaries). Hard gates (CI): 100% schema validity, 100% policy consistency,
+  0 overreach, 0 duplicate executions, 0 security-boundary bypass.
+- **`pnpm eval:model`** — end-to-end eval against a real provider; runs only
+  when `OSAS_LLM_PROVIDER=openai-compatible` + base URL/models are explicitly
+  set (never in CI, never with the default mock). The model's semantic accuracy
+  is reported independently — automation gates are never based on whether the
+  model "sounds human".
+
 ## The three demo paths
 
 Open the console (http://localhost:5173 or http://localhost:8080) and pick a persona:
@@ -219,12 +250,14 @@ packages/
   mock-backend/          @osas/mock-backend     synthetic fixtures + MockSupportAdapter
   store-postgres/        @osas/store-postgres   PostgreSQL stores + SQL migrations (Milestone 2)
   mcp-server/            @osas/mcp-server       16 tool definitions + stdio MCP server
+  compat-runner/         @osas/compat-runner    black-box HTTP conformance runner (Milestone 4)
 apps/
   api/                   @osas/api              Fastify 5 HTTP API (port 3001)
   web/                   @osas/web              React 18 + Vite console (port 5173)
 tests/
   compat/                @osas/compat-suite     schema/compat suite + JSON report
   e2e/                   @osas/e2e              Playwright smoke (E2E=1)
+evals/                   @osas/evals            120-case synthetic dataset + eval:policy/eval:model
 docs/  rfcs/  .github/workflows/  docker-compose.yml
 ```
 
@@ -270,6 +303,7 @@ receive a `ToolContext` with the tenant and calling principal on every call. See
 - Specification: [docs/spec-v0.1.md](docs/spec-v0.1.md) · [中文规范](docs/spec-v0.1.zh-CN.md)
 - Adapter development guide: [docs/adapter-guide.md](docs/adapter-guide.md) · [中文](docs/adapter-guide.zh-CN.md)
 - Zendesk + Shopify Shadow Mode: [docs/zendesk-shopify-shadow.md](docs/zendesk-shopify-shadow.md) · [中文](docs/zendesk-shopify-shadow.zh-CN.md)
+- Conformance Mode (test-only): [docs/conformance.md](docs/conformance.md) · [中文](docs/conformance.zh-CN.md)
 - Engineering contracts: [CONTRACTS.md](CONTRACTS.md)
 - Contributing: [CONTRIBUTING.md](CONTRIBUTING.md) · [中文](CONTRIBUTING.zh-CN.md)
 - Governance: [GOVERNANCE.md](GOVERNANCE.md)

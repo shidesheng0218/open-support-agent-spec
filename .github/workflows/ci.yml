@@ -19,6 +19,8 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - run: pnpm typecheck
       - run: pnpm test
+      # Milestone 4: offline policy eval is a hard CI gate (non-zero on gate failure).
+      - run: pnpm eval:policy
       - run: pnpm build
 
   compat:
@@ -43,8 +45,21 @@ jobs:
   docker:
     runs-on: ubuntu-latest
     needs: build-test
+    env:
+      # Milestone 4: conformance mode is enabled ONLY for this throwaway CI
+      # Docker environment (test-only key, never a real secret). The default
+      # elsewhere is off, and production startup refuses it entirely.
+      OSAS_CONFORMANCE_MODE: "true"
+      OSAS_CONFORMANCE_KEY: "ci-conformance-test-key"
     steps:
       - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm build
       - run: docker compose build
       - run: docker compose up -d
       - name: Wait for API health
@@ -69,6 +84,14 @@ jobs:
           report="$(curl -fsS http://localhost:3001/v1/compat/report)"
           echo "$report" | grep -Eq '"specVersion": *"0.1"'
           echo "$report" | grep -Eq '"ok": *true'
+      - name: Black-box compat runner against the Docker API (conformance mode on)
+        run: pnpm osas:compat -- --target http://localhost:3001 --out compat-runner-report.json
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: compat-runner-report
+          path: compat-runner-report.json
+          if-no-files-found: warn
       - name: Assert web console served through nginx proxy
         run: |
           curl -fsS http://localhost:8080/ | grep -qi 'html'

@@ -190,4 +190,9 @@ export class InMemoryPolicyStore implements PolicyStore {
       retiredAt: nowIso(),
     });
   }
+
+  /** Conformance Mode (Milestone 4, test-only): wipe all policy versions. */
+  reset(): void {
+    this.byTenant.clear();
+  }
 }

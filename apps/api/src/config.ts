@@ -28,6 +28,43 @@ export function loadStorageConfig(env: NodeJS.ProcessEnv = process.env): Storage
   return { mode: "postgres", databaseUrl };
 }
 
+/**
+ * Conformance Mode (Milestone 4): test-only reset/fixture/snapshot endpoints
+ * for the black-box compat runner. Fails closed: never allowed with
+ * NODE_ENV=production, and enabling it without OSAS_CONFORMANCE_KEY aborts
+ * startup. See docs/conformance.md — NEVER enable in production.
+ */
+export interface ConformanceConfig {
+  enabled: boolean;
+  /** Required X-OSAS-Conformance-Key header value when enabled. */
+  key?: string;
+}
+
+export function loadConformanceConfig(
+  env: NodeJS.ProcessEnv = process.env,
+): ConformanceConfig {
+  const raw = (env.OSAS_CONFORMANCE_MODE ?? "").trim().toLowerCase();
+  if (!raw || raw === "false" || raw === "0") return { enabled: false };
+  if (raw !== "true") {
+    throw new ConfigError(`OSAS_CONFORMANCE_MODE must be "true" or "false"; got "${raw}"`);
+  }
+  const nodeEnv = env.NODE_ENV ?? "development";
+  if (nodeEnv === "production") {
+    throw new ConfigError(
+      "OSAS_CONFORMANCE_MODE=true is not allowed with NODE_ENV=production " +
+        "(conformance endpoints expose reset/fixture/snapshot and are test-only)",
+    );
+  }
+  const key = env.OSAS_CONFORMANCE_KEY?.trim();
+  if (!key) {
+    throw new ConfigError(
+      "OSAS_CONFORMANCE_MODE=true requires OSAS_CONFORMANCE_KEY to be set " +
+        "(a test-only shared secret; never reuse a real credential)",
+    );
+  }
+  return { enabled: true, key };
+}
+
 export type LlmProviderKind = "mock" | "openai-compatible";
 
 export interface LlmConfig {

@@ -53,6 +53,8 @@ declare module "fastify" {
     /** Present when OSAS_STORAGE=postgres; enables transactional execution. */
     pgPool?: import("@osas/store-postgres").Pool;
     authConfig: import("./auth.js").AuthConfig;
+    /** Milestone 4: conformance mode (test-only reset/fixture/snapshot). */
+    conformanceConfig: import("./config.js").ConformanceConfig;
     compatReportPath?: string;
   }
 }

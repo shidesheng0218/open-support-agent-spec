@@ -157,7 +157,22 @@ export async function basicRoutes(app: FastifyInstance): Promise<void> {
     const { tenantId } = req.params as { tenantId: string };
     assertTenantAccess(req, tenantId);
     const ctx = ctxFor(req, tenantId);
-    return resolveActivePolicy(adapter, app.policyStore, ctx, tenantId);
+    const active = await resolveActivePolicy(adapter, app.policyStore, ctx, tenantId);
+    // Return the pure TenantPolicy (schemas/core/tenant-policy.json has
+    // additionalProperties: false); lifecycle metadata lives on /versions.
+    const {
+      status: _status,
+      createdBy: _createdBy,
+      simulatedAt: _simulatedAt,
+      approvedBy: _approvedBy,
+      approvedAt: _approvedAt,
+      activatedBy: _activatedBy,
+      activatedAt: _activatedAt,
+      retiredBy: _retiredBy,
+      retiredAt: _retiredAt,
+      ...policy
+    } = active as unknown as Record<string, unknown>;
+    return policy;
   });
 
   // v0.1.1: the active policy is immutable. Change it through the versioned

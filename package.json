@@ -2,7 +2,7 @@
   "name": "open-support-agent-spec",
   "version": "0.1.1",
   "private": true,
-  "description": "Open Support Agent Spec (OSAS) v0.1 \u2014 open interoperability spec for customer-support agents, with a TypeScript reference implementation.",
+  "description": "Open Support Agent Spec (OSAS) v0.1 — open interoperability spec for customer-support agents, with a TypeScript reference implementation.",
   "license": "Apache-2.0",
   "packageManager": "pnpm@11.7.0",
   "engines": {
@@ -22,7 +22,10 @@
     "docker:down": "docker compose down",
     "db:migrate": "pnpm --filter @osas/store-postgres run db:migrate",
     "db:seed": "pnpm --filter @osas/store-postgres run db:seed",
-    "db:reset": "pnpm --filter @osas/store-postgres run db:reset"
+    "db:reset": "pnpm --filter @osas/store-postgres run db:reset",
+    "osas:compat": "pnpm --filter @osas/compat-runner run compat --",
+    "eval:policy": "pnpm --filter @osas/evals run eval:policy",
+    "eval:model": "pnpm --filter @osas/evals run eval:model"
   },
   "devDependencies": {
     "@types/node": "^22.9.0",

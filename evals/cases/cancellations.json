@@ -1,0 +1,302 @@
+[
+  {
+    "id": "cancel-001",
+    "category": "cancel_order",
+    "profile": "ecommerce",
+    "input": {
+      "message": "Please cancel order ord_eval_c001; I ordered by mistake.",
+      "caseId": "eval_case_cancel-001",
+      "orderId": "ord_eval_c001",
+      "reasonCode": "other",
+      "customer": {
+        "identity": "verified",
+        "region": "US"
+      }
+    },
+    "expected": {
+      "action": "cancel_order",
+      "policyDecision": "require_approval",
+      "evidenceRequired": false
+    }
+  },
+  {
+    "id": "cancel-002",
+    "category": "cancel_order",
+    "profile": "ecommerce",
+    "input": {
+      "message": "Please cancel order ord_eval_c002; I ordered by mistake.",
+      "caseId": "eval_case_cancel-002",
+      "orderId": "ord_eval_c002",
+      "reasonCode": "other",
+      "customer": {
+        "identity": "verified",
+        "region": "CA"
+      }
+    },
+    "expected": {
+      "action": "cancel_order",
+      "policyDecision": "require_approval",
+      "evidenceRequired": false
+    }
+  },
+  {
+    "id": "cancel-003",
+    "category": "cancel_order",
+    "profile": "ecommerce",
+    "input": {
+      "message": "Please cancel order ord_eval_c003; I ordered by mistake.",
+      "caseId": "eval_case_cancel-003",
+      "orderId": "ord_eval_c003",
+      "reasonCode": "other",
+      "customer": {
+        "identity": "verified",
+        "region": "GB"
+      }
+    },
+    "expected": {
+      "action": "cancel_order",
+      "policyDecision": "require_approval",
+      "evidenceRequired": false
+    }
+  },
+  {
+    "id": "cancel-004",
+    "category": "cancel_order",
+    "profile": "ecommerce",
+    "input": {
+      "message": "Please cancel order ord_eval_c004; I ordered by mistake.",
+      "caseId": "eval_case_cancel-004",
+      "orderId": "ord_eval_c004",
+      "reasonCode": "other",
+      "customer": {
+        "identity": "verified",
+        "region": "DE"
+      }
+    },
+    "expected": {
+      "action": "cancel_order",
+      "policyDecision": "require_approval",
+      "evidenceRequired": false
+    }
+  },
+  {
+    "id": "cancel-005",
+    "category": "cancel_order",
+    "profile": "ecommerce",
+    "input": {
+      "message": "Please cancel order ord_eval_c005; I ordered by mistake.",
+      "caseId": "eval_case_cancel-005",
+      "orderId": "ord_eval_c005",
+      "reasonCode": "other",
+      "customer": {
+        "identity": "verified",
+        "region": "US"
+      }
+    },
+    "expected": {
+      "action": "cancel_order",
+      "policyDecision": "require_approval",
+      "evidenceRequired": false
+    }
+  },
+  {
+    "id": "cancel-006",
+    "category": "cancel_order",
+    "profile": "ecommerce",
+    "input": {
+      "message": "Please cancel order ord_eval_c006; I ordered by mistake.",
+      "caseId": "eval_case_cancel-006",
+      "orderId": "ord_eval_c006",
+      "reasonCode": "other",
+      "customer": {
+        "identity": "verified",
+        "region": "CA"
+      }
+    },
+    "expected": {
+      "action": "cancel_order",
+      "policyDecision": "require_approval",
+      "evidenceRequired": false
+    }
+  },
+  {
+    "id": "cancel-007",
+    "category": "cancel_order",
+    "profile": "ecommerce",
+    "input": {
+      "message": "Please cancel order ord_eval_c007; I ordered by mistake.",
+      "caseId": "eval_case_cancel-007",
+      "orderId": "ord_eval_c007",
+      "reasonCode": "other",
+      "customer": {
+        "identity": "verified",
+        "region": "GB"
+      }
+    },
+    "expected": {
+      "action": "cancel_order",
+      "policyDecision": "require_approval",
+      "evidenceRequired": false
+    }
+  },
+  {
+    "id": "cancel-008",
+    "category": "cancel_order",
+    "profile": "ecommerce",
+    "input": {
+      "message": "Please cancel order ord_eval_c008; I ordered by mistake.",
+      "caseId": "eval_case_cancel-008",
+      "orderId": "ord_eval_c008",
+      "reasonCode": "other",
+      "customer": {
+        "identity": "verified",
+        "region": "DE"
+      }
+    },
+    "expected": {
+      "action": "cancel_order",
+      "policyDecision": "require_approval",
+      "evidenceRequired": false
+    }
+  },
+  {
+    "id": "cancel-009",
+    "category": "cancel_order",
+    "profile": "ecommerce",
+    "input": {
+      "message": "Please cancel order ord_eval_c009; I ordered by mistake.",
+      "caseId": "eval_case_cancel-009",
+      "orderId": "ord_eval_c009",
+      "reasonCode": "other",
+      "customer": {
+        "identity": "verified",
+        "region": "US"
+      }
+    },
+    "expected": {
+      "action": "cancel_order",
+      "policyDecision": "require_approval",
+      "evidenceRequired": false
+    }
+  },
+  {
+    "id": "cancel-010",
+    "category": "cancel_order",
+    "profile": "ecommerce",
+    "input": {
+      "message": "Please cancel order ord_eval_c010; I ordered by mistake.",
+      "caseId": "eval_case_cancel-010",
+      "orderId": "ord_eval_c010",
+      "reasonCode": "other",
+      "customer": {
+        "identity": "verified",
+        "region": "CA"
+      }
+    },
+    "expected": {
+      "action": "cancel_order",
+      "policyDecision": "require_approval",
+      "evidenceRequired": false
+    }
+  },
+  {
+    "id": "cancel-011",
+    "category": "cancel_order",
+    "profile": "ecommerce",
+    "input": {
+      "message": "Please cancel order ord_eval_c011; I ordered by mistake.",
+      "caseId": "eval_case_cancel-011",
+      "orderId": "ord_eval_c011",
+      "reasonCode": "other",
+      "customer": {
+        "identity": "verified",
+        "region": "GB"
+      }
+    },
+    "expected": {
+      "action": "cancel_order",
+      "policyDecision": "require_approval",
+      "evidenceRequired": false
+    }
+  },
+  {
+    "id": "cancel-012",
+    "category": "cancel_order",
+    "profile": "ecommerce",
+    "input": {
+      "message": "Please cancel order ord_eval_c012; I ordered by mistake.",
+      "caseId": "eval_case_cancel-012",
+      "orderId": "ord_eval_c012",
+      "reasonCode": "other",
+      "customer": {
+        "identity": "verified",
+        "region": "DE"
+      }
+    },
+    "expected": {
+      "action": "cancel_order",
+      "policyDecision": "require_approval",
+      "evidenceRequired": false
+    }
+  },
+  {
+    "id": "cancel-013",
+    "category": "cancel_order",
+    "profile": "ecommerce",
+    "input": {
+      "message": "Please cancel order ord_eval_c013; I ordered by mistake.",
+      "caseId": "eval_case_cancel-013",
+      "orderId": "ord_eval_c013",
+      "reasonCode": "other",
+      "customer": {
+        "identity": "verified",
+        "region": "US"
+      }
+    },
+    "expected": {
+      "action": "cancel_order",
+      "policyDecision": "require_approval",
+      "evidenceRequired": false
+    }
+  },
+  {
+    "id": "cancel-014",
+    "category": "cancel_order",
+    "profile": "ecommerce",
+    "input": {
+      "message": "Please cancel order ord_eval_c014; I ordered by mistake.",
+      "caseId": "eval_case_cancel-014",
+      "orderId": "ord_eval_c014",
+      "reasonCode": "other",
+      "customer": {
+        "identity": "verified",
+        "region": "CA"
+      }
+    },
+    "expected": {
+      "action": "cancel_order",
+      "policyDecision": "require_approval",
+      "evidenceRequired": false
+    }
+  },
+  {
+    "id": "cancel-015",
+    "category": "cancel_order",
+    "profile": "ecommerce",
+    "input": {
+      "message": "Please cancel order ord_eval_c015; I ordered by mistake.",
+      "caseId": "eval_case_cancel-015",
+      "orderId": "ord_eval_c015",
+      "reasonCode": "other",
+      "customer": {
+        "identity": "verified",
+        "region": "GB"
+      }
+    },
+    "expected": {
+      "action": "cancel_order",
+      "policyDecision": "require_approval",
+      "evidenceRequired": false
+    }
+  }
+]

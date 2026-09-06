@@ -9,6 +9,39 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **Black-box compat runner (Milestone 4)**: new package `@osas/compat-runner`
+  (`pnpm osas:compat -- --target http://localhost:3001 [--token <t>]`) — an
+  HTTP-only conformance runner that verifies discovery (`/.well-known/osas`,
+  specVersion, Capability Manifest), tool/schema endpoints, `POST /v1/validate`,
+  the active-policy surface, and policy-simulation behavior. With a conformance
+  key (`OSAS_CONFORMANCE_MODE=true` + `OSAS_CONFORMANCE_KEY` or
+  `--conformance-key`) it additionally runs the stateful suite: policy
+  lifecycle state machine (draft → simulate → approve → activate → retire,
+  illegal transitions rejected, active policy immutable), simulation result
+  correctness (auto_execute / require_approval / block), idempotent execution
+  replay, RBAC and tenant isolation, and audit-chain integrity. Emits a
+  machine-readable JSON report and exits non-zero on any failure.
+- **Conformance Mode (test-only, fail closed)**: `OSAS_CONFORMANCE_MODE=true` +
+  `OSAS_CONFORMANCE_KEY` registers `POST /v1/conformance/reset`,
+  `POST /v1/conformance/fixtures/load` (`demo`/`empty`), and
+  `GET /v1/conformance/snapshot`, each gated by the constant-time-compared
+  `X-OSAS-Conformance-Key` header. Startup refuses the mode with
+  `NODE_ENV=production` or without a key; endpoints are not registered at all
+  otherwise. CI enables it only for the disposable Docker environment.
+  Docs: [docs/conformance.md](docs/conformance.md) (+ zh-CN).
+- **Evaluation suite** (`evals/`, `@osas/evals`): 120 synthetic, PII-free cases
+  (30 refunds, 20 returns, 15 reshipments, 15 cancellations, 20 general
+  inquiries, 20 security boundaries) with expected action, policy result,
+  reason codes, handoff reason, and evidence requirements per case.
+  `pnpm eval:policy` runs fully offline and is a hard CI gate (100% schema
+  validity, 100% policy consistency, 0 overreach, 0 duplicate executions,
+  0 security-boundary bypass; exits non-zero otherwise). `pnpm eval:model`
+  runs only with an explicitly configured real provider (never in CI) and
+  reports model semantic accuracy independently of the safety gates.
+- Test-only `reset()` on the in-memory stores (`InMemoryPolicyStore`,
+  `InMemoryExecutionStore`, `InMemoryUsageStore`, `InMemoryShadowRunStore`)
+  and `MockSupportAdapter.reset(fixtures)` to back the conformance endpoints.
+
 - **Shadow Mode (Milestone 3)**: `OSAS_EXECUTION_MODE=shadow | live` (default
   `shadow`; `live` refuses startup with `LIVE_EXECUTION_NOT_AVAILABLE_IN_V0_1_1`).
   New `ShadowRun` core object + `schemas/core/shadow-run.json`
@@ -52,6 +85,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Static web health endpoint `GET /healthz` in `apps/web/nginx.conf` (nginx-level,
   independent of the API); `GET /health` keeps proxying to the API.
 - New API and E2E tests for compat-report availability in Docker environments.
+
+### Fixed
+
+- `GET /v1/policies/:tenantId` now returns a pure `TenantPolicy` (lifecycle
+  metadata stripped) so the response validates against
+  `schemas/core/tenant-policy.json` (`additionalProperties: false`) — caught by
+  the black-box runner; version records with lifecycle fields remain available
+  via `GET /v1/policies/:tenantId/versions`.
+
 
 ### Changed
 

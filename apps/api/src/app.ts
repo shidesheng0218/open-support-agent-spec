@@ -30,12 +30,15 @@ import { createSeededAdapter } from "./seed.js";
 import { SYSTEM_PRINCIPAL, loggerOptions, registerPlugins } from "./plugins.js";
 import { createAuthHook, loadAuthConfig, type AuthConfig } from "./auth.js";
 import {
+  loadConformanceConfig,
   loadLlmConfig,
   loadStorageConfig,
+  type ConformanceConfig,
   type LlmConfig,
   type StorageConfig,
 } from "./config.js";
 import { registerRoutes } from "./routes/index.js";
+import { conformanceRoutes } from "./routes/conformance.js";
 
 export interface BuildAppOptions {
   adapter?: SupportAdapter;
@@ -52,6 +55,8 @@ export interface BuildAppOptions {
   usageStore?: UsageStore;
   /** Explicit execution mode (tests). Default: loadExecutionMode(env) — fails closed on "live". */
   executionMode?: ExecutionModeConfig;
+  /** Explicit conformance config (tests). Default: loadConformanceConfig(env) — fails closed in production. */
+  conformance?: ConformanceConfig;
   /** Explicit ShadowRun store (tests). Default: memory or Postgres by storage mode. */
   shadowRunStore?: ShadowRunStore;
   /** Env override for config loading (tests); defaults to process.env. */
@@ -101,6 +106,9 @@ export async function buildApp(opts: BuildAppOptions = {}): Promise<FastifyInsta
   // v0.1.1: OSAS_EXECUTION_MODE — only "shadow" exists; "live" aborts startup
   // with LIVE_EXECUTION_NOT_AVAILABLE_IN_V0_1_1.
   const executionMode = opts.executionMode ?? loadExecutionMode(env);
+  // Milestone 4: conformance mode — enabled only via explicit env, never in
+  // production, and only with a test-only key (loadConformanceConfig throws).
+  const conformance = opts.conformance ?? loadConformanceConfig(env);
   const adapter = opts.adapter ?? createSeededAdapter();
   const app = Fastify({ logger: opts.logger === false ? false : loggerOptions });
   await app.register(cors, { origin: true });
@@ -177,7 +185,12 @@ export async function buildApp(opts: BuildAppOptions = {}): Promise<FastifyInsta
   app.decorate("gateway", gateway);
   app.decorate("compatReportPath", opts.compatReportPath);
   app.decorate("authConfig", auth);
+  app.decorate("conformanceConfig", conformance);
   registerPlugins(app, createAuthHook(auth));
   await registerRoutes(app);
+  // Conformance endpoints exist only in conformance mode (never in production).
+  if (conformance.enabled) {
+    await app.register(conformanceRoutes);
+  }
   return app;
 }

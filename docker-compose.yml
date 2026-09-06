@@ -17,6 +17,11 @@ services:
       OSAS_LLM_PROVIDER: ${OSAS_LLM_PROVIDER:-mock}
       # Execution mode (Milestone 3): shadow only; "live" refuses to start.
       OSAS_EXECUTION_MODE: ${OSAS_EXECUTION_MODE:-shadow}
+      # Conformance mode (Milestone 4): OFF by default; CI enables it for the
+      # throwaway Docker test environment only. Never enable in production —
+      # startup fails closed when NODE_ENV=production.
+      OSAS_CONFORMANCE_MODE: ${OSAS_CONFORMANCE_MODE:-false}
+      OSAS_CONFORMANCE_KEY: ${OSAS_CONFORMANCE_KEY:-}
     ports:
       - "3001:3001"
 

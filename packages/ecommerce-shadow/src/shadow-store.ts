@@ -54,4 +54,9 @@ export class InMemoryShadowRunStore implements ShadowRunStore {
     this.runs.set(InMemoryShadowRunStore.key(run.tenantId, run.id), clone(run));
     return clone(run);
   }
+
+  /** Conformance Mode (Milestone 4, test-only): wipe all ShadowRuns. */
+  reset(): void {
+    this.runs.clear();
+  }
 }

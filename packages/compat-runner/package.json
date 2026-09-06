@@ -1,0 +1,35 @@
+{
+  "name": "@osas/compat-runner",
+  "version": "0.1.1",
+  "private": true,
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "bin": {
+    "osas-compat": "./dist/cli.js"
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "test": "vitest run",
+    "compat": "tsx src/cli.ts"
+  },
+  "dependencies": {
+    "@osas/core": "workspace:*",
+    "@osas/schema-validator": "workspace:*"
+  },
+  "devDependencies": {
+    "@osas/api": "workspace:*",
+    "fastify": "^5.2.0",
+    "tsx": "^4.19.2"
+  }
+}

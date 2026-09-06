@@ -1,0 +1,402 @@
+[
+  {
+    "id": "return-001",
+    "category": "return",
+    "profile": "ecommerce",
+    "input": {
+      "message": "I'd like to return the item from order ord_eval_t001, it doesn't fit.",
+      "caseId": "eval_case_return-001",
+      "orderId": "ord_eval_t001",
+      "reasonCode": "other",
+      "customer": {
+        "identity": "verified",
+        "region": "US"
+      }
+    },
+    "expected": {
+      "action": "return_request",
+      "policyDecision": "require_approval",
+      "evidenceRequired": false
+    }
+  },
+  {
+    "id": "return-002",
+    "category": "return",
+    "profile": "ecommerce",
+    "input": {
+      "message": "I'd like to return the item from order ord_eval_t002, it doesn't fit.",
+      "caseId": "eval_case_return-002",
+      "orderId": "ord_eval_t002",
+      "reasonCode": "other",
+      "customer": {
+        "identity": "verified",
+        "region": "CA"
+      }
+    },
+    "expected": {
+      "action": "return_request",
+      "policyDecision": "require_approval",
+      "evidenceRequired": false
+    }
+  },
+  {
+    "id": "return-003",
+    "category": "return",
+    "profile": "ecommerce",
+    "input": {
+      "message": "I'd like to return the item from order ord_eval_t003, it doesn't fit.",
+      "caseId": "eval_case_return-003",
+      "orderId": "ord_eval_t003",
+      "reasonCode": "other",
+      "customer": {
+        "identity": "unverified",
+        "region": "GB"
+      }
+    },
+    "expected": {
+      "action": "return_request",
+      "policyDecision": "require_approval",
+      "evidenceRequired": false
+    }
+  },
+  {
+    "id": "return-004",
+    "category": "return",
+    "profile": "ecommerce",
+    "input": {
+      "message": "I'd like to return the item from order ord_eval_t004, it doesn't fit.",
+      "caseId": "eval_case_return-004",
+      "orderId": "ord_eval_t004",
+      "reasonCode": "other",
+      "customer": {
+        "identity": "verified",
+        "region": "DE"
+      }
+    },
+    "expected": {
+      "action": "return_request",
+      "policyDecision": "require_approval",
+      "evidenceRequired": false
+    }
+  },
+  {
+    "id": "return-005",
+    "category": "return",
+    "profile": "ecommerce",
+    "input": {
+      "message": "I'd like to return the item from order ord_eval_t005, it doesn't fit.",
+      "caseId": "eval_case_return-005",
+      "orderId": "ord_eval_t005",
+      "reasonCode": "other",
+      "customer": {
+        "identity": "verified",
+        "region": "US"
+      }
+    },
+    "expected": {
+      "action": "return_request",
+      "policyDecision": "require_approval",
+      "evidenceRequired": false
+    }
+  },
+  {
+    "id": "return-006",
+    "category": "return",
+    "profile": "ecommerce",
+    "input": {
+      "message": "I'd like to return the item from order ord_eval_t006, it doesn't fit.",
+      "caseId": "eval_case_return-006",
+      "orderId": "ord_eval_t006",
+      "reasonCode": "other",
+      "customer": {
+        "identity": "verified",
+        "region": "CA"
+      }
+    },
+    "expected": {
+      "action": "return_request",
+      "policyDecision": "require_approval",
+      "evidenceRequired": false
+    }
+  },
+  {
+    "id": "return-007",
+    "category": "return",
+    "profile": "ecommerce",
+    "input": {
+      "message": "I'd like to return the item from order ord_eval_t007, it doesn't fit.",
+      "caseId": "eval_case_return-007",
+      "orderId": "ord_eval_t007",
+      "reasonCode": "other",
+      "customer": {
+        "identity": "unverified",
+        "region": "GB"
+      }
+    },
+    "expected": {
+      "action": "return_request",
+      "policyDecision": "require_approval",
+      "evidenceRequired": false
+    }
+  },
+  {
+    "id": "return-008",
+    "category": "return",
+    "profile": "ecommerce",
+    "input": {
+      "message": "I'd like to return the item from order ord_eval_t008, it doesn't fit.",
+      "caseId": "eval_case_return-008",
+      "orderId": "ord_eval_t008",
+      "reasonCode": "other",
+      "customer": {
+        "identity": "verified",
+        "region": "DE"
+      }
+    },
+    "expected": {
+      "action": "return_request",
+      "policyDecision": "require_approval",
+      "evidenceRequired": false
+    }
+  },
+  {
+    "id": "return-009",
+    "category": "return",
+    "profile": "ecommerce",
+    "input": {
+      "message": "I'd like to return the item from order ord_eval_t009, it doesn't fit.",
+      "caseId": "eval_case_return-009",
+      "orderId": "ord_eval_t009",
+      "reasonCode": "other",
+      "customer": {
+        "identity": "verified",
+        "region": "US"
+      }
+    },
+    "expected": {
+      "action": "return_request",
+      "policyDecision": "require_approval",
+      "evidenceRequired": false
+    }
+  },
+  {
+    "id": "return-010",
+    "category": "return",
+    "profile": "ecommerce",
+    "input": {
+      "message": "I'd like to return the item from order ord_eval_t010, it doesn't fit.",
+      "caseId": "eval_case_return-010",
+      "orderId": "ord_eval_t010",
+      "reasonCode": "other",
+      "customer": {
+        "identity": "verified",
+        "region": "CA"
+      }
+    },
+    "expected": {
+      "action": "return_request",
+      "policyDecision": "require_approval",
+      "evidenceRequired": false
+    }
+  },
+  {
+    "id": "return-011",
+    "category": "return",
+    "profile": "ecommerce",
+    "input": {
+      "message": "I'd like to return the item from order ord_eval_t011, it doesn't fit.",
+      "caseId": "eval_case_return-011",
+      "orderId": "ord_eval_t011",
+      "reasonCode": "other",
+      "customer": {
+        "identity": "unverified",
+        "region": "GB"
+      }
+    },
+    "expected": {
+      "action": "return_request",
+      "policyDecision": "require_approval",
+      "evidenceRequired": false
+    }
+  },
+  {
+    "id": "return-012",
+    "category": "return",
+    "profile": "ecommerce",
+    "input": {
+      "message": "I'd like to return the item from order ord_eval_t012, it doesn't fit.",
+      "caseId": "eval_case_return-012",
+      "orderId": "ord_eval_t012",
+      "reasonCode": "other",
+      "customer": {
+        "identity": "verified",
+        "region": "DE"
+      }
+    },
+    "expected": {
+      "action": "return_request",
+      "policyDecision": "require_approval",
+      "evidenceRequired": false
+    }
+  },
+  {
+    "id": "return-013",
+    "category": "return",
+    "profile": "ecommerce",
+    "input": {
+      "message": "I'd like to return the item from order ord_eval_t013, it doesn't fit.",
+      "caseId": "eval_case_return-013",
+      "orderId": "ord_eval_t013",
+      "reasonCode": "other",
+      "customer": {
+        "identity": "verified",
+        "region": "US"
+      }
+    },
+    "expected": {
+      "action": "return_request",
+      "policyDecision": "require_approval",
+      "evidenceRequired": false
+    }
+  },
+  {
+    "id": "return-014",
+    "category": "return",
+    "profile": "ecommerce",
+    "input": {
+      "message": "I'd like to return the item from order ord_eval_t014, it doesn't fit.",
+      "caseId": "eval_case_return-014",
+      "orderId": "ord_eval_t014",
+      "reasonCode": "other",
+      "customer": {
+        "identity": "verified",
+        "region": "CA"
+      }
+    },
+    "expected": {
+      "action": "return_request",
+      "policyDecision": "require_approval",
+      "evidenceRequired": false
+    }
+  },
+  {
+    "id": "return-015",
+    "category": "return",
+    "profile": "ecommerce",
+    "input": {
+      "message": "I'd like to return the item from order ord_eval_t015, it doesn't fit.",
+      "caseId": "eval_case_return-015",
+      "orderId": "ord_eval_t015",
+      "reasonCode": "other",
+      "customer": {
+        "identity": "unverified",
+        "region": "GB"
+      }
+    },
+    "expected": {
+      "action": "return_request",
+      "policyDecision": "require_approval",
+      "evidenceRequired": false
+    }
+  },
+  {
+    "id": "return-016",
+    "category": "return",
+    "profile": "ecommerce",
+    "input": {
+      "message": "I'd like to return the item from order ord_eval_t016, it doesn't fit.",
+      "caseId": "eval_case_return-016",
+      "orderId": "ord_eval_t016",
+      "reasonCode": "other",
+      "customer": {
+        "identity": "verified",
+        "region": "DE"
+      }
+    },
+    "expected": {
+      "action": "return_request",
+      "policyDecision": "require_approval",
+      "evidenceRequired": false
+    }
+  },
+  {
+    "id": "return-017",
+    "category": "return",
+    "profile": "ecommerce",
+    "input": {
+      "message": "I'd like to return the item from order ord_eval_t017, it doesn't fit.",
+      "caseId": "eval_case_return-017",
+      "orderId": "ord_eval_t017",
+      "reasonCode": "other",
+      "customer": {
+        "identity": "verified",
+        "region": "US"
+      }
+    },
+    "expected": {
+      "action": "return_request",
+      "policyDecision": "require_approval",
+      "evidenceRequired": false
+    }
+  },
+  {
+    "id": "return-018",
+    "category": "return",
+    "profile": "ecommerce",
+    "input": {
+      "message": "I'd like to return the item from order ord_eval_t018, it doesn't fit.",
+      "caseId": "eval_case_return-018",
+      "orderId": "ord_eval_t018",
+      "reasonCode": "other",
+      "customer": {
+        "identity": "verified",
+        "region": "CA"
+      }
+    },
+    "expected": {
+      "action": "return_request",
+      "policyDecision": "require_approval",
+      "evidenceRequired": false
+    }
+  },
+  {
+    "id": "return-019",
+    "category": "return",
+    "profile": "ecommerce",
+    "input": {
+      "message": "I'd like to return the item from order ord_eval_t019, it doesn't fit.",
+      "caseId": "eval_case_return-019",
+      "orderId": "ord_eval_t019",
+      "reasonCode": "other",
+      "customer": {
+        "identity": "unverified",
+        "region": "GB"
+      }
+    },
+    "expected": {
+      "action": "return_request",
+      "policyDecision": "require_approval",
+      "evidenceRequired": false
+    }
+  },
+  {
+    "id": "return-020",
+    "category": "return",
+    "profile": "ecommerce",
+    "input": {
+      "message": "I'd like to return the item from order ord_eval_t020, it doesn't fit.",
+      "caseId": "eval_case_return-020",
+      "orderId": "ord_eval_t020",
+      "reasonCode": "other",
+      "customer": {
+        "identity": "verified",
+        "region": "DE"
+      }
+    },
+    "expected": {
+      "action": "return_request",
+      "policyDecision": "require_approval",
+      "evidenceRequired": false
+    }
+  }
+]

@@ -1,0 +1,34 @@
+{
+  "name": "@osas/evals",
+  "version": "0.1.1",
+  "private": true,
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist",
+    "cases"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "test": "vitest run",
+    "eval:policy": "tsx src/run-policy.ts",
+    "eval:model": "tsx src/run-model.ts"
+  },
+  "dependencies": {
+    "@osas/core": "workspace:*",
+    "@osas/model-gateway": "workspace:*",
+    "@osas/policy-engine": "workspace:*",
+    "@osas/schema-validator": "workspace:*"
+  },
+  "devDependencies": {
+    "tsx": "^4.19.2"
+  }
+}

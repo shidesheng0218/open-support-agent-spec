@@ -66,4 +66,9 @@ export class InMemoryUsageStore implements UsageStore {
     const rows = await this.query(q);
     return rows.reduce((sum, e) => sum + (e.costUsd ?? 0), 0);
   }
+
+  /** Conformance Mode (Milestone 4, test-only): wipe all usage records. */
+  reset(): void {
+    this.entries.length = 0;
+  }
 }

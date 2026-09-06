@@ -72,6 +72,10 @@ export class MockSupportAdapter implements SupportAdapter {
   private readonly auditChainHeads = new Map<string, { sequence: number; lastHash: string }>();
 
   constructor(fixtures: DemoFixtures = createDemoFixtures()) {
+    this.load(fixtures);
+  }
+
+  private load(fixtures: DemoFixtures): void {
     const seed = clone(fixtures);
     for (const c of seed.cases) this.cases.set(c.id, c);
     for (const c of seed.customers) this.customers.set(c.id, c);
@@ -89,6 +93,34 @@ export class MockSupportAdapter implements SupportAdapter {
     for (const h of seed.handoffs) this.handoffs.set(h.id, h);
     for (const e of seed.auditEvents) this.auditEvents.set(e.id, e);
     this.policies.set(seed.policy.tenantId, seed.policy);
+  }
+
+  /**
+   * Conformance Mode (Milestone 4): wipe ALL in-memory state (including id
+   * counters and per-tenant audit hash-chain heads) and re-seed from fresh
+   * fixtures. Test-only — the reference API exposes this exclusively through
+   * the conformance endpoints, which fail closed in production.
+   */
+  reset(fixtures: DemoFixtures = createDemoFixtures()): void {
+    this.counters.clear();
+    this.cases.clear();
+    this.customers.clear();
+    this.knowledge.clear();
+    this.orders.clear();
+    this.shipments.clear();
+    this.subscriptions.clear();
+    this.invoices.clear();
+    this.creditBalances.clear();
+    this.evidence.clear();
+    this.proposals.clear();
+    this.caseNotes.clear();
+    this.escalations.clear();
+    this.approvals.clear();
+    this.handoffs.clear();
+    this.auditEvents.clear();
+    this.policies.clear();
+    this.auditChainHeads.clear();
+    this.load(fixtures);
   }
 
   private nextId(prefix: string): string {

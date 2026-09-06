@@ -1,0 +1,398 @@
+[
+  {
+    "id": "reshipment-001",
+    "category": "reshipment",
+    "profile": "ecommerce",
+    "input": {
+      "message": "My order ord_eval_s001 never arrived; can you send a replacement?",
+      "caseId": "eval_case_reshipment-001",
+      "orderId": "ord_eval_s001",
+      "amount": {
+        "currency": "USD",
+        "minorUnits": 1
+      },
+      "reasonCode": "not_received",
+      "customer": {
+        "identity": "verified",
+        "region": "US"
+      },
+      "evidence": "fresh"
+    },
+    "expected": {
+      "action": "reshipment",
+      "policyDecision": "auto_execute",
+      "evidenceRequired": true
+    }
+  },
+  {
+    "id": "reshipment-002",
+    "category": "reshipment",
+    "profile": "ecommerce",
+    "input": {
+      "message": "My order ord_eval_s002 never arrived; can you send a replacement?",
+      "caseId": "eval_case_reshipment-002",
+      "orderId": "ord_eval_s002",
+      "amount": {
+        "currency": "USD",
+        "minorUnits": 800
+      },
+      "reasonCode": "not_received",
+      "customer": {
+        "identity": "verified",
+        "region": "CA"
+      },
+      "evidence": "fresh"
+    },
+    "expected": {
+      "action": "reshipment",
+      "policyDecision": "auto_execute",
+      "evidenceRequired": true
+    }
+  },
+  {
+    "id": "reshipment-003",
+    "category": "reshipment",
+    "profile": "ecommerce",
+    "input": {
+      "message": "My order ord_eval_s003 never arrived; can you send a replacement?",
+      "caseId": "eval_case_reshipment-003",
+      "orderId": "ord_eval_s003",
+      "amount": {
+        "currency": "USD",
+        "minorUnits": 1500
+      },
+      "reasonCode": "not_received",
+      "customer": {
+        "identity": "verified",
+        "region": "GB"
+      },
+      "evidence": "fresh"
+    },
+    "expected": {
+      "action": "reshipment",
+      "policyDecision": "auto_execute",
+      "evidenceRequired": true
+    }
+  },
+  {
+    "id": "reshipment-004",
+    "category": "reshipment",
+    "profile": "ecommerce",
+    "input": {
+      "message": "My order ord_eval_s004 never arrived; can you send a replacement?",
+      "caseId": "eval_case_reshipment-004",
+      "orderId": "ord_eval_s004",
+      "amount": {
+        "currency": "USD",
+        "minorUnits": 2200
+      },
+      "reasonCode": "not_received",
+      "customer": {
+        "identity": "verified",
+        "region": "DE"
+      },
+      "evidence": "fresh"
+    },
+    "expected": {
+      "action": "reshipment",
+      "policyDecision": "auto_execute",
+      "evidenceRequired": true
+    }
+  },
+  {
+    "id": "reshipment-005",
+    "category": "reshipment",
+    "profile": "ecommerce",
+    "input": {
+      "message": "My order ord_eval_s005 never arrived; can you send a replacement?",
+      "caseId": "eval_case_reshipment-005",
+      "orderId": "ord_eval_s005",
+      "amount": {
+        "currency": "USD",
+        "minorUnits": 2999
+      },
+      "reasonCode": "not_received",
+      "customer": {
+        "identity": "verified",
+        "region": "US"
+      },
+      "evidence": "fresh"
+    },
+    "expected": {
+      "action": "reshipment",
+      "policyDecision": "auto_execute",
+      "evidenceRequired": true
+    }
+  },
+  {
+    "id": "reshipment-006",
+    "category": "reshipment",
+    "profile": "ecommerce",
+    "input": {
+      "message": "My order ord_eval_s006 never arrived; can you send a replacement?",
+      "caseId": "eval_case_reshipment-006",
+      "orderId": "ord_eval_s006",
+      "amount": {
+        "currency": "USD",
+        "minorUnits": 500
+      },
+      "reasonCode": "not_received",
+      "customer": {
+        "identity": "verified",
+        "region": "CA"
+      },
+      "evidence": "fresh"
+    },
+    "expected": {
+      "action": "reshipment",
+      "policyDecision": "auto_execute",
+      "evidenceRequired": true
+    }
+  },
+  {
+    "id": "reshipment-007",
+    "category": "reshipment",
+    "profile": "ecommerce",
+    "input": {
+      "message": "My order ord_eval_s007 never arrived; can you send a replacement?",
+      "caseId": "eval_case_reshipment-007",
+      "orderId": "ord_eval_s007",
+      "amount": {
+        "currency": "USD",
+        "minorUnits": 1200
+      },
+      "reasonCode": "not_received",
+      "customer": {
+        "identity": "verified",
+        "region": "GB"
+      },
+      "evidence": "fresh"
+    },
+    "expected": {
+      "action": "reshipment",
+      "policyDecision": "auto_execute",
+      "evidenceRequired": true
+    }
+  },
+  {
+    "id": "reshipment-008",
+    "category": "reshipment",
+    "profile": "ecommerce",
+    "input": {
+      "message": "My order ord_eval_s008 never arrived; can you send a replacement?",
+      "caseId": "eval_case_reshipment-008",
+      "orderId": "ord_eval_s008",
+      "amount": {
+        "currency": "USD",
+        "minorUnits": 1800
+      },
+      "reasonCode": "not_received",
+      "customer": {
+        "identity": "verified",
+        "region": "DE"
+      },
+      "evidence": "fresh"
+    },
+    "expected": {
+      "action": "reshipment",
+      "policyDecision": "auto_execute",
+      "evidenceRequired": true
+    }
+  },
+  {
+    "id": "reshipment-009",
+    "category": "reshipment",
+    "profile": "ecommerce",
+    "input": {
+      "message": "My order ord_eval_s009 never arrived; can you send a replacement?",
+      "caseId": "eval_case_reshipment-009",
+      "orderId": "ord_eval_s009",
+      "amount": {
+        "currency": "USD",
+        "minorUnits": 2500
+      },
+      "reasonCode": "not_received",
+      "customer": {
+        "identity": "verified",
+        "region": "US"
+      },
+      "evidence": "fresh"
+    },
+    "expected": {
+      "action": "reshipment",
+      "policyDecision": "auto_execute",
+      "evidenceRequired": true
+    }
+  },
+  {
+    "id": "reshipment-010",
+    "category": "reshipment",
+    "profile": "ecommerce",
+    "input": {
+      "message": "Reship order ord_eval_s010, a high-value replacement.",
+      "caseId": "eval_case_reshipment-010",
+      "orderId": "ord_eval_s010",
+      "amount": {
+        "currency": "USD",
+        "minorUnits": 3100
+      },
+      "reasonCode": "not_received",
+      "customer": {
+        "identity": "verified",
+        "region": "US"
+      },
+      "evidence": "fresh"
+    },
+    "expected": {
+      "action": "reshipment",
+      "policyDecision": "require_approval",
+      "evidenceRequired": true,
+      "reasonCodes": [
+        "OVER_THRESHOLD"
+      ]
+    }
+  },
+  {
+    "id": "reshipment-011",
+    "category": "reshipment",
+    "profile": "ecommerce",
+    "input": {
+      "message": "Reship order ord_eval_s011, a high-value replacement.",
+      "caseId": "eval_case_reshipment-011",
+      "orderId": "ord_eval_s011",
+      "amount": {
+        "currency": "USD",
+        "minorUnits": 8000
+      },
+      "reasonCode": "not_received",
+      "customer": {
+        "identity": "verified",
+        "region": "US"
+      },
+      "evidence": "fresh"
+    },
+    "expected": {
+      "action": "reshipment",
+      "policyDecision": "require_approval",
+      "evidenceRequired": true,
+      "reasonCodes": [
+        "OVER_THRESHOLD"
+      ]
+    }
+  },
+  {
+    "id": "reshipment-012",
+    "category": "reshipment",
+    "profile": "ecommerce",
+    "input": {
+      "message": "Please reship order ord_eval_s012.",
+      "caseId": "eval_case_reshipment-012",
+      "orderId": "ord_eval_s012",
+      "amount": {
+        "currency": "USD",
+        "minorUnits": 1500
+      },
+      "reasonCode": "not_received",
+      "customer": {
+        "identity": "unverified",
+        "region": "US"
+      },
+      "evidence": "fresh"
+    },
+    "expected": {
+      "action": "reshipment",
+      "policyDecision": "block",
+      "evidenceRequired": true,
+      "reasonCodes": [
+        "IDENTITY_UNVERIFIED"
+      ],
+      "handoffReason": "identity_unverified"
+    }
+  },
+  {
+    "id": "reshipment-013",
+    "category": "reshipment",
+    "profile": "ecommerce",
+    "input": {
+      "message": "Please reship order ord_eval_s013.",
+      "caseId": "eval_case_reshipment-013",
+      "orderId": "ord_eval_s013",
+      "amount": {
+        "currency": "USD",
+        "minorUnits": 1500
+      },
+      "reasonCode": "not_received",
+      "customer": {
+        "identity": "unverified",
+        "region": "US"
+      },
+      "evidence": "fresh"
+    },
+    "expected": {
+      "action": "reshipment",
+      "policyDecision": "block",
+      "evidenceRequired": true,
+      "reasonCodes": [
+        "IDENTITY_UNVERIFIED"
+      ],
+      "handoffReason": "identity_unverified"
+    }
+  },
+  {
+    "id": "reshipment-014",
+    "category": "reshipment",
+    "profile": "ecommerce",
+    "input": {
+      "message": "Reship order ord_eval_s014, package lost.",
+      "caseId": "eval_case_reshipment-014",
+      "orderId": "ord_eval_s014",
+      "amount": {
+        "currency": "USD",
+        "minorUnits": 1500
+      },
+      "reasonCode": "not_received",
+      "customer": {
+        "identity": "verified",
+        "region": "US"
+      },
+      "evidence": "missing"
+    },
+    "expected": {
+      "action": "reshipment",
+      "policyDecision": "block",
+      "evidenceRequired": true,
+      "reasonCodes": [
+        "INSUFFICIENT_EVIDENCE"
+      ],
+      "handoffReason": "insufficient_evidence"
+    }
+  },
+  {
+    "id": "reshipment-015",
+    "category": "reshipment",
+    "profile": "ecommerce",
+    "input": {
+      "message": "Reship order ord_eval_s015; the shipment record is from last month.",
+      "caseId": "eval_case_reshipment-015",
+      "orderId": "ord_eval_s015",
+      "amount": {
+        "currency": "USD",
+        "minorUnits": 1500
+      },
+      "reasonCode": "not_received",
+      "customer": {
+        "identity": "verified",
+        "region": "US"
+      },
+      "evidence": "expired"
+    },
+    "expected": {
+      "action": "reshipment",
+      "policyDecision": "require_approval",
+      "evidenceRequired": true,
+      "reasonCodes": [
+        "EVIDENCE_STALE"
+      ]
+    }
+  }
+]

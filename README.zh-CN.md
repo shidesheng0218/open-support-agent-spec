@@ -140,6 +140,34 @@ Docker 构建上下文为**仓库根目录**（两个 Dockerfile 都复制整个
   `SHOPIFY_API_VERSION`）。详见
   [docs/zendesk-shopify-shadow.zh-CN.md](docs/zendesk-shopify-shadow.zh-CN.md)。
 
+### 运行时配置（Milestone 4）
+
+- **Conformance Mode**（`OSAS_CONFORMANCE_MODE=true` + `OSAS_CONFORMANCE_KEY`）：
+  启用仅供测试的端点 `POST /v1/conformance/reset`、
+  `POST /v1/conformance/fixtures/load`、`GET /v1/conformance/snapshot`
+  （均要求 `X-OSAS-Conformance-Key` 头）。**严禁在生产环境启用**——
+  `NODE_ENV=production` 时启动直接失败（fail closed），缺少 key 同样拒绝启动。
+  CI 只在一次性的 Docker 测试环境中启用。详见
+  [docs/conformance.zh-CN.md](docs/conformance.zh-CN.md)。
+
+## 黑盒兼容性与评测（Milestone 4）
+
+- **`pnpm osas:compat -- --target http://localhost:3001`** —— `@osas/compat-runner`，
+  黑盒一致性 Runner：只通过 HTTP 与目标实现通信，校验服务发现
+  （`/.well-known/osas`、specVersion、Capability Manifest）、工具与 Schema、
+  策略模拟结果；当配置了 Conformance Key（`OSAS_CONFORMANCE_MODE=true` +
+  `OSAS_CONFORMANCE_KEY`，或 `--conformance-key`）时运行状态型套件（策略版本
+  状态机、幂等执行、权限与租户隔离、审计链完整性）。输出机器可读 JSON 报告，
+  任何失败都会以非 0 退出码结束。
+- **`pnpm eval:policy`** —— 完全离线，对 `evals/cases/` 中 120 条合成案例
+  （30 退款、20 退货、15 补发、15 取消订单、20 普通咨询、20 安全边界）评测
+  策略引擎。硬性门禁（进入 CI）：100% Schema 合法、100% 策略一致、0 次越权、
+  0 次重复执行、0 次安全边界绕过。
+- **`pnpm eval:model`** —— 接入真实 Provider 的端到端评测；仅当显式设置
+  `OSAS_LLM_PROVIDER=openai-compatible` 及 base URL/模型时才运行（不进 CI，
+  默认 mock 下不运行）。模型的语义准确率独立展示——自动执行门禁从不以模型
+  "回答得像不像人"为准。
+
 ## 三条演示路径
 
 打开控制台（http://localhost:5173 或 http://localhost:8080），选择一个角色：
@@ -212,12 +240,14 @@ packages/
   mock-backend/          @osas/mock-backend     合成 fixtures + MockSupportAdapter
   store-postgres/        @osas/store-postgres   PostgreSQL 存储 + SQL 迁移（Milestone 2）
   mcp-server/            @osas/mcp-server       16 个工具定义 + stdio MCP 服务器
+  compat-runner/         @osas/compat-runner    黑盒 HTTP 一致性 Runner（Milestone 4）
 apps/
   api/                   @osas/api              Fastify 5 HTTP API（端口 3001）
   web/                   @osas/web              React 18 + Vite 控制台（端口 5173）
 tests/
   compat/                @osas/compat-suite     Schema/兼容套件 + JSON 报告
   e2e/                   @osas/e2e              Playwright 冒烟（E2E=1）
+evals/                   @osas/evals            120 条合成评测集 + eval:policy/eval:model
 docs/  rfcs/  .github/workflows/  docker-compose.yml
 ```
 
@@ -263,6 +293,7 @@ Adapter 抛出 `AdapterNotFoundError`（→ API 404）/ `AdapterPermissionError`
 - 规范：[docs/spec-v0.1.zh-CN.md](docs/spec-v0.1.zh-CN.md) · [English](docs/spec-v0.1.md)
 - Adapter 开发指南：[docs/adapter-guide.zh-CN.md](docs/adapter-guide.zh-CN.md) · [English](docs/adapter-guide.md)
 - Zendesk + Shopify Shadow Mode：[docs/zendesk-shopify-shadow.zh-CN.md](docs/zendesk-shopify-shadow.zh-CN.md) · [English](docs/zendesk-shopify-shadow.md)
+- Conformance Mode（仅限测试）：[docs/conformance.zh-CN.md](docs/conformance.zh-CN.md) · [English](docs/conformance.md)
 - 工程契约：[CONTRACTS.md](CONTRACTS.md)
 - 贡献指南：[CONTRIBUTING.zh-CN.md](CONTRIBUTING.zh-CN.md) · [English](CONTRIBUTING.md)
 - 治理：[GOVERNANCE.md](GOVERNANCE.md)

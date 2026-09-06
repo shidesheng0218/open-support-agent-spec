@@ -1,0 +1,816 @@
+[
+  {
+    "id": "refund-001",
+    "category": "refund",
+    "profile": "ecommerce",
+    "input": {
+      "message": "Order ord_eval_r001 arrived damaged; please refund $15.00.",
+      "caseId": "eval_case_refund-001",
+      "orderId": "ord_eval_r001",
+      "amount": {
+        "currency": "USD",
+        "minorUnits": 1500
+      },
+      "reasonCode": "damaged",
+      "customer": {
+        "identity": "verified",
+        "region": "US"
+      },
+      "evidence": "fresh"
+    },
+    "expected": {
+      "action": "refund",
+      "policyDecision": "auto_execute",
+      "evidenceRequired": true
+    }
+  },
+  {
+    "id": "refund-002",
+    "category": "refund",
+    "profile": "ecommerce",
+    "input": {
+      "message": "Order ord_eval_r002 arrived wrong item; please refund $25.00.",
+      "caseId": "eval_case_refund-002",
+      "orderId": "ord_eval_r002",
+      "amount": {
+        "currency": "USD",
+        "minorUnits": 2500
+      },
+      "reasonCode": "wrong_item",
+      "customer": {
+        "identity": "verified",
+        "region": "CA"
+      },
+      "evidence": "fresh"
+    },
+    "expected": {
+      "action": "refund",
+      "policyDecision": "auto_execute",
+      "evidenceRequired": true
+    }
+  },
+  {
+    "id": "refund-003",
+    "category": "refund",
+    "profile": "ecommerce",
+    "input": {
+      "message": "Order ord_eval_r003 arrived not received; please refund $32.00.",
+      "caseId": "eval_case_refund-003",
+      "orderId": "ord_eval_r003",
+      "amount": {
+        "currency": "USD",
+        "minorUnits": 3200
+      },
+      "reasonCode": "not_received",
+      "customer": {
+        "identity": "verified",
+        "region": "GB"
+      },
+      "evidence": "fresh"
+    },
+    "expected": {
+      "action": "refund",
+      "policyDecision": "auto_execute",
+      "evidenceRequired": true
+    }
+  },
+  {
+    "id": "refund-004",
+    "category": "refund",
+    "profile": "ecommerce",
+    "input": {
+      "message": "Order ord_eval_r004 arrived other; please refund $49.99.",
+      "caseId": "eval_case_refund-004",
+      "orderId": "ord_eval_r004",
+      "amount": {
+        "currency": "USD",
+        "minorUnits": 4999
+      },
+      "reasonCode": "other",
+      "customer": {
+        "identity": "verified",
+        "region": "DE"
+      },
+      "evidence": "fresh"
+    },
+    "expected": {
+      "action": "refund",
+      "policyDecision": "auto_execute",
+      "evidenceRequired": true
+    }
+  },
+  {
+    "id": "refund-005",
+    "category": "refund",
+    "profile": "ecommerce",
+    "input": {
+      "message": "Order ord_eval_r005 arrived damaged; please refund $8.00.",
+      "caseId": "eval_case_refund-005",
+      "orderId": "ord_eval_r005",
+      "amount": {
+        "currency": "USD",
+        "minorUnits": 800
+      },
+      "reasonCode": "damaged",
+      "customer": {
+        "identity": "verified",
+        "region": "US"
+      },
+      "evidence": "fresh"
+    },
+    "expected": {
+      "action": "refund",
+      "policyDecision": "auto_execute",
+      "evidenceRequired": true
+    }
+  },
+  {
+    "id": "refund-006",
+    "category": "refund",
+    "profile": "ecommerce",
+    "input": {
+      "message": "Order ord_eval_r006 arrived wrong item; please refund $12.00.",
+      "caseId": "eval_case_refund-006",
+      "orderId": "ord_eval_r006",
+      "amount": {
+        "currency": "USD",
+        "minorUnits": 1200
+      },
+      "reasonCode": "wrong_item",
+      "customer": {
+        "identity": "verified",
+        "region": "CA"
+      },
+      "evidence": "fresh"
+    },
+    "expected": {
+      "action": "refund",
+      "policyDecision": "auto_execute",
+      "evidenceRequired": true
+    }
+  },
+  {
+    "id": "refund-007",
+    "category": "refund",
+    "profile": "ecommerce",
+    "input": {
+      "message": "Order ord_eval_r007 arrived not received; please refund $27.50.",
+      "caseId": "eval_case_refund-007",
+      "orderId": "ord_eval_r007",
+      "amount": {
+        "currency": "USD",
+        "minorUnits": 2750
+      },
+      "reasonCode": "not_received",
+      "customer": {
+        "identity": "verified",
+        "region": "GB"
+      },
+      "evidence": "fresh"
+    },
+    "expected": {
+      "action": "refund",
+      "policyDecision": "auto_execute",
+      "evidenceRequired": true
+    }
+  },
+  {
+    "id": "refund-008",
+    "category": "refund",
+    "profile": "ecommerce",
+    "input": {
+      "message": "Order ord_eval_r008 arrived other; please refund $40.00.",
+      "caseId": "eval_case_refund-008",
+      "orderId": "ord_eval_r008",
+      "amount": {
+        "currency": "USD",
+        "minorUnits": 4000
+      },
+      "reasonCode": "other",
+      "customer": {
+        "identity": "verified",
+        "region": "DE"
+      },
+      "evidence": "fresh"
+    },
+    "expected": {
+      "action": "refund",
+      "policyDecision": "auto_execute",
+      "evidenceRequired": true
+    }
+  },
+  {
+    "id": "refund-009",
+    "category": "refund",
+    "profile": "ecommerce",
+    "input": {
+      "message": "Order ord_eval_r009 arrived damaged; please refund $9.99.",
+      "caseId": "eval_case_refund-009",
+      "orderId": "ord_eval_r009",
+      "amount": {
+        "currency": "USD",
+        "minorUnits": 999
+      },
+      "reasonCode": "damaged",
+      "customer": {
+        "identity": "verified",
+        "region": "US"
+      },
+      "evidence": "fresh"
+    },
+    "expected": {
+      "action": "refund",
+      "policyDecision": "auto_execute",
+      "evidenceRequired": true
+    }
+  },
+  {
+    "id": "refund-010",
+    "category": "refund",
+    "profile": "ecommerce",
+    "input": {
+      "message": "Order ord_eval_r010 arrived wrong item; please refund $21.00.",
+      "caseId": "eval_case_refund-010",
+      "orderId": "ord_eval_r010",
+      "amount": {
+        "currency": "USD",
+        "minorUnits": 2100
+      },
+      "reasonCode": "wrong_item",
+      "customer": {
+        "identity": "verified",
+        "region": "CA"
+      },
+      "evidence": "fresh"
+    },
+    "expected": {
+      "action": "refund",
+      "policyDecision": "auto_execute",
+      "evidenceRequired": true
+    }
+  },
+  {
+    "id": "refund-011",
+    "category": "refund",
+    "profile": "ecommerce",
+    "input": {
+      "message": "Order ord_eval_r011 arrived not received; please refund $36.00.",
+      "caseId": "eval_case_refund-011",
+      "orderId": "ord_eval_r011",
+      "amount": {
+        "currency": "USD",
+        "minorUnits": 3600
+      },
+      "reasonCode": "not_received",
+      "customer": {
+        "identity": "verified",
+        "region": "GB"
+      },
+      "evidence": "fresh"
+    },
+    "expected": {
+      "action": "refund",
+      "policyDecision": "auto_execute",
+      "evidenceRequired": true
+    }
+  },
+  {
+    "id": "refund-012",
+    "category": "refund",
+    "profile": "ecommerce",
+    "input": {
+      "message": "Order ord_eval_r012 arrived other; please refund $45.00.",
+      "caseId": "eval_case_refund-012",
+      "orderId": "ord_eval_r012",
+      "amount": {
+        "currency": "USD",
+        "minorUnits": 4500
+      },
+      "reasonCode": "other",
+      "customer": {
+        "identity": "verified",
+        "region": "DE"
+      },
+      "evidence": "fresh"
+    },
+    "expected": {
+      "action": "refund",
+      "policyDecision": "auto_execute",
+      "evidenceRequired": true
+    }
+  },
+  {
+    "id": "refund-013",
+    "category": "refund",
+    "profile": "ecommerce",
+    "input": {
+      "message": "I need a refund of $51.00 for order ord_eval_r013.",
+      "caseId": "eval_case_refund-013",
+      "orderId": "ord_eval_r013",
+      "amount": {
+        "currency": "USD",
+        "minorUnits": 5100
+      },
+      "reasonCode": "damaged",
+      "customer": {
+        "identity": "verified",
+        "region": "US"
+      },
+      "evidence": "fresh"
+    },
+    "expected": {
+      "action": "refund",
+      "policyDecision": "require_approval",
+      "evidenceRequired": true,
+      "reasonCodes": [
+        "OVER_THRESHOLD"
+      ]
+    }
+  },
+  {
+    "id": "refund-014",
+    "category": "refund",
+    "profile": "ecommerce",
+    "input": {
+      "message": "I need a refund of $75.00 for order ord_eval_r014.",
+      "caseId": "eval_case_refund-014",
+      "orderId": "ord_eval_r014",
+      "amount": {
+        "currency": "USD",
+        "minorUnits": 7500
+      },
+      "reasonCode": "damaged",
+      "customer": {
+        "identity": "verified",
+        "region": "US"
+      },
+      "evidence": "fresh"
+    },
+    "expected": {
+      "action": "refund",
+      "policyDecision": "require_approval",
+      "evidenceRequired": true,
+      "reasonCodes": [
+        "OVER_THRESHOLD"
+      ]
+    }
+  },
+  {
+    "id": "refund-015",
+    "category": "refund",
+    "profile": "ecommerce",
+    "input": {
+      "message": "I need a refund of $120.00 for order ord_eval_r015.",
+      "caseId": "eval_case_refund-015",
+      "orderId": "ord_eval_r015",
+      "amount": {
+        "currency": "USD",
+        "minorUnits": 12000
+      },
+      "reasonCode": "damaged",
+      "customer": {
+        "identity": "verified",
+        "region": "US"
+      },
+      "evidence": "fresh"
+    },
+    "expected": {
+      "action": "refund",
+      "policyDecision": "require_approval",
+      "evidenceRequired": true,
+      "reasonCodes": [
+        "OVER_THRESHOLD"
+      ]
+    }
+  },
+  {
+    "id": "refund-016",
+    "category": "refund",
+    "profile": "ecommerce",
+    "input": {
+      "message": "I need a refund of $250.00 for order ord_eval_r016.",
+      "caseId": "eval_case_refund-016",
+      "orderId": "ord_eval_r016",
+      "amount": {
+        "currency": "USD",
+        "minorUnits": 25000
+      },
+      "reasonCode": "damaged",
+      "customer": {
+        "identity": "verified",
+        "region": "US"
+      },
+      "evidence": "fresh"
+    },
+    "expected": {
+      "action": "refund",
+      "policyDecision": "require_approval",
+      "evidenceRequired": true,
+      "reasonCodes": [
+        "OVER_THRESHOLD"
+      ]
+    }
+  },
+  {
+    "id": "refund-017",
+    "category": "refund",
+    "profile": "ecommerce",
+    "input": {
+      "message": "I need a refund of $900.00 for order ord_eval_r017.",
+      "caseId": "eval_case_refund-017",
+      "orderId": "ord_eval_r017",
+      "amount": {
+        "currency": "USD",
+        "minorUnits": 90000
+      },
+      "reasonCode": "damaged",
+      "customer": {
+        "identity": "verified",
+        "region": "US"
+      },
+      "evidence": "fresh"
+    },
+    "expected": {
+      "action": "refund",
+      "policyDecision": "require_approval",
+      "evidenceRequired": true,
+      "reasonCodes": [
+        "OVER_THRESHOLD"
+      ]
+    }
+  },
+  {
+    "id": "refund-018",
+    "category": "refund",
+    "profile": "ecommerce",
+    "input": {
+      "message": "Refund order ord_eval_r018 please, the item was damaged.",
+      "caseId": "eval_case_refund-018",
+      "orderId": "ord_eval_r018",
+      "amount": {
+        "currency": "USD",
+        "minorUnits": 2500
+      },
+      "reasonCode": "damaged",
+      "customer": {
+        "identity": "unverified",
+        "region": "US"
+      },
+      "evidence": "fresh"
+    },
+    "expected": {
+      "action": "refund",
+      "policyDecision": "block",
+      "evidenceRequired": true,
+      "reasonCodes": [
+        "IDENTITY_UNVERIFIED"
+      ],
+      "handoffReason": "identity_unverified"
+    }
+  },
+  {
+    "id": "refund-019",
+    "category": "refund",
+    "profile": "ecommerce",
+    "input": {
+      "message": "Refund order ord_eval_r019 please, the item was damaged.",
+      "caseId": "eval_case_refund-019",
+      "orderId": "ord_eval_r019",
+      "amount": {
+        "currency": "USD",
+        "minorUnits": 2500
+      },
+      "reasonCode": "damaged",
+      "customer": {
+        "identity": "unverified",
+        "region": "US"
+      },
+      "evidence": "fresh"
+    },
+    "expected": {
+      "action": "refund",
+      "policyDecision": "block",
+      "evidenceRequired": true,
+      "reasonCodes": [
+        "IDENTITY_UNVERIFIED"
+      ],
+      "handoffReason": "identity_unverified"
+    }
+  },
+  {
+    "id": "refund-020",
+    "category": "refund",
+    "profile": "ecommerce",
+    "input": {
+      "message": "Refund order ord_eval_r020 please, the item was damaged.",
+      "caseId": "eval_case_refund-020",
+      "orderId": "ord_eval_r020",
+      "amount": {
+        "currency": "USD",
+        "minorUnits": 2500
+      },
+      "reasonCode": "damaged",
+      "customer": {
+        "identity": "unverified",
+        "region": "US"
+      },
+      "evidence": "fresh"
+    },
+    "expected": {
+      "action": "refund",
+      "policyDecision": "block",
+      "evidenceRequired": true,
+      "reasonCodes": [
+        "IDENTITY_UNVERIFIED"
+      ],
+      "handoffReason": "identity_unverified"
+    }
+  },
+  {
+    "id": "refund-021",
+    "category": "refund",
+    "profile": "ecommerce",
+    "input": {
+      "message": "Please refund order ord_eval_r021, wrong item shipped.",
+      "caseId": "eval_case_refund-021",
+      "orderId": "ord_eval_r021",
+      "amount": {
+        "currency": "USD",
+        "minorUnits": 2000
+      },
+      "reasonCode": "wrong_item",
+      "customer": {
+        "identity": "expired",
+        "region": "US"
+      },
+      "evidence": "fresh"
+    },
+    "expected": {
+      "action": "refund",
+      "policyDecision": "block",
+      "evidenceRequired": true,
+      "reasonCodes": [
+        "IDENTITY_UNVERIFIED"
+      ],
+      "handoffReason": "identity_unverified"
+    }
+  },
+  {
+    "id": "refund-022",
+    "category": "refund",
+    "profile": "ecommerce",
+    "input": {
+      "message": "Please refund order ord_eval_r022, wrong item shipped.",
+      "caseId": "eval_case_refund-022",
+      "orderId": "ord_eval_r022",
+      "amount": {
+        "currency": "USD",
+        "minorUnits": 2000
+      },
+      "reasonCode": "wrong_item",
+      "customer": {
+        "identity": "expired",
+        "region": "US"
+      },
+      "evidence": "fresh"
+    },
+    "expected": {
+      "action": "refund",
+      "policyDecision": "block",
+      "evidenceRequired": true,
+      "reasonCodes": [
+        "IDENTITY_UNVERIFIED"
+      ],
+      "handoffReason": "identity_unverified"
+    }
+  },
+  {
+    "id": "refund-023",
+    "category": "refund",
+    "profile": "ecommerce",
+    "input": {
+      "message": "Refund order ord_eval_r023; I never received it.",
+      "caseId": "eval_case_refund-023",
+      "orderId": "ord_eval_r023",
+      "amount": {
+        "currency": "USD",
+        "minorUnits": 1800
+      },
+      "reasonCode": "not_received",
+      "customer": {
+        "identity": "missing",
+        "region": "US"
+      },
+      "evidence": "fresh"
+    },
+    "expected": {
+      "action": "refund",
+      "policyDecision": "block",
+      "evidenceRequired": true,
+      "reasonCodes": [
+        "IDENTITY_REQUIRED"
+      ],
+      "handoffReason": "identity_unverified"
+    }
+  },
+  {
+    "id": "refund-024",
+    "category": "refund",
+    "profile": "ecommerce",
+    "input": {
+      "message": "Refund order ord_eval_r024; item damaged in transit.",
+      "caseId": "eval_case_refund-024",
+      "orderId": "ord_eval_r024",
+      "amount": {
+        "currency": "USD",
+        "minorUnits": 2500
+      },
+      "reasonCode": "damaged",
+      "customer": {
+        "identity": "verified",
+        "region": "IR"
+      },
+      "evidence": "fresh"
+    },
+    "expected": {
+      "action": "refund",
+      "policyDecision": "block",
+      "evidenceRequired": true,
+      "reasonCodes": [
+        "REGION_BLOCKED"
+      ],
+      "handoffReason": "region_blocked"
+    }
+  },
+  {
+    "id": "refund-025",
+    "category": "refund",
+    "profile": "ecommerce",
+    "input": {
+      "message": "Refund order ord_eval_r025; item damaged in transit.",
+      "caseId": "eval_case_refund-025",
+      "orderId": "ord_eval_r025",
+      "amount": {
+        "currency": "USD",
+        "minorUnits": 2500
+      },
+      "reasonCode": "damaged",
+      "customer": {
+        "identity": "verified",
+        "region": "KP"
+      },
+      "evidence": "fresh"
+    },
+    "expected": {
+      "action": "refund",
+      "policyDecision": "block",
+      "evidenceRequired": true,
+      "reasonCodes": [
+        "REGION_BLOCKED"
+      ],
+      "handoffReason": "region_blocked"
+    }
+  },
+  {
+    "id": "refund-026",
+    "category": "refund",
+    "profile": "ecommerce",
+    "input": {
+      "message": "Refund order ord_eval_r026 please, damaged on arrival.",
+      "caseId": "eval_case_refund-026",
+      "orderId": "ord_eval_r026",
+      "amount": {
+        "currency": "USD",
+        "minorUnits": 2500
+      },
+      "reasonCode": "damaged",
+      "customer": {
+        "identity": "verified",
+        "region": "BR"
+      },
+      "evidence": "fresh"
+    },
+    "expected": {
+      "action": "refund",
+      "policyDecision": "require_approval",
+      "evidenceRequired": true,
+      "reasonCodes": [
+        "REGION_UNLISTED"
+      ]
+    }
+  },
+  {
+    "id": "refund-027",
+    "category": "refund",
+    "profile": "ecommerce",
+    "input": {
+      "message": "I want a refund for order ord_eval_r027 because I changed my mind.",
+      "caseId": "eval_case_refund-027",
+      "orderId": "ord_eval_r027",
+      "amount": {
+        "currency": "USD",
+        "minorUnits": 2500
+      },
+      "reasonCode": "buyers_remorse",
+      "customer": {
+        "identity": "verified",
+        "region": "US"
+      },
+      "evidence": "fresh"
+    },
+    "expected": {
+      "action": "refund",
+      "policyDecision": "block",
+      "evidenceRequired": true,
+      "reasonCodes": [
+        "REASON_CODE_NOT_ALLOWED"
+      ]
+    }
+  },
+  {
+    "id": "refund-028",
+    "category": "refund",
+    "profile": "ecommerce",
+    "input": {
+      "message": "I want a refund for order ord_eval_r028 because I changed my mind.",
+      "caseId": "eval_case_refund-028",
+      "orderId": "ord_eval_r028",
+      "amount": {
+        "currency": "USD",
+        "minorUnits": 2500
+      },
+      "reasonCode": "buyers_remorse",
+      "customer": {
+        "identity": "verified",
+        "region": "US"
+      },
+      "evidence": "fresh"
+    },
+    "expected": {
+      "action": "refund",
+      "policyDecision": "block",
+      "evidenceRequired": true,
+      "reasonCodes": [
+        "REASON_CODE_NOT_ALLOWED"
+      ]
+    }
+  },
+  {
+    "id": "refund-029",
+    "category": "refund",
+    "profile": "ecommerce",
+    "input": {
+      "message": "Refund order ord_eval_r029; it arrived broken.",
+      "caseId": "eval_case_refund-029",
+      "orderId": "ord_eval_r029",
+      "amount": {
+        "currency": "USD",
+        "minorUnits": 2500
+      },
+      "reasonCode": "damaged",
+      "customer": {
+        "identity": "verified",
+        "region": "US"
+      },
+      "evidence": "missing"
+    },
+    "expected": {
+      "action": "refund",
+      "policyDecision": "block",
+      "evidenceRequired": true,
+      "reasonCodes": [
+        "INSUFFICIENT_EVIDENCE"
+      ],
+      "handoffReason": "insufficient_evidence"
+    }
+  },
+  {
+    "id": "refund-030",
+    "category": "refund",
+    "profile": "ecommerce",
+    "input": {
+      "message": "Refund order ord_eval_r030; it arrived broken.",
+      "caseId": "eval_case_refund-030",
+      "orderId": "ord_eval_r030",
+      "amount": {
+        "currency": "USD",
+        "minorUnits": 2500
+      },
+      "reasonCode": "damaged",
+      "customer": {
+        "identity": "verified",
+        "region": "US"
+      },
+      "evidence": "missing"
+    },
+    "expected": {
+      "action": "refund",
+      "policyDecision": "block",
+      "evidenceRequired": true,
+      "reasonCodes": [
+        "INSUFFICIENT_EVIDENCE"
+      ],
+      "handoffReason": "insufficient_evidence"
+    }
+  }
+]

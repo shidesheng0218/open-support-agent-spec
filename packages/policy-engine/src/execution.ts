@@ -54,6 +54,11 @@ export class InMemoryExecutionStore implements ExecutionStore {
       record,
     );
   }
+
+  /** Conformance Mode (Milestone 4, test-only): wipe all execution records. */
+  reset(): void {
+    this.map.clear();
+  }
 }
 
 export class ExecutionStatusError extends Error {

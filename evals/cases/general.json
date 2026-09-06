@@ -1,0 +1,282 @@
+[
+  {
+    "id": "general-001",
+    "category": "general",
+    "profile": "ecommerce",
+    "input": {
+      "message": "Where is my order? The tracking shows it left the depot.",
+      "caseId": "eval_case_general-001"
+    },
+    "expected": {
+      "action": null,
+      "policyDecision": "none",
+      "evidenceRequired": false
+    }
+  },
+  {
+    "id": "general-002",
+    "category": "general",
+    "profile": "ecommerce",
+    "input": {
+      "message": "What is your return window for clothing?",
+      "caseId": "eval_case_general-002"
+    },
+    "expected": {
+      "action": null,
+      "policyDecision": "none",
+      "evidenceRequired": false
+    }
+  },
+  {
+    "id": "general-003",
+    "category": "general",
+    "profile": "ecommerce",
+    "input": {
+      "message": "Do you ship to PO boxes?",
+      "caseId": "eval_case_general-003"
+    },
+    "expected": {
+      "action": null,
+      "policyDecision": "none",
+      "evidenceRequired": false
+    }
+  },
+  {
+    "id": "general-004",
+    "category": "general",
+    "profile": "ecommerce",
+    "input": {
+      "message": "Can I change the shipping address on an order?",
+      "caseId": "eval_case_general-004"
+    },
+    "expected": {
+      "action": null,
+      "policyDecision": "none",
+      "evidenceRequired": false
+    }
+  },
+  {
+    "id": "general-005",
+    "category": "general",
+    "profile": "ecommerce",
+    "input": {
+      "message": "The discount code didn't apply at checkout — how does that work?",
+      "caseId": "eval_case_general-005"
+    },
+    "expected": {
+      "action": null,
+      "policyDecision": "none",
+      "evidenceRequired": false
+    }
+  },
+  {
+    "id": "general-006",
+    "category": "general",
+    "profile": "ecommerce",
+    "input": {
+      "message": "Is the ceramic mug dishwasher safe?",
+      "caseId": "eval_case_general-006"
+    },
+    "expected": {
+      "action": null,
+      "policyDecision": "none",
+      "evidenceRequired": false
+    }
+  },
+  {
+    "id": "general-007",
+    "category": "general",
+    "profile": "ecommerce",
+    "input": {
+      "message": "When will the office chair be back in stock?",
+      "caseId": "eval_case_general-007"
+    },
+    "expected": {
+      "action": null,
+      "policyDecision": "none",
+      "evidenceRequired": false
+    }
+  },
+  {
+    "id": "general-008",
+    "category": "general",
+    "profile": "saas",
+    "input": {
+      "message": "How do I add a teammate to my workspace?",
+      "caseId": "eval_case_general-008"
+    },
+    "expected": {
+      "action": null,
+      "policyDecision": "none",
+      "evidenceRequired": false
+    }
+  },
+  {
+    "id": "general-009",
+    "category": "general",
+    "profile": "saas",
+    "input": {
+      "message": "What's the difference between the starter and pro plans?",
+      "caseId": "eval_case_general-009"
+    },
+    "expected": {
+      "action": null,
+      "policyDecision": "none",
+      "evidenceRequired": false
+    }
+  },
+  {
+    "id": "general-010",
+    "category": "general",
+    "profile": "saas",
+    "input": {
+      "message": "How do I export my invoices as PDF?",
+      "caseId": "eval_case_general-010"
+    },
+    "expected": {
+      "action": null,
+      "policyDecision": "none",
+      "evidenceRequired": false
+    }
+  },
+  {
+    "id": "general-011",
+    "category": "general",
+    "profile": "saas",
+    "input": {
+      "message": "Do you offer annual billing?",
+      "caseId": "eval_case_general-011"
+    },
+    "expected": {
+      "action": null,
+      "policyDecision": "none",
+      "evidenceRequired": false
+    }
+  },
+  {
+    "id": "general-012",
+    "category": "general",
+    "profile": "saas",
+    "input": {
+      "message": "Where can I find the API documentation?",
+      "caseId": "eval_case_general-012"
+    },
+    "expected": {
+      "action": null,
+      "policyDecision": "none",
+      "evidenceRequired": false
+    }
+  },
+  {
+    "id": "general-013",
+    "category": "general",
+    "profile": "saas",
+    "input": {
+      "message": "How do I enable two-factor authentication?",
+      "caseId": "eval_case_general-013"
+    },
+    "expected": {
+      "action": null,
+      "policyDecision": "none",
+      "evidenceRequired": false
+    }
+  },
+  {
+    "id": "general-014",
+    "category": "general",
+    "profile": "core",
+    "input": {
+      "message": "I just wanted to say thanks for the quick help yesterday!",
+      "caseId": "eval_case_general-014"
+    },
+    "expected": {
+      "action": null,
+      "policyDecision": "none",
+      "evidenceRequired": false
+    }
+  },
+  {
+    "id": "general-015",
+    "category": "general",
+    "profile": "core",
+    "input": {
+      "message": "What are your support hours?",
+      "caseId": "eval_case_general-015"
+    },
+    "expected": {
+      "action": null,
+      "policyDecision": "none",
+      "evidenceRequired": false
+    }
+  },
+  {
+    "id": "general-016",
+    "category": "general",
+    "profile": "core",
+    "input": {
+      "message": "How do I update my account email address?",
+      "caseId": "eval_case_general-016"
+    },
+    "expected": {
+      "action": null,
+      "policyDecision": "none",
+      "evidenceRequired": false
+    }
+  },
+  {
+    "id": "general-017",
+    "category": "general",
+    "profile": "core",
+    "input": {
+      "message": "Can you tell me more about your loyalty program?",
+      "caseId": "eval_case_general-017"
+    },
+    "expected": {
+      "action": null,
+      "policyDecision": "none",
+      "evidenceRequired": false
+    }
+  },
+  {
+    "id": "general-018",
+    "category": "general",
+    "profile": "core",
+    "input": {
+      "message": "Is there a mobile app I can use?",
+      "caseId": "eval_case_general-018"
+    },
+    "expected": {
+      "action": null,
+      "policyDecision": "none",
+      "evidenceRequired": false
+    }
+  },
+  {
+    "id": "general-019",
+    "category": "general",
+    "profile": "core",
+    "input": {
+      "message": "I'd like to leave feedback about the checkout experience.",
+      "caseId": "eval_case_general-019"
+    },
+    "expected": {
+      "action": null,
+      "policyDecision": "none",
+      "evidenceRequired": false
+    }
+  },
+  {
+    "id": "general-020",
+    "category": "general",
+    "profile": "ecommerce",
+    "input": {
+      "message": "My package arrived early — everything looks great, thanks!",
+      "caseId": "eval_case_general-020"
+    },
+    "expected": {
+      "action": null,
+      "policyDecision": "none",
+      "evidenceRequired": false
+    }
+  }
+]
