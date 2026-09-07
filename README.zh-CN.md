@@ -1,72 +1,117 @@
 # Open Support Agent Spec（OSAS，开放客服 Agent 规范）
 
-[![License: Apache-2.0](https://img.shields.io/badge/License-Apache--2.0-blue.svg)](LICENSE)
-[![Spec: v0.1 Draft](https://img.shields.io/badge/spec-v0.1%20Draft-orange.svg)](docs/spec-v0.1.zh-CN.md)
-[![CI](https://github.com/shidesheng0218/open-support-agent-spec/actions/workflows/ci.yml/badge.svg)](https://github.com/shidesheng0218/open-support-agent-spec/actions/workflows/ci.yml)
+<div align="center">
+  <img src="docs/assets/osas-hero.svg" alt="OSAS：面向客服业务的可治理 AI Agent" width="100%" />
 
-[English](README.md)
+  <p><strong>面向客服业务的可治理、可互操作 AI Agent。</strong><br />
+  一份 Schema 优先的统一契约：读取可信数据、生成结构化建议、执行策略门禁、<br />
+  默认 Shadow Mode，并解释每一个结果。</p>
 
-OSAS 是一份**面向客服场景 AI Agent 的开放互操作规范**：它定义了 Agent 如何读取业务数据、
-生成结构化建议、通过策略校验、执行或升级人工，并留下完整审计轨迹的统一契约 ——
-不绑定任何特定模型、客服系统或电商平台。
+  <p>
+    <a href="README.md">English</a> ·
+    <a href="#快速开始">快速开始</a> ·
+    <a href="docs/spec-v0.1.zh-CN.md">阅读规范</a> ·
+    <a href="CONTRIBUTING.zh-CN.md">参与贡献</a>
+  </p>
+</div>
 
-> **当前状态：v0.1 草案（Draft）。** OSAS 是一份**正在积极演进中的开放规范草案**，
-> **并非**已确立的行业标准，目前不提供任何稳定性承诺。在 v1.0 之前，接口、Schema 与
-> 行为都可能发生变化。详见[状态与路线图](#状态与路线图)。
+<p align="center">
+  <a href="LICENSE"><img src="https://img.shields.io/badge/license-Apache--2.0-2563EB?style=flat-square" alt="Apache 2.0 许可证" /></a>
+  <a href="docs/spec-v0.1.zh-CN.md"><img src="https://img.shields.io/badge/spec-v0.1%20Draft-F59E0B?style=flat-square" alt="v0.1 草案" /></a>
+  <a href="https://github.com/shidesheng0218/open-support-agent-spec/actions/workflows/ci.yml"><img src="https://github.com/shidesheng0218/open-support-agent-spec/actions/workflows/ci.yml/badge.svg" alt="CI 状态" /></a>
+  <img src="https://img.shields.io/badge/Node-%3E%3D20-339933?style=flat-square&logo=node.js&logoColor=white" alt="Node.js 20 或更高" />
+  <img src="https://img.shields.io/badge/pnpm-11-F69220?style=flat-square&logo=pnpm&logoColor=white" alt="pnpm 11" />
+</p>
 
-## 本仓库交付内容
+> **当前状态：v0.1 草案（Draft）。** OSAS 是正在积极演进中的开放规范草案，**并非**
+> 已确立的行业标准。在 v1.0 之前，接口、Schema 与行为都可能发生变化，详见
+> [状态与路线图](#状态与路线图)。
 
-- **规范文本** —— 规范性文档见 [`docs/spec-v0.1.zh-CN.md`](docs/spec-v0.1.zh-CN.md)
-  （[English](docs/spec-v0.1.md)）；其机器可校验形式为 [`schemas/`](schemas/) 下的
-  JSON Schema（draft 2020-12），具有最高权威性。
-- **TypeScript 参考实现 Agent** —— 可运行的 monorepo，实现完整链路：
-  模型网关、策略引擎、MCP 工具服务器、HTTP API 与 Web 控制台。
-- **三个 Profile** —— `core`（工单、客户、证据、备注、升级），外加两个扩展 Profile：
-  `ecommerce`（订单、物流、退款、补发）与 `saas`（订阅、发票、额度余额、额度发放、套餐变更）。
-- **Schema 与兼容性测试套件** —— `@osas/compat-suite` 校验 Schema、状态机、策略矩阵、
-  工具映射、幂等与对账，并输出机器可读报告。通过该套件是声明 OSAS Profile 兼容的
-  必要条件（见 [GOVERNANCE.md](GOVERNANCE.md)）。
+## 为什么需要 OSAS？
+
+生产级客服 Agent 不能只有“会回答”的模型，还需要一份把推理与权限分开、把模型输出
+变成类型化建议，并让安全路径成为默认路径的统一契约。
+
+| 难题 | OSAS 的回答 |
+|---|---|
+| 模型可能建议危险写入 | 模型权限上限是 `request-approval`，永远拿不到 `execute`。 |
+| 每个客服/电商系统 API 都不同 | `SupportAdapter` 提供稳定、携带租户上下文的工具接口。 |
+| “大概成功了”无法审计 | 建议、决策、模型调用、人工接管和写入都变成 `AuditEvent`。 |
+| 直接上线风险高、难复现 | 默认 `shadow`；兼容性与策略门禁可确定、可离线复现。 |
+
+## 一眼看懂
+
+| 16 个 MCP 工具 | 3 个 Profile | 120 条策略案例 | 255 项兼容检查 |
+|---|---|---|---|
+| Core、电商、SaaS | Schema 驱动契约 | 离线安全评测 | HTTP 黑盒一致性 |
+
+仓库同时提供规范文本、机器可校验 JSON Schema、TypeScript 参考实现、Web 控制台、参考
+Adapter、兼容性套件与可复现的策略评测。
 
 ## 架构
 
-```
-                       ┌──────────────────────────────────────────────┐
-                       │                  模型网关                     │
-                       │   分层路由 · 输出上限 · 预算 ·                 │
-                       │   注入检测 · 遥测                             │
-                       └───────────────┬──────────────────────────────┘
-                                       │
-   大模型（任意 provider / mock）───────┘
-        │
-        ▼  工具调用（MCP，16 个工具）     ┌───────────────────┐
-   ┌─────────┐   读取（工单、订单……）     │     策略引擎       │
-   │  Agent  │──────────────────────────▶│  确定性求值（§4）   │
-   └────┬────┘                            └─────────┬─────────┘
-        │  写入 = 结构化 ActionProposal               │
-        ▼                                           │
-   ┌───────────┐   auto_execute        ┌────────────▼────────────┐
-   │  建议存储  │──────────────────────▶│  通过 Adapter 执行       │
-   └───────────┘──────────┐            │  （幂等键去重）          │
-        │   require_approval           └────────────┬────────────┘
-        │             ▼                             │
-        │      ┌─────────────┐                      ▼
-        │      │  人工审批 /  │               ┌────────────┐    ┌──────────────┐
-        │      │  人工接管    │               │  Adapter   │───▶│ 后端系统      │
-        │      └─────────────┘               │ (自带/mock)│    │（客服/电商/  │
-        ▼                                    └─────┬──────┘    │   SaaS）     │
-   ┌──────────────────────────────────────────────▼─────┐      └──────────────┘
-   │  审计轨迹：每条建议、决策、执行、接管、模型调用        │
-   │  → AuditEvent（可通过 API 查询）                     │
-   └─────────────────────────────────────────────────────┘
+```mermaid
+flowchart LR
+    M[大模型或 Mock Provider] --> G[模型网关<br/>路由 · 预算 · 注入检测]
+    G --> T[MCP 工具面<br/>16 个类型化工具]
+    T --> A[Support Adapter<br/>自定义 · Mock · Zendesk · Shopify]
+    A --> B[(客服 / 电商 / SaaS 后端)]
+    G --> P[确定性策略引擎]
+    P -->|auto_execute| X[Shadow Run / 执行边界]
+    P -->|pending_approval| H[人工审批或接管]
+    H --> X
+    X --> A
+    G -. 每次调用 .-> E[(AuditEvent 审计轨迹)]
+    P -. 每次决策 .-> E
+    X -. 每个结果 .-> E
+
+    classDef model fill:#312E81,stroke:#A78BFA,color:#fff
+    classDef gate fill:#164E63,stroke:#67E8F9,color:#fff
+    classDef adapter fill:#065F46,stroke:#6EE7B7,color:#fff
+    classDef audit fill:#78350F,stroke:#FCD34D,color:#fff
+    class M,G,T model
+    class P,H,X gate
+    class A,B adapter
+    class E audit
 ```
 
 模型绝不持有后端凭据。所有读写都经由 `SupportAdapter` 接口完成，调用方以携带明确权限的
 `Principal` 身份发起；所有写入都是结构化的 `ActionProposal`，必须先通过确定性的策略
 求值才能执行。
 
+边界设计只有一句话：**模型负责提议，策略负责决策，Adapter 负责执行，审计负责解释**。
+
 ## 快速开始
 
-环境要求：Node >= 20（推荐 Node 22）、pnpm 11、Docker（可选）。
+从 clone 到看到一个带策略门禁的演示，大约只需要一分钟。环境要求：Node >= 20
+（推荐 Node 22）、pnpm 11；想体验一键环境时再安装 Docker。
+
+### 最快路径：Docker
+
+```bash
+git clone https://github.com/shidesheng0218/open-support-agent-spec.git
+cd open-support-agent-spec
+docker compose up --build
+```
+
+然后打开：
+
+| 入口 | 地址 | 可以看什么 |
+|---|---|---|
+| Web 控制台 | [`localhost:8080`](http://localhost:8080) | `/demo`、`/developer`、`/agent`、`/platform` |
+| API 健康检查 | [`localhost:3001/health`](http://localhost:3001/health) | 服务与规范状态 |
+| 工具目录 | [`localhost:3001/v1/meta/tools`](http://localhost:3001/v1/meta/tools) | 16 个类型化 MCP 工具 |
+
+<details>
+<summary><strong>演示到底证明了什么？</strong></summary>
+
+| 场景 | 策略结果 | 说明 |
+|---|---|---|
+| $25 电商退款 | `auto_execute` | 证据新鲜且符合租户策略，可以执行有边界的动作。 |
+| 超阈值 SaaS 额度 | `pending_approval` | 风险更高的动作先停在人审门禁。 |
+| 未验证身份或提示注入 | `policy_rejected` + 接管 | 不安全路径被阻断，并进入可见的人工处理流。 |
+
+</details>
 
 ### 本地运行（pnpm）
 
@@ -152,6 +197,26 @@ Docker 构建上下文为**仓库根目录**（两个 Dockerfile 都复制整个
 
 ## 黑盒兼容性与评测（Milestone 4）
 
+OSAS 把安全当作发布属性，而不是 README 里的口号：
+
+```mermaid
+flowchart TB
+    C[干净 checkout] --> I[pnpm install --frozen-lockfile]
+    I --> B[pnpm build]
+    B --> T[pnpm test]
+    T --> TC[pnpm typecheck]
+    TC --> E[pnpm eval:policy]
+    E --> K{所有门禁通过？}
+    K -->|是| D[Docker 一致性 + Playwright E2E]
+    K -->|否| S[在集成前停止]
+    D --> R[输出机器可读报告]
+
+    classDef good fill:#065F46,stroke:#6EE7B7,color:#fff
+    classDef stop fill:#7F1D1D,stroke:#FCA5A5,color:#fff
+    class B,T,TC,E,D,R good
+    class S stop
+```
+
 - **`pnpm osas:compat -- --target http://localhost:3001`** —— `@osas/compat-runner`，
   黑盒一致性 Runner：只通过 HTTP 与目标实现通信，校验服务发现
   （`/.well-known/osas`、specVersion、Capability Manifest）、工具与 Schema、
@@ -193,22 +258,40 @@ Docker 构建上下文为**仓库根目录**（两个 Dockerfile 都复制整个
 
 所有 Agent 动作遵循同一条流水线：
 
+```mermaid
+flowchart LR
+    A[读取可信数据<br/>经由 Adapter 工具] --> B[生成 ActionProposal<br/>附带证据]
+    B --> C{确定性策略求值}
+    C -->|auto_execute| D[Shadow Run / 执行边界]
+    C -->|pending_approval| H[人工审批]
+    C -->|blocked| X[人工接管]
+    H --> D
+    D --> W[幂等回写]
+    W --> E[AuditEvent + 异常对账]
+    X --> E
+
+    classDef input fill:#312E81,stroke:#A78BFA,color:#fff
+    classDef gate fill:#164E63,stroke:#67E8F9,color:#fff
+    classDef outcome fill:#065F46,stroke:#6EE7B7,color:#fff
+    classDef blocked fill:#7F1D1D,stroke:#FCA5A5,color:#fff
+    class A,B input
+    class C,H gate
+    class D,W,E outcome
+    class X blocked
 ```
-读取可信业务数据 ─▶ 生成结构化建议 ─▶ 策略校验
- （经由 Adapter 工具）  （ActionProposal + 证据）  （确定性求值）
-                                                │
-                          ┌─────────────────────┤
-                          ▼                     ▼
-                       自动执行           人工审批 ─▶ 随后执行
-                          │                     │
-                          └──────────┬──────────┘
-                                     ▼
-                          回写结果（幂等）
-                                     ▼
-                       审计留痕 / 异常对账
-              （每一步都产生 AuditEvent；结果不确定时进入
-                reconciliation_required，绝不做盲目重试）
-```
+
+不确定结果会进入 `reconciliation_required`；参考实现不会对结果未知的写入做盲目重试。
+
+## 安全边界一览
+
+| 边界 | 默认行为 |
+|---|---|
+| 模型权限 | `read` → `draft` → `request-approval`，永远不能 `execute` |
+| 执行模式 | v0.1 只有 `shadow`；`live` 模式拒绝启动 |
+| 凭据 | 后端密钥留在 Adapter 之后，不进入模型上下文 |
+| 提示注入 | 检测、阻断、人工接管并写入审计 |
+| 成本控制 | 达到每日/单 case 上限时，在调用 Provider 前阻断 |
+| 一致性端点 | 仅测试用途、需要 key，生产环境拒绝启动 |
 
 ## 权限阶梯
 

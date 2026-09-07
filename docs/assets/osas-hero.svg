@@ -1,0 +1,73 @@
+<svg width="1400" height="460" viewBox="0 0 1400 460" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="title desc">
+  <title id="title">Open Support Agent Spec</title>
+  <desc id="desc">Governed AI agents for customer support: model, policy, adapter, audit.</desc>
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1400" y2="460" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#0B1020"/>
+      <stop offset="0.52" stop-color="#132A46"/>
+      <stop offset="1" stop-color="#0D6B68"/>
+    </linearGradient>
+    <linearGradient id="accent" x1="300" y1="80" x2="1050" y2="370" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#8B5CF6"/>
+      <stop offset="0.48" stop-color="#22D3EE"/>
+      <stop offset="1" stop-color="#34D399"/>
+    </linearGradient>
+    <filter id="glow" x="-40%" y="-40%" width="180%" height="180%">
+      <feGaussianBlur stdDeviation="14" result="blur"/>
+      <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+    <pattern id="grid" width="36" height="36" patternUnits="userSpaceOnUse">
+      <path d="M36 0H0V36" stroke="white" stroke-opacity="0.045"/>
+    </pattern>
+  </defs>
+
+  <rect width="1400" height="460" rx="28" fill="url(#bg)"/>
+  <rect width="1400" height="460" rx="28" fill="url(#grid)"/>
+  <circle cx="1190" cy="56" r="180" fill="#22D3EE" fill-opacity="0.09" filter="url(#glow)"/>
+  <circle cx="1280" cy="360" r="220" fill="#34D399" fill-opacity="0.08" filter="url(#glow)"/>
+
+  <text x="86" y="104" fill="#A5F3FC" font-family="Inter, ui-sans-serif, system-ui, sans-serif" font-size="22" font-weight="700" letter-spacing="4">OPEN SUPPORT AGENT SPEC</text>
+  <text x="82" y="178" fill="white" font-family="Inter, ui-sans-serif, system-ui, sans-serif" font-size="68" font-weight="800">Governed AI agents</text>
+  <text x="86" y="238" fill="#D1FAE5" font-family="Inter, ui-sans-serif, system-ui, sans-serif" font-size="34" font-weight="500">for customer support operations.</text>
+  <text x="88" y="292" fill="#CBD5E1" font-family="Inter, ui-sans-serif, system-ui, sans-serif" font-size="20">Schema-driven · policy-gated · shadow-first · provider-independent</text>
+
+  <g transform="translate(86 352)">
+    <rect width="184" height="48" rx="24" fill="white" fill-opacity="0.12" stroke="white" stroke-opacity="0.22"/>
+    <text x="92" y="31" text-anchor="middle" fill="white" font-family="Inter, ui-sans-serif, system-ui, sans-serif" font-size="17" font-weight="700">v0.1 Draft</text>
+    <rect x="200" width="190" height="48" rx="24" fill="#34D399" fill-opacity="0.18" stroke="#6EE7B7" stroke-opacity="0.6"/>
+    <text x="295" y="31" text-anchor="middle" fill="#D1FAE5" font-family="Inter, ui-sans-serif, system-ui, sans-serif" font-size="17" font-weight="700">Apache-2.0</text>
+  </g>
+
+  <g transform="translate(735 116)">
+    <path d="M84 88H202M286 88H404M488 88H606" stroke="url(#accent)" stroke-width="5" stroke-linecap="round"/>
+    <path d="M194 80L208 88L194 96M396 80L410 88L396 96M598 80L612 88L598 96" stroke="#67E8F9" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+    <g>
+      <rect width="168" height="176" rx="24" fill="#111827" fill-opacity="0.72" stroke="#A78BFA" stroke-width="2"/>
+      <circle cx="84" cy="55" r="22" fill="#8B5CF6" fill-opacity="0.25" stroke="#C4B5FD"/>
+      <path d="M73 55H95M84 44V66" stroke="#EDE9FE" stroke-width="3" stroke-linecap="round"/>
+      <text x="84" y="118" text-anchor="middle" fill="white" font-family="Inter, ui-sans-serif, system-ui, sans-serif" font-size="21" font-weight="800">MODEL</text>
+      <text x="84" y="145" text-anchor="middle" fill="#CBD5E1" font-family="Inter, ui-sans-serif, system-ui, sans-serif" font-size="15">reason + propose</text>
+    </g>
+    <g transform="translate(202)">
+      <rect width="168" height="176" rx="24" fill="#111827" fill-opacity="0.72" stroke="#22D3EE" stroke-width="2"/>
+      <circle cx="84" cy="55" r="22" fill="#22D3EE" fill-opacity="0.2" stroke="#67E8F9"/>
+      <path d="M74 55L81 62L95 47" stroke="#CFFAFE" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+      <text x="84" y="118" text-anchor="middle" fill="white" font-family="Inter, ui-sans-serif, system-ui, sans-serif" font-size="21" font-weight="800">POLICY</text>
+      <text x="84" y="145" text-anchor="middle" fill="#CBD5E1" font-family="Inter, ui-sans-serif, system-ui, sans-serif" font-size="15">decide + gate</text>
+    </g>
+    <g transform="translate(404)">
+      <rect width="168" height="176" rx="24" fill="#111827" fill-opacity="0.72" stroke="#34D399" stroke-width="2"/>
+      <circle cx="84" cy="55" r="22" fill="#34D399" fill-opacity="0.2" stroke="#6EE7B7"/>
+      <path d="M72 55H96M84 43V67" stroke="#D1FAE5" stroke-width="3" stroke-linecap="round"/>
+      <text x="84" y="118" text-anchor="middle" fill="white" font-family="Inter, ui-sans-serif, system-ui, sans-serif" font-size="21" font-weight="800">ADAPTER</text>
+      <text x="84" y="145" text-anchor="middle" fill="#CBD5E1" font-family="Inter, ui-sans-serif, system-ui, sans-serif" font-size="15">simulate + write</text>
+    </g>
+    <g transform="translate(606)">
+      <rect width="168" height="176" rx="24" fill="#111827" fill-opacity="0.72" stroke="#FBBF24" stroke-width="2"/>
+      <circle cx="84" cy="55" r="22" fill="#FBBF24" fill-opacity="0.2" stroke="#FDE68A"/>
+      <path d="M73 49H95M73 59H95" stroke="#FEF3C7" stroke-width="3" stroke-linecap="round"/>
+      <text x="84" y="118" text-anchor="middle" fill="white" font-family="Inter, ui-sans-serif, system-ui, sans-serif" font-size="21" font-weight="800">AUDIT</text>
+      <text x="84" y="145" text-anchor="middle" fill="#CBD5E1" font-family="Inter, ui-sans-serif, system-ui, sans-serif" font-size="15">explain + reconcile</text>
+    </g>
+  </g>
+</svg>

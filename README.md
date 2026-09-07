@@ -1,68 +1,80 @@
 # Open Support Agent Spec (OSAS)
 
-[![License: Apache-2.0](https://img.shields.io/badge/License-Apache--2.0-blue.svg)](LICENSE)
-[![Spec: v0.1 Draft](https://img.shields.io/badge/spec-v0.1%20Draft-orange.svg)](docs/spec-v0.1.md)
-[![CI](https://github.com/shidesheng0218/open-support-agent-spec/actions/workflows/ci.yml/badge.svg)](https://github.com/shidesheng0218/open-support-agent-spec/actions/workflows/ci.yml)
+<div align="center">
+  <img src="docs/assets/osas-hero.svg" alt="OSAS: governed AI agents for customer support" width="100%" />
 
-[中文文档](README.zh-CN.md)
+  <p><strong>Governed, interoperable AI agents for customer-support operations.</strong><br />
+  A schema-first contract for reading trusted data, proposing actions, enforcing policy,
+  running safely in shadow mode, and explaining every outcome.</p>
 
-OSAS is an **open interoperability specification for customer-support AI agents**: a shared
-contract for how an agent reads business data, proposes actions, passes policy checks, executes
-or escalates, and leaves a complete audit trail — independent of any specific model, helpdesk,
-or commerce platform.
+  <p>
+    <a href="README.zh-CN.md">中文文档</a> ·
+    <a href="#quickstart">Try it locally</a> ·
+    <a href="docs/spec-v0.1.md">Read the spec</a> ·
+    <a href="CONTRIBUTING.md">Contribute</a>
+  </p>
+</div>
 
-> **Status: v0.1 Draft.** OSAS is a **draft open specification under active development**.
-> It is **not** a claimed industry standard, and no stability guarantees are made yet.
-> Interfaces, schemas, and behaviors may change before v1.0. See
+<p align="center">
+  <a href="LICENSE"><img src="https://img.shields.io/badge/license-Apache--2.0-2563EB?style=flat-square" alt="Apache 2.0 license" /></a>
+  <a href="docs/spec-v0.1.md"><img src="https://img.shields.io/badge/spec-v0.1%20Draft-F59E0B?style=flat-square" alt="v0.1 Draft" /></a>
+  <a href="https://github.com/shidesheng0218/open-support-agent-spec/actions/workflows/ci.yml"><img src="https://github.com/shidesheng0218/open-support-agent-spec/actions/workflows/ci.yml/badge.svg" alt="CI status" /></a>
+  <img src="https://img.shields.io/badge/Node-%3E%3D20-339933?style=flat-square&logo=node.js&logoColor=white" alt="Node.js 20 or newer" />
+  <img src="https://img.shields.io/badge/pnpm-11-F69220?style=flat-square&logo=pnpm&logoColor=white" alt="pnpm 11" />
+</p>
+
+> **Status: v0.1 Draft.** OSAS is an open specification under active development, not a claimed
+> industry standard. Interfaces, schemas, and behaviors may change before v1.0; see
 > [Status & roadmap](#status--roadmap).
 
-## What it delivers
+## Why OSAS?
 
-- **The specification** — normative text in [`docs/spec-v0.1.md`](docs/spec-v0.1.md)
-  ([中文](docs/spec-v0.1.zh-CN.md)), with machine-checkable JSON Schemas (draft 2020-12) under
-  [`schemas/`](schemas/) as the authoritative form.
-- **A TypeScript reference agent** — a runnable monorepo implementing the full pipeline:
-  model gateway, policy engine, MCP tool server, HTTP API, and web console.
-- **Three profiles** — `core` (cases, customers, evidence, notes, escalations) plus two
-  extension profiles: `ecommerce` (orders, shipments, refunds, reshipments) and `saas`
-  (subscriptions, invoices, credit balances, credits, plan changes).
-- **Schema & compatibility suite** — `@osas/compat-suite` validates schemas, state machines,
-  the policy matrix, tool mappings, idempotency, and reconciliation, and emits a
-  machine-readable report. Passing it is the requirement for declaring OSAS profile
-  compatibility (see [GOVERNANCE.md](GOVERNANCE.md)).
+Production support agents need more than a capable model. They need a contract that separates
+reasoning from authority, turns model output into typed proposals, and makes the safe path the
+default path.
+
+| The hard problem | The OSAS answer |
+|---|---|
+| A model can suggest an unsafe write | Models are capped at `request-approval`; they never receive `execute`. |
+| Every helpdesk has a different API | `SupportAdapter` gives tools a stable, tenant-aware interface. |
+| “It probably worked” is not an audit trail | Every proposal, decision, model call, handoff, and write becomes an `AuditEvent`. |
+| Live rollout is risky and hard to reproduce | `shadow` mode is the default; conformance and policy gates are deterministic and offline-friendly. |
+
+## At a glance
+
+| 16 MCP tools | 3 profiles | 120 policy cases | 255 compatibility checks |
+|---|---|---|---|
+| Core, ecommerce, SaaS | Schema-driven contracts | Offline safety evals | HTTP black-box conformance |
+
+The repository ships the normative spec, machine-checkable JSON Schemas, a TypeScript reference
+implementation, a web console, reference adapters, a compatibility suite, and reproducible
+policy evaluations.
 
 ## Architecture
 
-```
-                       ┌──────────────────────────────────────────────┐
-                       │                Model gateway                  │
-                       │   tier routing · output caps · budget ·       │
-                       │   injection detection · telemetry             │
-                       └───────────────┬──────────────────────────────┘
-                                       │
-   LLM (any provider / mock) ──────────┘
-        │
-        ▼  tool calls (MCP, 16 tools)        ┌───────────────────┐
-   ┌─────────┐   reads (cases, orders, ...)  │   Policy engine    │
-   │  Agent  │──────────────────────────────▶│  deterministic     │
-   └────┬────┘                                │  evaluation (§4)   │
-        │  writes = structured ActionProposal └─────────┬─────────┘
-        ▼                                               │
-   ┌───────────┐   auto_execute            ┌────────────▼────────────┐
-   │ Proposal  │──────────────────────────▶│  Execute via adapter     │
-   │  store    │   require_approval        │  (idempotency-keyed)     │
-   └───────────┘──────────────┐            └────────────┬────────────┘
-        │                     ▼                         │
-        │              ┌─────────────┐                  ▼
-        │              │ Human       │           ┌────────────┐    ┌──────────────┐
-        │              │ approval /  │           │  Adapter   │───▶│ Backend      │
-        │              │ handoff     │           │ (BYO/mock) │    │ (helpdesk /  │
-        │              └─────────────┘           └─────┬──────┘    │  shop / SaaS)│
-        ▼                                              │           └──────────────┘
-   ┌──────────────────────────────────────────────────▼─────┐
-   │  Audit trail: every proposal, decision, execution,      │
-   │  handoff, model call → AuditEvent (queryable via API)   │
-   └─────────────────────────────────────────────────────────┘
+```mermaid
+flowchart LR
+    M[LLM or Mock Provider] --> G[Model Gateway<br/>routing · budgets · injection detection]
+    G --> T[MCP Tool Surface<br/>16 typed tools]
+    T --> A[Support Adapter<br/>BYO · Mock · Zendesk · Shopify]
+    A --> B[(Helpdesk / Commerce / SaaS)]
+    G --> P[Deterministic Policy Engine]
+    P -->|auto_execute| X[Shadow Run / Execution Boundary]
+    P -->|pending_approval| H[Human Approval or Handoff]
+    H --> X
+    X --> A
+    G -. every call .-> E[(AuditEvent Trail)]
+    P -. every decision .-> E
+    X -. every outcome .-> E
+
+    classDef model fill:#312E81,stroke:#A78BFA,color:#fff
+    classDef gate fill:#164E63,stroke:#67E8F9,color:#fff
+    classDef adapter fill:#065F46,stroke:#6EE7B7,color:#fff
+    classDef audit fill:#78350F,stroke:#FCD34D,color:#fff
+    class M,G,T model
+    class P,H,X gate
+    class A,B adapter
+    class E audit
 ```
 
 Models never hold backend credentials. All reads and writes flow through the
@@ -70,9 +82,40 @@ Models never hold backend credentials. All reads and writes flow through the
 are structured `ActionProposal` objects that must pass deterministic policy evaluation
 before anything executes.
 
+The important boundary is intentional: **the model proposes, policy decides, adapters perform,
+and the audit trail explains**.
+
 ## Quickstart
 
-Requirements: Node >= 20 (Node 22 recommended), pnpm 11, Docker (optional).
+Get from clone to a visible, policy-gated demo in about a minute. Requirements: Node >= 20
+(Node 22 recommended), pnpm 11, and Docker for the one-command experience.
+
+### Fastest path: Docker
+
+```bash
+git clone https://github.com/shidesheng0218/open-support-agent-spec.git
+cd open-support-agent-spec
+docker compose up --build
+```
+
+Then open:
+
+| Surface | URL | What to look at |
+|---|---|---|
+| Web console | [`localhost:8080`](http://localhost:8080) | `/demo`, `/developer`, `/agent`, `/platform` |
+| API health | [`localhost:3001/health`](http://localhost:3001/health) | service and spec status |
+| Tool catalog | [`localhost:3001/v1/meta/tools`](http://localhost:3001/v1/meta/tools) | the 16 typed MCP tools |
+
+<details>
+<summary><strong>What the demo proves</strong></summary>
+
+| Scenario | Policy result | Why it matters |
+|---|---|---|
+| $25 ecommerce refund | `auto_execute` | Fresh evidence and a tenant policy can permit a bounded action. |
+| SaaS credit over threshold | `pending_approval` | Higher-risk actions stop at a human gate. |
+| Unverified identity or prompt injection | `policy_rejected` + handoff | The unsafe path is blocked and made visible. |
+
+</details>
 
 ### Local (pnpm)
 
@@ -159,6 +202,26 @@ All knobs are env vars — see [.env.example](.env.example) for the annotated te
 
 ## Black-box compatibility & evaluation (Milestone 4)
 
+OSAS treats safety as a release property, not a README promise:
+
+```mermaid
+flowchart TB
+    C[Clean checkout] --> I[pnpm install --frozen-lockfile]
+    I --> B[pnpm build]
+    B --> T[pnpm test]
+    T --> TC[pnpm typecheck]
+    TC --> E[pnpm eval:policy]
+    E --> K{All gates green?}
+    K -->|yes| D[Docker conformance + Playwright E2E]
+    K -->|no| S[Stop before integration]
+    D --> R[Publish machine-readable reports]
+
+    classDef good fill:#065F46,stroke:#6EE7B7,color:#fff
+    classDef stop fill:#7F1D1D,stroke:#FCA5A5,color:#fff
+    class B,T,TC,E,D,R good
+    class S stop
+```
+
 - **`pnpm osas:compat -- --target http://localhost:3001`** — `@osas/compat-runner`,
   a black-box conformance runner that speaks only HTTP to the target: discovery
   (`/.well-known/osas`, specVersion, Capability Manifest), tool/schema
@@ -203,22 +266,41 @@ The `/demo` page runs three one-click scripted scenarios end-to-end via `/v1/cha
 
 Every agent action follows the same pipeline:
 
+```mermaid
+flowchart LR
+    A[Read trusted data<br/>via adapter tools] --> B[Generate ActionProposal<br/>with evidence]
+    B --> C{Deterministic policy evaluation}
+    C -->|auto_execute| D[Shadow Run / execute boundary]
+    C -->|pending_approval| H[Human approval]
+    C -->|blocked| X[Human handoff]
+    H --> D
+    D --> W[Idempotent write-back]
+    W --> E[AuditEvent + reconciliation]
+    X --> E
+
+    classDef input fill:#312E81,stroke:#A78BFA,color:#fff
+    classDef gate fill:#164E63,stroke:#67E8F9,color:#fff
+    classDef outcome fill:#065F46,stroke:#6EE7B7,color:#fff
+    classDef blocked fill:#7F1D1D,stroke:#FCA5A5,color:#fff
+    class A,B input
+    class C,H gate
+    class D,W,E outcome
+    class X blocked
 ```
-Read trusted business data ─▶ Generate structured proposal ─▶ Policy evaluation
-      (via adapter tools)         (ActionProposal + evidence)      (deterministic)
-                                                                       │
-                          ┌──────────────────────┬─────────────────────┘
-                          ▼                      ▼
-                    Auto-execute          Human approval ─▶ then execute
-                          │                      │
-                          └──────────┬───────────┘
-                                     ▼
-                       Write back result (idempotent)
-                                     ▼
-               Audit trail / exception reconciliation
-        (every step emits AuditEvents; uncertain outcomes →
-         reconciliation_required, never blind retries)
-```
+
+Uncertain outcomes become `reconciliation_required`; the reference implementation never
+blindly retries a write whose outcome is unknown.
+
+## Safety boundaries at a glance
+
+| Boundary | Default behavior |
+|---|---|
+| Model authority | `read` → `draft` → `request-approval`; never `execute` |
+| Execution | `shadow` only in v0.1; live mode refuses to start |
+| Credentials | Backend secrets stay behind adapters, outside model context |
+| Prompt injection | Detected, blocked, handed off, and audited |
+| Cost controls | Daily and per-case budgets block provider calls at the cap |
+| Conformance endpoints | Test-only, key-protected, and refused in production |
 
 ## Permission ladder
 
