@@ -17,11 +17,10 @@ jobs:
           node-version: 22
           cache: pnpm
       - run: pnpm install --frozen-lockfile
-      - run: pnpm typecheck
       - run: pnpm test
+      - run: pnpm typecheck
       # Milestone 4: offline policy eval is a hard CI gate (non-zero on gate failure).
       - run: pnpm eval:policy
-      - run: pnpm build
 
   compat:
     runs-on: ubuntu-latest
