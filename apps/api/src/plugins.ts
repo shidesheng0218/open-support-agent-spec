@@ -12,8 +12,8 @@ import type { ExecutionStore, PolicyStore } from "@osas/policy-engine";
 import type { ModelGateway } from "@osas/model-gateway";
 import type { UsageStore } from "@osas/model-gateway";
 
-export const SPEC_VERSION = "0.1";
-export const API_VERSION = "0.1.1";
+export const SPEC_VERSION = "0.2";
+export const API_VERSION = "0.2.0";
 // Canonical home is auth.ts (the auth hook owns tenant resolution).
 export { DEFAULT_TENANT } from "./auth.js";
 
@@ -44,7 +44,7 @@ declare module "fastify" {
     policyStore: PolicyStore;
     /** Milestone 3: ShadowRun persistence (memory or Postgres). */
     shadowRunStore: import("@osas/ecommerce-shadow").ShadowRunStore;
-    /** Milestone 3: always "shadow" in v0.1.1 — "live" aborts startup. */
+    /** Milestone 3: always "shadow" in v0.2.0 — "live" aborts startup. */
     executionMode: import("@osas/ecommerce-shadow").ExecutionModeConfig;
     gateway: ModelGateway;
     usageStore: UsageStore;

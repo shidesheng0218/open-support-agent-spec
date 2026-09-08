@@ -21,7 +21,7 @@ const run = DATABASE_URL ? describe : describe.skip;
 function makePolicy(tenantId: string, version: string): TenantPolicy {
   return {
     id: `pol_${version}`,
-    specVersion: "0.1",
+    specVersion: "0.2",
     tenantId,
     version,
     effectiveFrom: "2026-01-01T00:00:00.000Z",
@@ -111,7 +111,7 @@ run("store-postgres (requires DATABASE_URL)", () => {
         });
         await new PostgresAuditStore(client).append({
           id: eventId,
-          specVersion: "0.1",
+          specVersion: "0.2",
           tenantId: tenant,
           eventType: "execution_succeeded",
           actorType: "system",
@@ -137,7 +137,7 @@ run("store-postgres (requires DATABASE_URL)", () => {
       });
       await new PostgresAuditStore(client).append({
         id: eventId,
-        specVersion: "0.1",
+        specVersion: "0.2",
         tenantId: tenant,
         eventType: "execution_succeeded",
         actorType: "system",
@@ -213,7 +213,7 @@ run("store-postgres (requires DATABASE_URL)", () => {
     const store = new PostgresAuditStore(pool);
     const event: AuditEvent = {
       id: `evt_${randomUUID()}`,
-      specVersion: "0.1",
+      specVersion: "0.2",
       tenantId: tenant,
       eventType: "model_call_recorded",
       actorType: "model",
@@ -236,7 +236,7 @@ run("store-postgres (requires DATABASE_URL)", () => {
     const store = new PostgresShadowRunStore(pool);
     const run: ShadowRun = {
       id: `shadow_${randomUUID()}`,
-      specVersion: "0.1",
+      specVersion: "0.2",
       tenantId: tenant,
       proposalId: "prop_pg_shadow",
       policyDecision: {

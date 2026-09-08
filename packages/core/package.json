@@ -1,7 +1,8 @@
 {
   "name": "@osas/core",
-  "version": "0.1.1",
-  "private": true,
+  "version": "0.2.0",
+  "description": "OSAS core domain model: types, enums, the permission ladder, and proposal/case/policy-version state machines (specVersion \"0.2\").",
+  "license": "Apache-2.0",
   "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
@@ -14,6 +15,14 @@
   "files": [
     "dist"
   ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/shidesheng0218/open-support-agent-spec.git",
+    "directory": "packages/core"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
   "scripts": {
     "build": "tsc -p tsconfig.json",
     "typecheck": "tsc --noEmit -p tsconfig.json",

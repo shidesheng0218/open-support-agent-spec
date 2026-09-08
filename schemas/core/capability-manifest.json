@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://open-support-agent.dev/schemas/core/capability-manifest.json",
   "title": "CapabilityManifest",
-  "description": "What an OSAS implementation actually supports (v0.1.1). Served at GET /.well-known/osas and GET /v1/capabilities; operations needing an undeclared capability fail with CAPABILITY_UNSUPPORTED.",
+  "description": "What an OSAS implementation actually supports (introduced in v0.1.1; part of specVersion \"0.2\"). Served at GET /.well-known/osas and GET /v1/capabilities; operations needing an undeclared capability fail with CAPABILITY_UNSUPPORTED.",
   "type": "object",
   "additionalProperties": false,
   "required": [
@@ -67,6 +67,10 @@
         "ecommerce.shipment.read",
         "ecommerce.refund.propose",
         "ecommerce.refund.execute",
+        "ecommerce.shipment_incident.read",
+        "ecommerce.refund_status.read",
+        "ecommerce.item_claim.propose",
+        "ecommerce.exchange.propose",
         "saas.subscription.read",
         "saas.credit.propose"
       ]

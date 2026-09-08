@@ -1,0 +1,41 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://open-support-agent.dev/schemas/profiles/ecommerce/item-claim.json",
+  "title": "ItemClaim",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "id",
+    "specVersion",
+    "tenantId",
+    "orderId",
+    "lineId",
+    "claimType",
+    "quantity",
+    "status",
+    "createdAt",
+    "updatedAt"
+  ],
+  "properties": {
+    "id": { "$ref": "../../core/common.json#/$defs/Id" },
+    "specVersion": { "$ref": "../../core/common.json#/$defs/SpecVersion" },
+    "tenantId": { "$ref": "../../core/common.json#/$defs/Id" },
+    "orderId": { "$ref": "../../core/common.json#/$defs/Id" },
+    "lineId": { "$ref": "../../core/common.json#/$defs/Id" },
+    "claimType": {
+      "type": "string",
+      "enum": ["damaged", "wrong_item", "missing_item", "defective"]
+    },
+    "quantity": { "type": "integer", "minimum": 1 },
+    "evidenceIds": {
+      "type": "array",
+      "items": { "$ref": "../../core/common.json#/$defs/Id" }
+    },
+    "status": {
+      "type": "string",
+      "enum": ["submitted", "under_review", "approved", "rejected", "resolved"]
+    },
+    "createdAt": { "$ref": "../../core/common.json#/$defs/DateTime" },
+    "updatedAt": { "$ref": "../../core/common.json#/$defs/DateTime" }
+  }
+}

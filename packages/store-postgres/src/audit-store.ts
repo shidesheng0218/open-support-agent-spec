@@ -74,7 +74,7 @@ export class PostgresAuditStore {
     return rows.map((r) => {
       const event: AuditEvent = {
         id: r.event_id,
-        specVersion: "0.1",
+        specVersion: "0.2",
         tenantId,
         eventType: r.event_type,
         actorType: r.actor_type,

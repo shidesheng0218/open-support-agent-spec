@@ -78,16 +78,16 @@ describe("health & meta", () => {
     expect(res.statusCode).toBe(200);
     const body = res.json();
     expect(body.status).toBe("ok");
-    expect(body.specVersion).toBe("0.1");
+    expect(body.specVersion).toBe("0.2");
     expect(body.version).toBeDefined();
   });
 
-  it("GET /v1/meta/tools returns the 16 MCP tools", async () => {
+  it("GET /v1/meta/tools returns the 20 MCP tools", async () => {
     const res = await app.inject({ method: "GET", url: "/v1/meta/tools" });
     expect(res.statusCode).toBe(200);
     const tools = res.json();
     expect(Array.isArray(tools)).toBe(true);
-    expect(tools).toHaveLength(16);
+    expect(tools).toHaveLength(20);
   });
 
   it("POST /v1/validate validates data against a named schema", async () => {
@@ -108,7 +108,7 @@ describe("health & meta", () => {
         schemaName: "core/action-proposal",
         data: {
           id: "prop_x",
-          specVersion: "0.1",
+          specVersion: "0.2",
           tenantId: TENANT,
           caseId: "case_refund",
           profile: "ecommerce",
@@ -381,14 +381,14 @@ describe("compat report", () => {
       const reportPath = path.join(dir, "latest.json");
       await writeFile(
         reportPath,
-        JSON.stringify({ specVersion: "0.1", ok: true, totals: { passed: 1, failed: 0 }, suites: [] }),
+        JSON.stringify({ specVersion: "0.2", ok: true, totals: { passed: 1, failed: 0 }, suites: [] }),
       );
       const isolated = await buildApp({ logger: false, compatReportPath: reportPath });
       try {
         const res = await isolated.inject({ method: "GET", url: "/v1/compat/report" });
         expect(res.statusCode).toBe(200);
         expect(res.headers["content-type"]).toContain("application/json");
-        expect(res.json().specVersion).toBe("0.1");
+        expect(res.json().specVersion).toBe("0.2");
       } finally {
         await isolated.close();
       }

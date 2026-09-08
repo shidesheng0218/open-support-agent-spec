@@ -11,7 +11,7 @@ function makeEvent(over: Partial<AuditEvent> = {}): AuditEvent {
   seq += 1;
   return {
     id: `audit_${seq}`,
-    specVersion: "0.1",
+    specVersion: "0.2",
     tenantId: "tenant_demo",
     eventType: "policy_evaluated",
     actorType: "policy_engine",

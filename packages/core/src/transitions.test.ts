@@ -18,7 +18,7 @@ import {
 function makeCase(status: CaseStatus): Case {
   return {
     id: "case_1",
-    specVersion: "0.1",
+    specVersion: "0.2",
     tenantId: "tenant_demo",
     customerId: "cus_1",
     profile: "core",
@@ -37,7 +37,7 @@ function makeCase(status: CaseStatus): Case {
 function makeProposal(status: ProposalStatus): ActionProposal {
   return {
     id: "prop_1",
-    specVersion: "0.1",
+    specVersion: "0.2",
     tenantId: "tenant_demo",
     caseId: "case_1",
     profile: "ecommerce",

@@ -24,7 +24,7 @@ enable? What happens if we do nothing?
 ## Design
 
 The detailed design. Include normative language (MUST/SHOULD/MAY) where the change
-affects conformance. Reference the affected sections of `docs/spec-v0.1.md`, the
+affects conformance. Reference the affected sections of `docs/spec-v0.2.md`, the
 affected schemas under `schemas/`, and the affected packages. For schema changes,
 include the proposed schema diff or new schema.
 

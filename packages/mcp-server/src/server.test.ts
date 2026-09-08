@@ -32,7 +32,7 @@ describe("buildMcpServer", () => {
     expect(typeof server.connect).toBe("function");
   });
 
-  it("lists all 16 tools over the wire", async () => {
+  it("lists all 20 tools over the wire", async () => {
     const { client, server } = await connectedClient();
     const { tools } = await client.listTools();
     expect(tools.map((t) => t.name).sort()).toEqual(
@@ -153,6 +153,86 @@ describe("buildMcpServer", () => {
     await Promise.all([client.connect(clientTransport), server.connect(serverTransport)]);
     const result = await client.callTool({ name: "osas_core_get_case", arguments: { id: "case_refund" } });
     expect(result.isError).toBeFalsy();
+    await server.close();
+  });
+
+  it("serves the after-sales reads from the mock backend", async () => {
+    const { client, server } = await connectedClient();
+    const incident = await client.callTool({
+      name: "osas_ecom_get_shipment_incident",
+      arguments: { id: "inc_dnr_large" },
+    });
+    expect(incident.isError).toBeFalsy();
+    expect((incident.structuredContent as Record<string, unknown>).incidentType).toBe(
+      "delivered_not_received",
+    );
+
+    const refunds = await client.callTool({
+      name: "osas_ecom_get_refund_status",
+      arguments: { orderId: "ord_refunded" },
+    });
+    expect(refunds.isError).toBeFalsy();
+    const items = (refunds.structuredContent as Record<string, unknown>).items as unknown[];
+    expect(items).toHaveLength(1);
+    expect((items[0] as Record<string, unknown>).status).toBe("succeeded");
+    await server.close();
+  });
+
+  it("creates a submitted ItemClaim via the proposal shortcut", async () => {
+    const { client, server } = await connectedClient();
+    const result = await client.callTool({
+      name: "osas_ecom_create_item_claim_request",
+      arguments: {
+        caseId: "case_refund",
+        orderId: "ord_small",
+        lineId: "line_1",
+        claimType: "damaged",
+        quantity: 1,
+        idempotencyKey: "idem-claim-1",
+      },
+    });
+    expect(result.isError).toBeFalsy();
+    const claim = result.structuredContent as Record<string, unknown>;
+    expect(claim.status).toBe("submitted");
+    expect(claim.claimType).toBe("damaged");
+    await server.close();
+  });
+
+  it("drafts an exchange_request proposal that never executes", async () => {
+    const { client, server } = await connectedClient();
+    const result = await client.callTool({
+      name: "osas_ecom_create_exchange_request",
+      arguments: {
+        caseId: "case_refund",
+        orderId: "ord_small",
+        originalLineId: "line_1",
+        replacementSku: "sku_mug_v2",
+        idempotencyKey: "idem-exchange-1",
+      },
+    });
+    expect(result.isError).toBeFalsy();
+    const proposal = result.structuredContent as Record<string, unknown>;
+    expect(proposal.actionType).toBe("exchange_request");
+    expect(proposal.profile).toBe("ecommerce");
+    expect(proposal.status).toBe("proposed");
+    expect(proposal.requestedPermission).toBe("request-approval");
+    await server.close();
+  });
+
+  it("fails closed with CAPABILITY_UNSUPPORTED when the adapter lacks an after-sales method", async () => {
+    const adapter = new MockSupportAdapter();
+    Object.defineProperty(adapter, "getCapabilities", { value: undefined });
+    Object.defineProperty(adapter, "getShipmentIncident", { value: undefined });
+    const server = buildMcpServer(adapter, DEMO_PRINCIPAL);
+    const [clientTransport, serverTransport] = InMemoryTransport.createLinkedPair();
+    const client = new Client({ name: "test-client", version: "0.0.0" });
+    await Promise.all([client.connect(clientTransport), server.connect(serverTransport)]);
+    const result = await client.callTool({
+      name: "osas_ecom_get_shipment_incident",
+      arguments: { id: "inc_dnr_large" },
+    });
+    expect(result.isError).toBe(true);
+    expect(textContent(result)[0]!.text).toContain("CAPABILITY_UNSUPPORTED");
     await server.close();
   });
 });

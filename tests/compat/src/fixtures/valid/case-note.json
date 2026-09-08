@@ -1,6 +1,6 @@
 {
   "id": "note_1",
-  "specVersion": "0.1",
+  "specVersion": "0.2",
   "tenantId": "tenant_demo",
   "caseId": "case_1",
   "body": "Customer reported the item arrived damaged; photos attached.",

@@ -60,8 +60,8 @@ class Collector {
       { passed: 0, failed: 0, skipped: 0 },
     );
     return {
-      specVersion: "0.1",
-      generator: "@osas/compat-runner@0.1.1",
+      specVersion: "0.2",
+      generator: "@osas/compat-runner@0.2.0",
       target: options.target,
       runAt: new Date().toISOString(),
       mode: { stateful },
@@ -153,10 +153,10 @@ export async function runCompat(options: RunnerOptions): Promise<CompatRunReport
     wellKnown = res.body;
   });
 
-  await c.check('specVersion is "0.1"', async () => {
+  await c.check('specVersion is "0.2"', async () => {
     if (!isObject(wellKnown)) fail("no well-known document to inspect");
-    if (wellKnown.specVersion !== "0.1") {
-      fail(`specVersion is ${JSON.stringify(wellKnown.specVersion)}, expected "0.1"`);
+    if (wellKnown.specVersion !== "0.2") {
+      fail(`specVersion is ${JSON.stringify(wellKnown.specVersion)}, expected "0.2"`);
     }
     return `specVersion=${wellKnown.specVersion}`;
   });
@@ -230,7 +230,7 @@ export async function runCompat(options: RunnerOptions): Promise<CompatRunReport
   const now = new Date().toISOString();
   const validProposal = {
     id: "prop_validate_probe",
-    specVersion: "0.1",
+    specVersion: "0.2",
     tenantId: tenant,
     caseId: "case_probe",
     profile: "ecommerce",

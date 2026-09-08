@@ -114,11 +114,11 @@ const validFixtures: Record<string, unknown> = {
   "core/capability-manifest": {
     specVersion: SPEC_VERSION,
     implementationId: "test-impl",
-    implementationVersion: "0.1.1",
+    implementationVersion: "0.2.0",
     profiles: [{ name: "core", capabilities: ["case.read", "customer.read"] }],
     transports: ["http"],
     executionModes: ["proposal_only"],
-    adapterVersion: "0.1.1",
+    adapterVersion: "0.2.0",
   },
 };
 
@@ -148,10 +148,10 @@ describe("schemas dir resolution + manifest", () => {
     }
   });
 
-  it("manifest covers 14 core + 5 profile + 16 tool schemas", () => {
+  it("manifest covers 14 core + 9 profile + 20 tool schemas", () => {
     const manifest = loadManifest();
     expect(manifest.specVersion).toBe(SPEC_VERSION);
-    expect(manifest.schemas).toHaveLength(35);
+    expect(manifest.schemas).toHaveLength(43);
     expect(listSchemas().map((s) => s.name)).toContain("core/capability-manifest");
     expect(listSchemas().map((s) => s.name)).toContain("core/shadow-run");
     expect(listSchemas().map((s) => s.name)).toContain("tools/osas_core_get_case");
@@ -202,10 +202,10 @@ describe("invalid data is rejected", () => {
     expect(result.valid).toBe(false);
   });
 
-  it("specVersion mismatch fails (const 0.1)", () => {
+  it("specVersion mismatch fails (const 0.2)", () => {
     const result = validator.validate("core/customer", {
       ...(validFixtures["core/customer"] as object),
-      specVersion: "0.2",
+      specVersion: "0.1",
     });
     expect(result.valid).toBe(false);
   });
@@ -240,6 +240,114 @@ describe("invalid data is rejected", () => {
   });
 });
 
+describe("after-sales profile schemas (v0.2 Phase 4)", () => {
+  const afterSalesFixtures: Record<string, unknown> = {
+    "profiles/ecommerce/shipment-incident": {
+      ...base,
+      orderId: "ord_1",
+      shipmentId: "shp_1",
+      incidentType: "delayed",
+      carrier: "demo-post",
+      status: "open",
+      expectedAt: NOW,
+      detectedAt: NOW,
+      evidenceIds: ["ev_1"],
+      updatedAt: NOW,
+    },
+    "profiles/ecommerce/refund-transaction": {
+      ...base,
+      orderId: "ord_1",
+      proposalId: "prop_1",
+      provider: "mock-payments",
+      externalTransactionId: "rfnd_1",
+      status: "processing",
+      amount: { currency: "USD", minorUnits: 2500 },
+      requestedAt: NOW,
+      evidenceIds: ["ev_1"],
+      updatedAt: NOW,
+    },
+    "profiles/ecommerce/item-claim": {
+      ...base,
+      orderId: "ord_1",
+      lineId: "line_1",
+      claimType: "damaged",
+      quantity: 1,
+      evidenceIds: ["ev_1"],
+      status: "submitted",
+      updatedAt: NOW,
+    },
+    "profiles/ecommerce/exchange-request": {
+      ...base,
+      orderId: "ord_1",
+      originalLineId: "line_1",
+      replacementSku: "sku_mug_v2",
+      replacementVariant: "blue",
+      inventoryStatus: "in_stock",
+      priceDelta: { currency: "USD", minorUnits: -500 },
+      returnRequired: true,
+      status: "pending_approval",
+      evidenceIds: ["ev_1"],
+      updatedAt: NOW,
+    },
+  };
+
+  for (const [name, fixture] of Object.entries(afterSalesFixtures)) {
+    it(`${name}: valid instance passes`, () => {
+      const result = validator.validate(name, fixture);
+      expect(result.errors).toEqual([]);
+      expect(result.valid).toBe(true);
+    });
+  }
+
+  it("shipment-incident rejects a bad incidentType enum", () => {
+    const result = validator.validate("profiles/ecommerce/shipment-incident", {
+      ...(afterSalesFixtures["profiles/ecommerce/shipment-incident"] as object),
+      incidentType: "vanished",
+    });
+    expect(result.valid).toBe(false);
+  });
+
+  it("refund-transaction rejects a bad status enum and float minorUnits", () => {
+    const good = afterSalesFixtures["profiles/ecommerce/refund-transaction"] as object;
+    expect(
+      validator.validate("profiles/ecommerce/refund-transaction", { ...good, status: "mysterious" })
+        .valid,
+    ).toBe(false);
+    expect(
+      validator.validate("profiles/ecommerce/refund-transaction", {
+        ...good,
+        amount: { currency: "USD", minorUnits: 25.5 },
+      }).valid,
+    ).toBe(false);
+  });
+
+  it("item-claim rejects quantity < 1 and a bad claimType", () => {
+    const good = afterSalesFixtures["profiles/ecommerce/item-claim"] as object;
+    expect(
+      validator.validate("profiles/ecommerce/item-claim", { ...good, quantity: 0 }).valid,
+    ).toBe(false);
+    expect(
+      validator.validate("profiles/ecommerce/item-claim", { ...good, claimType: "vibes" }).valid,
+    ).toBe(false);
+  });
+
+  it("exchange-request accepts a negative priceDelta but rejects floats and extras", () => {
+    const good = afterSalesFixtures["profiles/ecommerce/exchange-request"] as Record<string, unknown>;
+    // negative delta already present in the valid fixture (replacement is cheaper)
+    expect(
+      validator.validate("profiles/ecommerce/exchange-request", {
+        ...good,
+        priceDelta: { currency: "USD", minorUnits: -2.5 },
+      }).valid,
+    ).toBe(false);
+    expect(
+      validator.validate("profiles/ecommerce/exchange-request", { ...good, hacker: true }).valid,
+    ).toBe(false);
+    const { returnRequired: _dropped, ...rest } = good;
+    expect(validator.validate("profiles/ecommerce/exchange-request", rest).valid).toBe(false);
+  });
+});
+
 describe("tools input schemas", () => {
   it("osas_core_get_case accepts { id } and rejects extras", () => {
     expect(validator.validate("tools/osas_core_get_case", { id: "case_1" }).valid).toBe(true);
@@ -269,6 +377,62 @@ describe("tools input schemas", () => {
         requestedPermission: "execute",
       }).valid,
     ).toBe(false);
+  });
+
+  it("after-sales read tools accept their lookup keys and reject extras", () => {
+    expect(validator.validate("tools/osas_ecom_get_shipment_incident", { id: "inc_1" }).valid).toBe(
+      true,
+    );
+    expect(validator.validate("tools/osas_ecom_get_shipment_incident", {}).valid).toBe(false);
+    expect(validator.validate("tools/osas_ecom_get_refund_status", { orderId: "ord_1" }).valid).toBe(
+      true,
+    );
+    expect(
+      validator.validate("tools/osas_ecom_get_refund_status", { orderId: "ord_1", id: "x" }).valid,
+    ).toBe(false);
+  });
+
+  it("osas_ecom_create_item_claim_request takes the shortcut shape", () => {
+    const input = {
+      caseId: "case_1",
+      orderId: "ord_1",
+      lineId: "line_1",
+      claimType: "damaged",
+      quantity: 1,
+      evidenceIds: ["ev_1"],
+      idempotencyKey: "k-1",
+    };
+    expect(validator.validate("tools/osas_ecom_create_item_claim_request", input).valid).toBe(true);
+    expect(
+      validator.validate("tools/osas_ecom_create_item_claim_request", { ...input, quantity: 0 })
+        .valid,
+    ).toBe(false);
+    expect(
+      validator.validate("tools/osas_ecom_create_item_claim_request", {
+        ...input,
+        requestedPermission: "execute",
+      }).valid,
+    ).toBe(false);
+  });
+
+  it("osas_ecom_create_exchange_request takes the shortcut shape (server sets permission/actor)", () => {
+    const input = {
+      caseId: "case_1",
+      orderId: "ord_1",
+      originalLineId: "line_1",
+      replacementSku: "sku_mug_v2",
+      evidenceIds: ["ev_1"],
+      idempotencyKey: "k-1",
+    };
+    expect(validator.validate("tools/osas_ecom_create_exchange_request", input).valid).toBe(true);
+    expect(
+      validator.validate("tools/osas_ecom_create_exchange_request", {
+        ...input,
+        requestedPermission: "execute",
+      }).valid,
+    ).toBe(false);
+    const { replacementSku: _dropped, ...rest } = input;
+    expect(validator.validate("tools/osas_ecom_create_exchange_request", rest).valid).toBe(false);
   });
 });
 

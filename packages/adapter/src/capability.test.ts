@@ -9,13 +9,13 @@ import { manifestAllows, requireCapability } from "./capability.js";
 
 function manifestWith(capabilities: string[]): CapabilityManifest {
   return {
-    specVersion: "0.1",
+    specVersion: "0.2",
     implementationId: "test-impl",
-    implementationVersion: "0.1.1",
+    implementationVersion: "0.2.0",
     profiles: [{ name: "core", capabilities: capabilities as CapabilityManifest["profiles"][number]["capabilities"] }],
     transports: ["http"],
     executionModes: ["proposal_only"],
-    adapterVersion: "0.1.1",
+    adapterVersion: "0.2.0",
   };
 }
 

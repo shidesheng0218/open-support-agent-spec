@@ -17,8 +17,8 @@ export interface RunnerSuite {
 }
 
 export interface CompatRunReport {
-  specVersion: "0.1";
-  generator: "@osas/compat-runner@0.1.1";
+  specVersion: "0.2";
+  generator: "@osas/compat-runner@0.2.0";
   target: string;
   runAt: string;
   mode: {

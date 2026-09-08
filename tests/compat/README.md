@@ -1,7 +1,7 @@
-# @osas/compat-suite — OSAS v0.1 compatibility test suite
+# @osas/compat-suite — OSAS v0.2 compatibility test suite
 
 This package is the **profile-compatibility gate** for the Open Support Agent Spec (OSAS) v0.1.
-Per GOVERNANCE.md, an implementation may only declare itself *"OSAS v0.1 profile-compatible"*
+Per GOVERNANCE.md, an implementation may only declare itself *"OSAS v0.2 profile-compatible"*
 (core / ecommerce / saas) when this suite passes against its schemas, state machines, policy
 engine, adapter surface, and MCP tool mapping.
 
@@ -47,7 +47,7 @@ Each run writes `tests/compat/report/latest.json`:
 
 ```json
 {
-  "specVersion": "0.1",
+  "specVersion": "0.2",
   "runAt": "2026-01-15T10:00:00.000Z",
   "generator": "@osas/compat-suite@0.1.0",
   "ok": true,

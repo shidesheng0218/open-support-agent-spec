@@ -1,0 +1,10 @@
+{
+  "caseId": "case_refund",
+  "orderId": "ord_small",
+  "originalLineId": "line_1",
+  "replacementSku": "sku_mug_v2",
+  "replacementVariant": "blue",
+  "reasonCode": "wrong_item",
+  "evidenceIds": ["ev_ord_small"],
+  "idempotencyKey": "idem_exchange_1"
+}

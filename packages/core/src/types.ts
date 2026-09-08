@@ -1,9 +1,9 @@
 /**
- * OSAS v0.1 core domain model (CONTRACTS.md §2, §4, §5).
+ * OSAS v0.2 core domain model (CONTRACTS.md §2, §4, §5).
  * These interfaces mirror the JSON Schemas under schemas/ field-for-field.
  */
 
-export type SpecVersion = "0.1";
+export type SpecVersion = "0.2";
 
 export type Profile = "core" | "ecommerce" | "saas";
 
@@ -110,7 +110,12 @@ export interface Evidence {
 /* ---------------- ActionProposal ---------------- */
 
 export type CoreActionType = "create_note" | "create_escalation";
-export type EcommerceActionType = "refund" | "return_request" | "reshipment" | "cancel_order";
+export type EcommerceActionType =
+  | "refund"
+  | "return_request"
+  | "reshipment"
+  | "cancel_order"
+  | "exchange_request";
 export type SaasActionType = "credit_apply" | "subscription_cancel" | "plan_change";
 export type ActionType = CoreActionType | EcommerceActionType | SaasActionType;
 
@@ -320,6 +325,10 @@ export type Capability =
   | "ecommerce.shipment.read"
   | "ecommerce.refund.propose"
   | "ecommerce.refund.execute"
+  | "ecommerce.shipment_incident.read"
+  | "ecommerce.refund_status.read"
+  | "ecommerce.item_claim.propose"
+  | "ecommerce.exchange.propose"
   | "saas.subscription.read"
   | "saas.credit.propose";
 
@@ -434,6 +443,119 @@ export interface Shipment {
   status: ShipmentStatus;
   eta?: IsoDateTime;
   createdAt: IsoDateTime;
+}
+
+/* ----- After-sales domain objects (schemas/profiles/ecommerce/) ----- */
+
+export type ShipmentIncidentType =
+  | "delayed"
+  | "lost"
+  | "delivered_not_received"
+  | "damaged_in_transit";
+
+export type ShipmentIncidentStatus = "open" | "investigating" | "resolved" | "closed";
+
+/** A logistics exception detected on a Shipment (delay, loss, damage, DNR). */
+export interface ShipmentIncident {
+  id: string;
+  specVersion: SpecVersion;
+  tenantId: string;
+  orderId: string;
+  shipmentId: string;
+  incidentType: ShipmentIncidentType;
+  carrier?: string;
+  status: ShipmentIncidentStatus;
+  expectedAt?: IsoDateTime;
+  detectedAt: IsoDateTime;
+  evidenceIds?: string[];
+  createdAt: IsoDateTime;
+  updatedAt: IsoDateTime;
+}
+
+export type RefundTransactionStatus =
+  | "requested"
+  | "processing"
+  | "succeeded"
+  | "failed"
+  | "reversed";
+
+/**
+ * Record of an actual refund transaction at a payment provider. Read-only for
+ * the model: it reflects execution outcomes, it never triggers them.
+ */
+export interface RefundTransaction {
+  id: string;
+  specVersion: SpecVersion;
+  tenantId: string;
+  orderId: string;
+  proposalId?: string;
+  provider?: string;
+  externalTransactionId?: string;
+  status: RefundTransactionStatus;
+  amount: Money;
+  requestedAt: IsoDateTime;
+  completedAt?: IsoDateTime;
+  failureCode?: string;
+  evidenceIds?: string[];
+  createdAt: IsoDateTime;
+  updatedAt: IsoDateTime;
+}
+
+export type ItemClaimType = "damaged" | "wrong_item" | "missing_item" | "defective";
+
+export type ItemClaimStatus =
+  | "submitted"
+  | "under_review"
+  | "approved"
+  | "rejected"
+  | "resolved";
+
+/** A per-line after-sales claim. Reviewed by humans; never auto-resolved. */
+export interface ItemClaim {
+  id: string;
+  specVersion: SpecVersion;
+  tenantId: string;
+  orderId: string;
+  lineId: string;
+  claimType: ItemClaimType;
+  quantity: number;
+  evidenceIds?: string[];
+  status: ItemClaimStatus;
+  createdAt: IsoDateTime;
+  updatedAt: IsoDateTime;
+}
+
+export type ExchangeInventoryStatus = "unknown" | "in_stock" | "out_of_stock" | "backordered";
+
+export type ExchangeRequestStatus =
+  | "proposed"
+  | "pending_approval"
+  | "approved"
+  | "rejected"
+  | "fulfilled"
+  | "cancelled";
+
+/**
+ * A request to exchange one order line for a replacement SKU. The model may
+ * only ever PROPOSE an exchange (ActionType "exchange_request",
+ * require_approval by default); fulfillment is always human.
+ */
+export interface ExchangeRequest {
+  id: string;
+  specVersion: SpecVersion;
+  tenantId: string;
+  orderId: string;
+  originalLineId: string;
+  replacementSku: string;
+  replacementVariant?: string;
+  inventoryStatus?: ExchangeInventoryStatus;
+  /** Replacement price minus original price; may be negative. Integer minor units, never a float. */
+  priceDelta?: Money;
+  returnRequired: boolean;
+  status: ExchangeRequestStatus;
+  evidenceIds?: string[];
+  createdAt: IsoDateTime;
+  updatedAt: IsoDateTime;
 }
 
 /* ---------------- Extension objects: saas profile ---------------- */

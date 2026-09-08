@@ -1,14 +1,15 @@
-# OSAS v0.1 — Engineering Contracts
+# OSAS v0.2 — Engineering Contracts
 
 This file is the **single shared contract** for every contributor/agent building this monorepo.
 It fixes paths, package names, types, algorithms, tool names, and API endpoints so that
 independently-built parts integrate without drift. The JSON Schemas under `schemas/` are the
-machine-checkable authority; this file must agree with them. `SPEC_VERSION = "0.1"`.
+machine-checkable authority; this file must agree with them. `SPEC_VERSION = "0.2"`.
 
 ## 0. Fixed decisions
 
 - pnpm workspace, Node >= 20, TypeScript strict, **ESM** (`"type": "module"`, NodeNext → relative imports in TS **must use `.js` suffix**), Vitest for all tests.
-- npm scope `@osas/*`, every package `"version": "0.1.1"` (specVersion stays `"0.1"`), `"private": true`.
+- npm scope `@osas/*`, every workspace package `"version": "0.2.0"` (lockstep with the spec; `SPEC_VERSION = "0.2"`).
+- **Publish policy**: only `@osas/core`, `@osas/schema-validator`, and `@osas/policy-engine` are public npm packages (`"private": false`, `publishConfig.access: "public"`). Everything else is an internal reference implementation with `"private": true` and is NOT npm-installable — including the reference adapters `@osas/chatwoot-adapter`, `@osas/zendesk-adapter`, `@osas/shopify-adapter`, plus `@osas/mock-backend`, `@osas/store-postgres`, `@osas/ecommerce-shadow` and all other private workspace packages. The Chatwoot adapter is a reference implementation: docs must never imply `npm install @osas/chatwoot-adapter` (or any other private package) works — use it from a repo checkout or copy it as a starting point.
 - Runtime validation: **Ajv v8 + ajv-formats only** (no zod). Schemas: JSON Schema draft 2020-12, `additionalProperties: false` on every object unless noted.
 - Money is `{ currency: string (ISO 4217, 3 upper-case letters), minorUnits: integer }`. Never floats.
 - Timestamps: ISO 8601 strings (`format: "date-time"`). IDs: opaque strings.
@@ -23,7 +24,7 @@ schemas/                     # authoritative JSON Schemas (draft 2020-12)
   core/*.json                # 8 core objects + common.json
   profiles/ecommerce/*.json  # order.json, shipment.json
   profiles/saas/*.json       # subscription.json, invoice.json, credit-balance.json
-  tools/*.json               # one input schema per MCP tool (16 tools, §7)
+  tools/*.json               # one input schema per MCP tool (20 tools, §7; +4 after-sales tools in spec-v0.2 §15)
 packages/
   core/            @osas/core             types, enums, state machines, detectInjection, id helpers
   schema-validator/@osas/schema-validator Ajv loader/validator over schemas/
@@ -43,7 +44,7 @@ rfcs/  docs/  .github/workflows/  docker-compose.yml
 
 ## 2. Core domain model
 
-All persisted objects have `id: string`, `specVersion: "0.1"` (schema: `const`), `createdAt: date-time`; most also `updatedAt`.
+All persisted objects have `id: string`, `specVersion: "0.2"` (schema: `const`), `createdAt: date-time`; most also `updatedAt`.
 
 ### Profile = "core" | "ecommerce" | "saas"
 
@@ -61,7 +62,7 @@ Every proposal conclusion MUST reference ≥1 evidence for financial actions; fr
 
 ### ActionProposal
 `tenantId, caseId, profile, actionType: ActionType, reasonCode: string, params: object, requestedPermission: Permission, requestedBy: { actorType: "model"|"human"|"system", actorId, model?: { provider, model } }, amount?: Money, evidenceIds: string[], idempotencyKey: string, status: ProposalStatus, policyDecision?: PolicyDecision`
-ActionType — core: `create_note`, `create_escalation`; ecommerce: `refund`, `return_request`, `reshipment`, `cancel_order`; saas: `credit_apply`, `subscription_cancel`, `plan_change`. `profile` must match the actionType's profile (`ACTION_TYPE_PROFILE` map in core).
+ActionType (10 total) — core: `create_note`, `create_escalation`; ecommerce: `refund`, `return_request`, `reshipment`, `cancel_order`, `exchange_request` (added in spec-v0.2 §15.5, require_approval by default, never model-executed); saas: `credit_apply`, `subscription_cancel`, `plan_change`. `profile` must match the actionType's profile (`ACTION_TYPE_PROFILE` map in core).
 Financial actionTypes (need amount + ≥1 evidence): `refund`, `reshipment`, `credit_apply`.
 ProposalStatus = `proposed | policy_rejected | pending_approval | approved | rejected | executing | executed | failed | reconciliation_required`.
 Transitions: `proposed→{policy_rejected,pending_approval,approved}`; `pending_approval→{approved,rejected}`; `approved→{executing}`; `executing→{executed,failed,reconciliation_required}`; `reconciliation_required→{executed,failed}`; `policy_rejected|rejected|executed|failed→{}` (terminal; no blind retry — a new attempt = new proposal with new idempotencyKey). `canTransitionProposal/transitionProposal` in core.
@@ -165,7 +166,7 @@ export interface SupportAdapter {
   updateHandoff(ctx, id: string, patch: Partial<Pick<HumanHandoff,"status"|"assignedTo"|"notes"|"resolvedAt">>): Promise<HumanHandoff>;
   getPolicy(ctx, tenantId: string): Promise<TenantPolicy>;
   putPolicy(ctx, policy: TenantPolicy): Promise<TenantPolicy>;
-  // v0.1.1: optional capability provider; once declared it is enforced
+  // introduced in v0.1.1: optional capability provider; once declared it is enforced
   // (undeclared capability -> AdapterCapabilityError CAPABILITY_UNSUPPORTED).
   getCapabilities?(ctx): Promise<CapabilityManifest>;
 }
@@ -174,8 +175,8 @@ Package also ships `templates/byo-adapter.template.ts` — a copy-paste starting
 
 ## 7. MCP mapping (@osas/mcp-server)
 
-- Export pure data `TOOL_DEFINITIONS: ToolDefinition[]` (`{ name, profile, description, inputSchema, adapterMethod, permissionRequired, capabilityRequired }`) — used by compat tests and the API `/v1/meta/tools`. `capabilityRequired` (v0.1.1) maps each tool to its spec capability; undeclared capabilities fail with `CAPABILITY_UNSUPPORTED` before the adapter is touched.
-- Tool names (16): `osas_core_get_case, osas_core_search_cases, osas_core_get_customer, osas_core_search_knowledge, osas_core_create_case_note, osas_core_create_escalation, osas_core_create_action_proposal, osas_ecom_get_order, osas_ecom_list_orders, osas_ecom_get_shipment, osas_saas_get_subscription, osas_saas_list_invoices, osas_saas_get_credit_balance, osas_saas_create_credit_request, osas_saas_create_cancellation_request, osas_saas_create_plan_change_request`.
+- Export pure data `TOOL_DEFINITIONS: ToolDefinition[]` (`{ name, profile, description, inputSchema, adapterMethod, permissionRequired, capabilityRequired }`) — used by compat tests and the API `/v1/meta/tools`. `capabilityRequired` (introduced in v0.1.1) maps each tool to its spec capability; undeclared capabilities fail with `CAPABILITY_UNSUPPORTED` before the adapter is touched.
+- Tool names (20): `osas_core_get_case, osas_core_search_cases, osas_core_get_customer, osas_core_search_knowledge, osas_core_create_case_note, osas_core_create_escalation, osas_core_create_action_proposal, osas_ecom_get_order, osas_ecom_list_orders, osas_ecom_get_shipment, osas_saas_get_subscription, osas_saas_list_invoices, osas_saas_get_credit_balance, osas_saas_create_credit_request, osas_saas_create_cancellation_request, osas_saas_create_plan_change_request` + the four after-sales tools from spec-v0.2 §15.6: `osas_ecom_get_shipment_incident, osas_ecom_get_refund_status, osas_ecom_create_item_claim_request, osas_ecom_create_exchange_request`.
 - The three `*_request` saas tools + ecom return/refund shortcut tools build an ActionProposal (status `proposed`, requestedPermission `request-approval`) via `createActionProposal`; they never execute.
 - Each tool's inputSchema lives at `schemas/tools/<tool_name>.json`.
 - `buildMcpServer(adapter, principal)` from `@modelcontextprotocol/sdk` (`McpServer` + `StdioServerTransport`), tool handlers call adapter with ctx; output `{ content: [{ type: "text", text: JSON.stringify(result, null, 2) }], structuredContent: result }`. `executeAction` is NEVER registered as a tool. `src/index.ts` = stdio main.
@@ -225,7 +226,7 @@ CORS enabled. `x-tenant-id` header optional (default `tenant_demo`). All errors 
 | POST | /v1/handoffs/:id/claim | `{ assignee }`; POST /v1/handoffs/:id/resolve `{ notes? }` |
 | GET | /v1/audit?caseId&proposalId | → AuditEvent[] |
 | GET | /v1/policies/:tenantId | → active TenantPolicy version (PolicyStore-backed) |
-| PUT | /v1/policies/:tenantId | → 409 `POLICY_IMMUTABLE` (v0.1.1: use the version lifecycle below) |
+| PUT | /v1/policies/:tenantId | → 409 `POLICY_IMMUTABLE` (since v0.1.1: use the version lifecycle below) |
 | GET | /.well-known/osas | → discovery document `{ specVersion, version, capabilities, endpoints }` |
 | GET | /v1/capabilities | → CapabilityManifest, or 404 `CAPABILITIES_NOT_DECLARED` |
 | GET | /v1/audit/verify | → `{ tenantId, chainLength, intact, firstError? }` (hash-chain verification) |
@@ -260,6 +261,7 @@ Demo TenantPolicy `pol_demo` v1.0.0: duplicateWindowSeconds 86400, maxEvidenceAg
 - refund: decision auto_execute, maxAmount $50, reasonCodes ["damaged","wrong_item","not_received","other"], requireVerifiedIdentity, identityMaxAgeSeconds 7776000, allowedRegions [US,CA,GB,DE,FR,JP,AU], blockedRegions [IR,KP,CU]
 - reshipment: auto_execute, maxAmount $30, requireVerifiedIdentity
 - return_request: require_approval; cancel_order: require_approval
+- exchange_request: require_approval (spec-v0.2 §15.5; the policy engine additionally caps it at require_approval and `executeProposal` refuses it — fulfillment is human-only)
 - credit_apply: require_approval, maxAmount $100 (auto nothing), reasonCodes ["service_outage","goodwill","billing_error"]
 - subscription_cancel: require_approval; plan_change: require_approval
 - create_note / create_escalation: auto_execute
@@ -278,11 +280,11 @@ MockSupportAdapter: in-memory maps, deep clones, id gen `<prefix>_<counter>`, de
 
 ## 14. Governance docs (owned by docs task)
 
-README.md + README.zh-CN.md (Draft 开放规范 v0.1 positioning, quickstart: pnpm & docker, architecture, three demo paths), docs/spec-v0.1.md + docs/spec-v0.1.zh-CN.md (full spec text from §2–§8 of this contract, expanded), CONTRIBUTING.md + CONTRIBUTING.zh-CN.md (bilingual flow, RFC requirement, release gate: schemas+docs+impl+compat tests in same PR; no stable release without runnable examples + passing tests), CODE_OF_CONDUCT.md (Contributor Covenant 2.1), SECURITY.md (report via GitHub private vulnerability reporting; no real customer data; redaction), GOVERNANCE.md (founding maintainers, semver, RFC for breaking/new semantics, profile-compat declaration requires passing compat suite; v1.0 requires ≥3 independent passing implementations), rfcs/0000-template.md + rfcs/0001-v0.1-core.md, CHANGELOG.md (0.1.0 draft).
+README.md + README.zh-CN.md (Draft 开放规范 v0.2 positioning, quickstart: pnpm & docker, architecture, three demo paths), docs/spec-v0.2.md + docs/spec-v0.2.zh-CN.md (full spec text from §2–§8 of this contract, expanded; docs/spec-v0.1.md + docs/spec-v0.1.zh-CN.md are retained as historical documents, superseded by spec-v0.2), CONTRIBUTING.md + CONTRIBUTING.zh-CN.md (bilingual flow, RFC requirement, release gate: schemas+docs+impl+compat tests in same PR; no stable release without runnable examples + passing tests), CODE_OF_CONDUCT.md (Contributor Covenant 2.1), SECURITY.md (report via GitHub private vulnerability reporting; no real customer data; redaction), GOVERNANCE.md (founding maintainers, semver, RFC for breaking/new semantics, profile-compat declaration requires passing compat suite; v1.0 requires ≥3 independent passing implementations), rfcs/0000-template.md + rfcs/0001-v0.1-core.md, CHANGELOG.md (0.2.0).
 
 ## 15. v0.1.1 extensions
 
-- **Capability manifest**: `schemas/core/capability-manifest.json` + `CapabilityManifest`/`Capability` types in @osas/core; 16 spec capabilities (`case.read`, `customer.read`, `knowledge.read`, `evidence.read`, `note.write`, `escalation.write`, `proposal.write`, `approval.read`, `approval.decide`, `audit.read`, `ecommerce.order.read`, `ecommerce.shipment.read`, `ecommerce.refund.propose`, `ecommerce.refund.execute`, `saas.subscription.read`, `saas.credit.propose`). Enforcement helper `requireAdapterCapability` in @osas/adapter; adapters without `getCapabilities` stay permissive. Mock adapter declares all 16.
+- **Capability manifest**: `schemas/core/capability-manifest.json` + `CapabilityManifest`/`Capability` types in @osas/core; 20 spec capabilities (`case.read`, `customer.read`, `knowledge.read`, `evidence.read`, `note.write`, `escalation.write`, `proposal.write`, `approval.read`, `approval.decide`, `audit.read`, `ecommerce.order.read`, `ecommerce.shipment.read`, `ecommerce.refund.propose`, `ecommerce.refund.execute`, `saas.subscription.read`, `saas.credit.propose`) plus the four after-sales capabilities from spec-v0.2 §15.6 (`ecommerce.shipment_incident.read`, `ecommerce.refund_status.read`, `ecommerce.item_claim.propose`, `ecommerce.exchange.propose`). Enforcement helper `requireAdapterCapability` in @osas/adapter; adapters without `getCapabilities` stay permissive. Mock adapter declares all 20.
 - **Policy lifecycle**: immutable versions `draft → simulated → approved → active → retired` (`POLICY_VERSION_TRANSITIONS` in @osas/core; `PolicyStore`/`InMemoryPolicyStore` in @osas/policy-engine). Runtime evaluation resolves the active version from the store (`resolveActivePolicy`), lazily importing the adapter's legacy policy as the initial active version. RBAC via the authenticated principal (§16): demo mode accepts the `x-osas-role: policy_admin` header; jwt mode reads the roles claim (single seam `policyAdminActor` in apps/api/src/routes/policies.ts). All changes audited (`policy_draft_created`/`policy_simulated`/`policy_approved`/`policy_activated`/`policy_retired`).
 - **Audit integrity**: optional `sequence`/`previousHash`/`eventHash` on AuditEvent; per-tenant append-only SHA-256 chain over stable JSON (`audit-chain.ts` in @osas/policy-engine; genesis previousHash = 64 zeros). `GET /v1/audit/verify` recomputes the chain. Tamper-evidence only — does not replace WORM storage; log redaction rules unchanged.
 
@@ -295,7 +297,7 @@ README.md + README.zh-CN.md (Draft 开放规范 v0.1 positioning, quickstart: pn
 
 ## 17. v0.1.1 Milestone 3 — Shadow Mode + reference adapters
 
-- **Execution mode (`OSAS_EXECUTION_MODE`)**: `shadow` (default) | `live`. Only `shadow` exists in v0.1.1; `live` aborts startup with `LiveExecutionNotAvailableError` (`LIVE_EXECUTION_NOT_AVAILABLE_IN_V0_1_1`) from `loadExecutionMode` (`@osas/ecommerce-shadow`), called in `buildApp` before any route registration. Unknown values throw `EXECUTION_MODE_CONFIG_INVALID`.
+- **Execution mode (`OSAS_EXECUTION_MODE`)**: `shadow` (default) | `live`. Only `shadow` exists in v0.2 (no `live` execution path has shipped on any release line); `live` aborts startup with `LiveExecutionNotAvailableError` (`LIVE_EXECUTION_NOT_AVAILABLE_IN_V0_1_1` — a historical stable error code name retained for compatibility) from `loadExecutionMode` (`@osas/ecommerce-shadow`), called in `buildApp` before any route registration. Unknown values throw `EXECUTION_MODE_CONFIG_INVALID`.
 - **ShadowRun** (`schemas/core/shadow-run.json`, `ShadowRun`/`ShadowRunOutcome`/`SuggestedAction` in @osas/core): `{ proposalId, policyDecision, wouldAutoExecute, suggestedAction, humanOutcome (accepted|rejected|modified|pending), humanComment?, externalReference?, createdAt, reviewedAt? }`. `wouldAutoExecute` ≡ `policyDecision.decision === "auto_execute"` — no other path can set it, so injection / unverified identity / stale evidence / over-threshold / duplicate proposals can never auto-execute (proved by API tests over the §4 matrix). Store seam `ShadowRunStore` (`@osas/ecommerce-shadow`: `InMemoryShadowRunStore`; `@osas/store-postgres`: `PostgresShadowRunStore` on `shadow_runs`, migration `0002_shadow_runs_milestone3.sql` adds payload/human-review columns).
 - **API**: `POST /v1/proposals/:id/shadow-run` (pure §4 simulation via `evaluateProposal` — no status change, no Approval/Handoff; stores ShadowRun + audits `shadow_run_created`), `POST /v1/shadow-runs/:id/review` (roles support_agent/policy_admin; reviewed runs are final → 409; audits `shadow_run_reviewed` as actorType human), `GET /v1/shadow-runs[/:id]` (embeds proposal + evidence). `POST /v1/proposals/:id/execute` refuses (409) proposals that have any ShadowRun — Shadow Mode never marks them executed. New audit event types: `shadow_run_created`, `shadow_run_reviewed` (hash-chained like everything else). `/.well-known/osas` exposes `executionMode`.
 - **Console**: `/shadow` page (pending reviews first; agent suggestion, policy reasons, evidence links, review accept/modify/reject, audit-chain verification badge; no live-execute UI).
@@ -308,7 +310,7 @@ README.md + README.zh-CN.md (Draft 开放规范 v0.1 positioning, quickstart: pn
 ## 18. v0.1.1 Milestone 4 — black-box compat runner, conformance mode, evals
 
 - **Conformance Mode (`OSAS_CONFORMANCE_MODE` + `OSAS_CONFORMANCE_KEY`)**: test-only endpoints `POST /v1/conformance/reset`, `POST /v1/conformance/fixtures/load` (`demo` | `empty`), `GET /v1/conformance/snapshot` (`apps/api/src/routes/conformance.ts`). Registered only when enabled; every request needs the `X-OSAS-Conformance-Key` header (timingSafeEqual over SHA-256; wrong/missing → 403). Fail closed: `NODE_ENV=production` or a missing key aborts startup (`loadConformanceConfig` in `apps/api/src/config.ts`). Reset re-seeds the MockSupportAdapter (`reset(fixtures)`) and wipes the in-memory stores (`reset()` on `InMemoryPolicyStore` / `InMemoryExecutionStore` / `InMemoryUsageStore` / `InMemoryShadowRunStore`); with `OSAS_STORAGE=postgres` it deletes the store tables instead. Snapshot returns per-tenant counts + audit-chain verification. Docs: `docs/conformance.md(.zh-CN.md)`. NEVER enable in production; CI enables it only in the disposable Docker job.
-- **Black-box compat runner (`@osas/compat-runner`)**: `pnpm osas:compat -- --target <url> [--token <t>] [--tenant <id>] [--conformance-key <k>] [--out <file>]`. HTTP-only: no imports from the target. Read-only suites always run (discovery: `/.well-known/osas` + specVersion "0.1" + schema-valid CapabilityManifest with known profiles/capabilities; schemas-tools: `/v1/schemas`, `/v1/schemas/:name`, `/v1/meta/tools`, `POST /v1/validate` accept+reject; policy-read: active TenantPolicy validates, simulate with unknown version → 404). Stateful suite runs only with a conformance key: wrong key rejected, reset/snapshot, simulation result correctness (auto_execute / require_approval over threshold / block on unverified identity), full policy lifecycle + illegal-transition 409 + PUT immutability 409, idempotent execution replay, RBAC (support_agent → 403) + tenant isolation (403 TENANT_MISMATCH), audit-chain intact with lifecycle events, final cleanup reset. Machine-readable JSON report (`ok`, per-suite checks); exit 0 pass / 1 failure / 2 usage error.
+- **Black-box compat runner (`@osas/compat-runner`)**: `pnpm osas:compat -- --target <url> [--token <t>] [--tenant <id>] [--conformance-key <k>] [--out <file>]`. HTTP-only: no imports from the target. Read-only suites always run (discovery: `/.well-known/osas` + specVersion "0.2" + schema-valid CapabilityManifest with known profiles/capabilities; schemas-tools: `/v1/schemas`, `/v1/schemas/:name`, `/v1/meta/tools`, `POST /v1/validate` accept+reject; policy-read: active TenantPolicy validates, simulate with unknown version → 404). Stateful suite runs only with a conformance key: wrong key rejected, reset/snapshot, simulation result correctness (auto_execute / require_approval over threshold / block on unverified identity), full policy lifecycle + illegal-transition 409 + PUT immutability 409, idempotent execution replay, RBAC (support_agent → 403) + tenant isolation (403 TENANT_MISMATCH), audit-chain intact with lifecycle events, final cleanup reset. Machine-readable JSON report (`ok`, per-suite checks); exit 0 pass / 1 failure / 2 usage error.
 - **Evals (`evals/`, `@osas/evals`)**: 120 synthetic PII-free cases (`evals/cases/*.json`: 30 refund, 20 return, 15 reshipment, 15 cancel_order, 20 general, 20 security) each with `input` (message, customer identity/region, evidence state, amount, reasonCode, duplicate/injection/executionOutcome flags) and `expected` (action | null, policyDecision | "none", reasonCodes, handoffReason, evidenceRequired). `pnpm eval:policy` is fully offline (fixed clock, eval policy mirroring §11): constructs the expected proposal per case, validates it against `core/action-proposal`, runs `evaluateProposal`, and probes uncertain executions via `executeProposal` (must park in `reconciliation_required`). Gates (CI, exit 1 on failure): 100% schema valid, 100% policy consistency, 0 overreach (block/none expected but auto_execute), 0 duplicate executions, 0 security-boundary bypass. Reports per-category accuracy, schema-valid rate, policy consistency, overreach/duplicate/bypass counts, cost ($0 offline) and latency to `evals/report/policy-latest.json` (git-ignored). `pnpm eval:model` runs only with `OSAS_LLM_PROVIDER=openai-compatible` + base URL/models set (never in CI); every model proposal is still capped at `request-approval` and re-evaluated by the policy engine, and semantic accuracy is reported separately — automation gates never depend on the model "sounding human".
 - **CI**: `build-test` runs `pnpm eval:policy`; the `docker` job sets `OSAS_CONFORMANCE_MODE=true` / `OSAS_CONFORMANCE_KEY` (compose passthrough defaults off) and runs the black-box runner against the Docker API, uploading its JSON report.
 - **Fix**: `GET /v1/policies/:tenantId` strips lifecycle metadata so the response validates against `core/tenant-policy` (additionalProperties: false); records keep lifecycle fields on `/versions`.

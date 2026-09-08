@@ -16,14 +16,35 @@ describe("createDemoFixtures", () => {
     );
     expect(f.customers.find((c) => c.id === "cus_blocked")?.region).toBe("IR");
     expect(f.customers.find((c) => c.id === "cus_expired")?.region).toBe("DE");
-    expect(f.orders.map((o) => o.id).sort()).toEqual(["ord_large", "ord_refunded", "ord_small"]);
+    expect(f.orders.map((o) => o.id).sort()).toEqual([
+      "ord_damaged",
+      "ord_delayed",
+      "ord_exch_instock",
+      "ord_exch_oos",
+      "ord_in_transit",
+      "ord_large",
+      "ord_multiline",
+      "ord_refund_failed",
+      "ord_refund_processing",
+      "ord_refunded",
+      "ord_shipped_window",
+      "ord_small",
+      "ord_unshipped",
+      "ord_wrong_sku",
+    ]);
     expect(f.orders.find((o) => o.id === "ord_small")?.total).toEqual({
       currency: "USD",
       minorUnits: 2500,
     });
     expect(f.orders.find((o) => o.id === "ord_large")?.total.minorUnits).toBe(90000);
     expect(f.orders.find((o) => o.id === "ord_refunded")?.status).toBe("refunded");
-    expect(f.shipments.map((s) => s.id)).toEqual(["shp_small"]);
+    expect(f.shipments.map((s) => s.id).sort()).toEqual([
+      "shp_delayed",
+      "shp_in_transit",
+      "shp_large",
+      "shp_small",
+      "shp_window",
+    ]);
     expect(f.subscriptions.map((s) => s.id).sort()).toEqual(["sub_active", "sub_past_due"]);
     expect(f.subscriptions.find((s) => s.id === "sub_active")?.mrr.minorUnits).toBe(9900);
     expect(f.invoices.map((i) => i.id)).toEqual(["inv_001"]);
@@ -41,7 +62,12 @@ describe("createDemoFixtures", () => {
       "case_refund",
       "case_unverified",
     ]);
-    expect(f.evidence.map((e) => e.id).sort()).toEqual(["ev_expired", "ev_ord_small"]);
+    expect(f.evidence.map((e) => e.id).sort()).toEqual([
+      "ev_damaged_photo1",
+      "ev_damaged_photo2",
+      "ev_expired",
+      "ev_ord_small",
+    ]);
   });
 
   it("ships demo policy pol_demo v1.0.0 with the §11 rules", () => {
@@ -51,7 +77,7 @@ describe("createDemoFixtures", () => {
     expect(policy.duplicateWindowSeconds).toBe(86400);
     expect(policy.maxEvidenceAgeSeconds).toBe(604800);
     expect(policy.defaultDecision).toBe("block");
-    expect(policy.rules).toHaveLength(9);
+    expect(policy.rules).toHaveLength(10);
     const refund = policy.rules.find((r) => r.actionType === "refund");
     expect(refund).toMatchObject({
       decision: "auto_execute",
@@ -68,6 +94,10 @@ describe("createDemoFixtures", () => {
       maxAmount: { currency: "USD", minorUnits: 10000 },
       reasonCodes: ["service_outage", "goodwill", "billing_error"],
     });
+    // exchange_request is require_approval in the demo policy and is never
+    // model-executed (policy engine refuses it even after approval).
+    const exchange = policy.rules.find((r) => r.actionType === "exchange_request");
+    expect(exchange).toMatchObject({ decision: "require_approval" });
   });
 
   it("case_dup carries an already-executed refund proposal for ord_small", () => {
@@ -103,7 +133,7 @@ describe("createDemoFixtures", () => {
     a.policy.rules.pop();
     a.customers[0]!.tags.push("mutated");
     expect(b.orders[0]!.status).toBe("delivered");
-    expect(b.policy.rules).toHaveLength(9);
+    expect(b.policy.rules).toHaveLength(10);
     expect(b.customers[0]!.tags).toEqual(["demo"]);
   });
 });

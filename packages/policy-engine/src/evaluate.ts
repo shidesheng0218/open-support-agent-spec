@@ -1,6 +1,7 @@
 import {
   ACTION_TYPE_PROFILE,
   FINANCIAL_ACTION_TYPES,
+  NEVER_AUTO_EXECUTE_ACTION_TYPES,
   type ActionProposal,
   type PolicyRule,
 } from "@osas/core";
@@ -228,6 +229,20 @@ export function evaluateProposal(
   // 11. Rule-matched baseline decision; final = worst of everything.
   if (rule && SEVERITY[rule.decision] > worst) {
     worst = SEVERITY[rule.decision];
+  }
+
+  // 12. NEVER_AUTO_EXECUTE: actionTypes like exchange_request are fulfilled by
+  //     humans only. Even a tenant rule of auto_execute cannot lower the
+  //     decision below require_approval.
+  if (
+    NEVER_AUTO_EXECUTE_ACTION_TYPES.includes(proposal.actionType) &&
+    worst < SEVERITY.require_approval
+  ) {
+    add(
+      "NEVER_AUTO_EXECUTE",
+      `actionType '${proposal.actionType}' is never model-executed; decision is capped at require_approval`,
+      "require_approval",
+    );
   }
 
   return {

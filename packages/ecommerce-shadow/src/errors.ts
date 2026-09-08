@@ -9,7 +9,7 @@ export class LiveExecutionNotAvailableError extends Error {
   readonly code = "LIVE_EXECUTION_NOT_AVAILABLE_IN_V0_1_1";
   constructor() {
     super(
-      "OSAS_EXECUTION_MODE=live is not available in v0.1.1. " +
+      "OSAS_EXECUTION_MODE=live is not available in v0.2.0. " +
         "Shadow Mode is the only supported execution mode: proposals are simulated " +
         "(ShadowRun) and final outcomes are written by humans. " +
         'Run with OSAS_EXECUTION_MODE=shadow (the default).',

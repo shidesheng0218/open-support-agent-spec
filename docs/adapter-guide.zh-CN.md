@@ -3,8 +3,9 @@
 [English](adapter-guide.md)
 
 本指南说明如何实现 `SupportAdapter`，把 OSAS 接入真实的客服/电商/计费系统。
-v0.1.1 附带两个参考实现：`@osas/zendesk-adapter`（工单系统）与
-`@osas/shopify-adapter`（只读电商）——建议对照源码阅读本指南。
+v0.2.0 附带三个参考实现：`@osas/zendesk-adapter`（工单系统）、
+`@osas/shopify-adapter`（只读电商）与 `@osas/chatwoot-adapter`（开源客服台）
+——建议对照源码阅读本指南。
 
 ## 契约
 
@@ -85,7 +86,7 @@ Adapter 单元测试必须在**无外部凭证、无网络**的条件下通过�
 
 ## 执行纪律
 
-`executeAction` 仅限 execute 权限，且永不注册为 MCP 工具。在 v0.1.1 Shadow
+`executeAction` 仅限 execute 权限，且永不注册为 MCP 工具。在 v0.2.0 Shadow
 Mode 下，参考集成不得实现任何真实金融写操作：Shopify Adapter 的
 `executeAction` 永远抛出 `CAPABILITY_UNSUPPORTED`，且不发任何 HTTP 请求。
 新增真实执行能力必须经过独立 RFC 决策。

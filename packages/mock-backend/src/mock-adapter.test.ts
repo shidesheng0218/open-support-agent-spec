@@ -44,7 +44,22 @@ describe("MockSupportAdapter reads", () => {
     expect((await adapter.getCustomer(ctx("read"), "cus_verified")).region).toBe("US");
     expect((await adapter.getOrder(ctx("read"), "ord_small")).total.minorUnits).toBe(2500);
     expect((await adapter.listOrders(ctx("read"), "cus_verified")).map((o) => o.id).sort()).toEqual(
-      ["ord_large", "ord_refunded", "ord_small"],
+      [
+        "ord_damaged",
+        "ord_delayed",
+        "ord_exch_instock",
+        "ord_exch_oos",
+        "ord_in_transit",
+        "ord_large",
+        "ord_multiline",
+        "ord_refund_failed",
+        "ord_refund_processing",
+        "ord_refunded",
+        "ord_shipped_window",
+        "ord_small",
+        "ord_unshipped",
+        "ord_wrong_sku",
+      ],
     );
     expect((await adapter.getShipment(ctx("read"), "shp_small")).status).toBe("delivered");
     expect((await adapter.getSubscription(ctx("read"), "sub_active")).status).toBe("active");
@@ -371,7 +386,12 @@ describe("MockSupportAdapter evidence reads", () => {
   it("listEvidence returns tenant-scoped evidence, optionally filtered by caseId", async () => {
     const adapter = new MockSupportAdapter();
     const all = await adapter.listEvidence(ctx("read"), {});
-    expect(all.map((e) => e.id).sort()).toEqual(["ev_expired", "ev_ord_small"]);
+    expect(all.map((e) => e.id).sort()).toEqual([
+      "ev_damaged_photo1",
+      "ev_damaged_photo2",
+      "ev_expired",
+      "ev_ord_small",
+    ]);
     const byCase = await adapter.listEvidence(ctx("read"), { caseId: "case_refund" });
     expect(byCase.map((e) => e.id).sort()).toEqual(["ev_expired", "ev_ord_small"]);
     expect(await adapter.listEvidence(ctx("read"), { caseId: "case_credit" })).toEqual([]);

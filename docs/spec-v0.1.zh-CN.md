@@ -1,3 +1,5 @@
+> **历史规范 — 已被 [spec-v0.2.zh-CN.md](spec-v0.2.zh-CN.md) 取代。保留仅供参考，请勿据此实现。**
+
 # Open Support Agent Spec（OSAS）v0.1 —— 草案
 
 [English version](spec-v0.1.md)

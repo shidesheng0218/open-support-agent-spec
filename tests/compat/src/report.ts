@@ -15,9 +15,9 @@ export interface ReportSuite {
 }
 
 export interface CompatReport {
-  specVersion: "0.1";
+  specVersion: "0.2";
   runAt: string;
-  generator: "@osas/compat-suite@0.1.0";
+  generator: "@osas/compat-suite@0.2.0";
   ok: boolean;
   totals: { passed: number; failed: number };
   suites: ReportSuite[];
@@ -42,9 +42,9 @@ export class ReportCollector {
     const passed = suites.reduce((n, s) => n + s.passed, 0);
     const failed = suites.reduce((n, s) => n + s.failed, 0);
     return {
-      specVersion: "0.1",
+      specVersion: "0.2",
       runAt: new Date().toISOString(),
-      generator: "@osas/compat-suite@0.1.0",
+      generator: "@osas/compat-suite@0.2.0",
       ok: failed === 0,
       totals: { passed, failed },
       suites,

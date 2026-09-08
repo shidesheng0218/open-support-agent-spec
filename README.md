@@ -10,20 +10,20 @@
   <p>
     <a href="README.zh-CN.md">中文文档</a> ·
     <a href="#quickstart">Try it locally</a> ·
-    <a href="docs/spec-v0.1.md">Read the spec</a> ·
+    <a href="docs/spec-v0.2.md">Read the spec</a> ·
     <a href="CONTRIBUTING.md">Contribute</a>
   </p>
 </div>
 
 <p align="center">
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-Apache--2.0-2563EB?style=flat-square" alt="Apache 2.0 license" /></a>
-  <a href="docs/spec-v0.1.md"><img src="https://img.shields.io/badge/spec-v0.1%20Draft-F59E0B?style=flat-square" alt="v0.1 Draft" /></a>
+  <a href="docs/spec-v0.2.md"><img src="https://img.shields.io/badge/spec-v0.2%20Draft-F59E0B?style=flat-square" alt="v0.2 Draft" /></a>
   <a href="https://github.com/shidesheng0218/open-support-agent-spec/actions/workflows/ci.yml"><img src="https://github.com/shidesheng0218/open-support-agent-spec/actions/workflows/ci.yml/badge.svg" alt="CI status" /></a>
   <img src="https://img.shields.io/badge/Node-%3E%3D20-339933?style=flat-square&logo=node.js&logoColor=white" alt="Node.js 20 or newer" />
   <img src="https://img.shields.io/badge/pnpm-11-F69220?style=flat-square&logo=pnpm&logoColor=white" alt="pnpm 11" />
 </p>
 
-> **Status: v0.1 Draft.** OSAS is an open specification under active development, not a claimed
+> **Status: v0.2 Draft.** OSAS is an open specification under active development, not a claimed
 > industry standard. Interfaces, schemas, and behaviors may change before v1.0; see
 > [Status & roadmap](#status--roadmap).
 
@@ -42,7 +42,7 @@ default path.
 
 ## At a glance
 
-| 16 MCP tools | 3 profiles | 120 policy cases | 255 compatibility checks |
+| 20 MCP tools | 3 profiles | 120 policy + 20 after-sales cases | 307 compatibility checks |
 |---|---|---|---|
 | Core, ecommerce, SaaS | Schema-driven contracts | Offline safety evals | HTTP black-box conformance |
 
@@ -185,10 +185,13 @@ All knobs are env vars — see [.env.example](.env.example) for the annotated te
   future RFC.
 - **Reference adapters** (fail closed when unconfigured; never required by the
   demo): Zendesk (`ZENDESK_BASE_URL`/`ZENDESK_SUBDOMAIN`, `ZENDESK_EMAIL`,
-  `ZENDESK_API_TOKEN`, `ZENDESK_ESCALATION_GROUP_ID`) and read-only Shopify
+  `ZENDESK_API_TOKEN`, `ZENDESK_ESCALATION_GROUP_ID`), read-only Shopify
   (`SHOPIFY_SHOP_DOMAIN`, `SHOPIFY_ADMIN_ACCESS_TOKEN`, optional
-  `SHOPIFY_API_VERSION`). See
-  [docs/zendesk-shopify-shadow.md](docs/zendesk-shopify-shadow.md).
+  `SHOPIFY_API_VERSION`), and Chatwoot (`CHATWOOT_BASE_URL`,
+  `CHATWOOT_ACCOUNT_ID`, `CHATWOOT_API_TOKEN`, optional
+  `CHATWOOT_ESCALATION_TEAM_ID`). See
+  [docs/zendesk-shopify-shadow.md](docs/zendesk-shopify-shadow.md) and
+  [docs/chatwoot-adapter.md](docs/chatwoot-adapter.md).
 
 ### Runtime configuration (Milestone 4)
 
@@ -245,7 +248,7 @@ flowchart TB
 
 Open the console (http://localhost:5173 or http://localhost:8080) and pick a persona:
 
-1. **Developer** (`/developer`) — browse the 16 MCP tool definitions (`/v1/meta/tools`),
+1. **Developer** (`/developer`) — browse the 20 MCP tool definitions (`/v1/meta/tools`),
    explore JSON Schemas (`/v1/schemas`), and validate arbitrary payloads against any schema
    in the playground (`POST /v1/validate`).
 2. **Support agent** (`/agent`) — work the approval queue (`/v1/approvals?status=pending`,
@@ -296,7 +299,7 @@ blindly retries a write whose outcome is unknown.
 | Boundary | Default behavior |
 |---|---|
 | Model authority | `read` → `draft` → `request-approval`; never `execute` |
-| Execution | `shadow` only in v0.1; live mode refuses to start |
+| Execution | `shadow` only in v0.2; live mode refuses to start |
 | Credentials | Backend secrets stay behind adapters, outside model context |
 | Prompt injection | Detected, blocked, handed off, and audited |
 | Cost controls | Daily and per-case budgets block provider calls at the cap |
@@ -328,6 +331,7 @@ packages/
   adapter/               @osas/adapter          SupportAdapter interface + BYO adapter template
   zendesk-adapter/       @osas/zendesk-adapter  Zendesk ticketing reference adapter (Milestone 3)
   shopify-adapter/       @osas/shopify-adapter  read-only Shopify reference adapter (Milestone 3)
+  chatwoot-adapter/      @osas/chatwoot-adapter Chatwoot (open-source helpdesk) reference adapter
   ecommerce-shadow/      @osas/ecommerce-shadow Shadow Mode: ShadowRun, stores, execution mode
   mock-backend/          @osas/mock-backend     synthetic fixtures + MockSupportAdapter
   store-postgres/        @osas/store-postgres   PostgreSQL stores + SQL migrations (Milestone 2)
@@ -340,12 +344,13 @@ tests/
   compat/                @osas/compat-suite     schema/compat suite + JSON report
   e2e/                   @osas/e2e              Playwright smoke (E2E=1)
 evals/                   @osas/evals            120-case synthetic dataset + eval:policy/eval:model
+examples/                embed-policy-engine    minimal standalone embedding of @osas/policy-engine
 docs/  rfcs/  .github/workflows/  docker-compose.yml
 ```
 
 ## Using the MCP server
 
-`@osas/mcp-server` exposes all agent capabilities as 16 MCP tools over stdio. Example client
+`@osas/mcp-server` exposes all agent capabilities as 20 MCP tools over stdio. Example client
 configuration (after `pnpm build`):
 
 ```json
@@ -377,26 +382,37 @@ billing), implement the `SupportAdapter` interface from `@osas/adapter` — star
 `packages/adapter/templates/byo-adapter.template.ts`, which has TODOs for every method.
 Adapters throw `AdapterNotFoundError` (→ API 404) / `AdapterPermissionError` (→ 403) and
 receive a `ToolContext` with the tenant and calling principal on every call. See the
-[adapter development guide](docs/adapter-guide.md); `@osas/zendesk-adapter` and
-`@osas/shopify-adapter` are complete reference implementations.
+[adapter development guide](docs/adapter-guide.md); `@osas/zendesk-adapter`,
+`@osas/shopify-adapter`, and `@osas/chatwoot-adapter` are complete reference
+implementations. Note on packaging: only `@osas/core`, `@osas/schema-validator`,
+and `@osas/policy-engine` are published to npm; the adapters and all other
+workspace packages are private reference implementations — they are not
+npm-installable (e.g. `npm install @osas/chatwoot-adapter` does not work), so
+build them from a repo checkout or copy them as a starting point. To adopt only
+the governance layer inside an existing system,
+embed `@osas/policy-engine` directly — see its
+[package README](packages/policy-engine/README.md) and the runnable
+[examples/embed-policy-engine](examples/embed-policy-engine).
 
 ## Documentation
 
-- Specification: [docs/spec-v0.1.md](docs/spec-v0.1.md) · [中文规范](docs/spec-v0.1.zh-CN.md)
+- Specification: [docs/spec-v0.2.md](docs/spec-v0.2.md) · [中文规范](docs/spec-v0.2.zh-CN.md)
 - Adapter development guide: [docs/adapter-guide.md](docs/adapter-guide.md) · [中文](docs/adapter-guide.zh-CN.md)
 - Zendesk + Shopify Shadow Mode: [docs/zendesk-shopify-shadow.md](docs/zendesk-shopify-shadow.md) · [中文](docs/zendesk-shopify-shadow.zh-CN.md)
+- Chatwoot adapter: [docs/chatwoot-adapter.md](docs/chatwoot-adapter.md) · [中文](docs/chatwoot-adapter.zh-CN.md)
+- Implementing OSAS (third-party guide): [docs/implementing-osas.md](docs/implementing-osas.md) · [中文](docs/implementing-osas.zh-CN.md)
 - Conformance Mode (test-only): [docs/conformance.md](docs/conformance.md) · [中文](docs/conformance.zh-CN.md)
 - Engineering contracts: [CONTRACTS.md](CONTRACTS.md)
 - Contributing: [CONTRIBUTING.md](CONTRIBUTING.md) · [中文](CONTRIBUTING.zh-CN.md)
 - Governance: [GOVERNANCE.md](GOVERNANCE.md)
 - Security policy: [SECURITY.md](SECURITY.md)
 - Code of conduct: [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md)
-- RFCs: [rfcs/](rfcs/) (start with [0001-v0.1-core](rfcs/0001-v0.1-core.md))
+- RFCs: [rfcs/](rfcs/) (start with [0001-v0.1-core](rfcs/0001-v0.1-core.md); positioning: [0002-osas-as-mcp-governance-profile](rfcs/0002-osas-as-mcp-governance-profile.md))
 - Changelog: [CHANGELOG.md](CHANGELOG.md)
 
 ## Status & roadmap
 
-OSAS v0.1 is a **Draft**. The path to v1.0:
+OSAS v0.2 is a **Draft**. The path to v1.0:
 
 - [ ] At least **3 independent implementations** (beyond this reference) pass the
       compat suite for a given profile.

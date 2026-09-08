@@ -20,6 +20,10 @@ const EXPECTED_TOOLS = [
   "osas_ecom_get_order",
   "osas_ecom_list_orders",
   "osas_ecom_get_shipment",
+  "osas_ecom_get_shipment_incident",
+  "osas_ecom_get_refund_status",
+  "osas_ecom_create_item_claim_request",
+  "osas_ecom_create_exchange_request",
   "osas_saas_get_subscription",
   "osas_saas_list_invoices",
   "osas_saas_get_credit_balance",
@@ -51,7 +55,7 @@ function permissionRank(p: string): number {
 function isProposalCreating(def: ToolDef): boolean {
   return (
     def.adapterMethod === "createActionProposal" ||
-    /create_(case_note|escalation|action_proposal|credit_request|cancellation_request|plan_change_request)$/.test(
+    /create_(case_note|escalation|action_proposal|credit_request|cancellation_request|plan_change_request|item_claim_request|exchange_request)$/.test(
       def.name,
     )
   );
@@ -62,8 +66,8 @@ export function registerToolsMapping(collector: ReportCollector): void {
     const defs = TOOL_DEFINITIONS as unknown as ToolDef[];
     const adapter = makeAdapter();
 
-    test("TOOL_DEFINITIONS has exactly the 16 contract tool names", () =>
-      runCase(collector, SUITE, "exactly the 16 contract tool names", () => {
+    test("TOOL_DEFINITIONS has exactly the 20 contract tool names", () =>
+      runCase(collector, SUITE, "exactly the 20 contract tool names", () => {
         expect(defs.map((d) => d.name).sort()).toEqual([...EXPECTED_TOOLS].sort());
       }));
 

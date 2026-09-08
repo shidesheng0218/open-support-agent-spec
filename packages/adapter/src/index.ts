@@ -1,4 +1,10 @@
-export type { Permission, Principal, ToolContext, SupportAdapter } from "./types.js";
+export type {
+  ExchangeEligibility,
+  Permission,
+  Principal,
+  ToolContext,
+  SupportAdapter,
+} from "./types.js";
 export {
   AdapterNotFoundError,
   AdapterPermissionError,

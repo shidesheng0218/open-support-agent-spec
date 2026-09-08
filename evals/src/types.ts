@@ -1,8 +1,11 @@
 import type {
   ActionType,
   HandoffReason,
+  Money,
+  OrderStatus,
   PolicyDecisionValue,
   Profile,
+  ShipmentStatus,
 } from "@osas/core";
 
 /**
@@ -81,3 +84,116 @@ export const CATEGORY_COUNTS: Readonly<Record<EvalCategory, number>> = {
   general: 20,
   security: 20,
 };
+
+/* ---------------- After-sales top-10 eval set (v0.2 Phase 3) ---------------- */
+
+/**
+ * The after-sales set uses a NEW case shape (not EvalCase): each case is a
+ * realistic after-sales scenario with explicit coverage bookkeeping, so the
+ * report can show which of the top-10 flows are genuinely supported end to
+ * end and which only reach proposal/shadow/handoff in this repo.
+ */
+
+export type AfterSalesScenario =
+  | "wismo"
+  | "delayed_delivery"
+  | "delivered_not_received"
+  | "damaged_item_refund"
+  | "wrong_item"
+  | "size_or_preference"
+  | "missing_item"
+  | "refund_not_received"
+  | "cancel_unshipped"
+  | "exchange";
+
+export const AFTER_SALES_SCENARIOS: readonly AfterSalesScenario[] = [
+  "wismo",
+  "delayed_delivery",
+  "delivered_not_received",
+  "damaged_item_refund",
+  "wrong_item",
+  "size_or_preference",
+  "missing_item",
+  "refund_not_received",
+  "cancel_unshipped",
+  "exchange",
+];
+
+export const AFTER_SALES_FILE = "after-sales-top10.json";
+/** 10 scenarios × 2 cases (one normal, one boundary/risk). */
+export const AFTER_SALES_CASE_COUNT = 20;
+
+export type AfterSalesCoverage =
+  | "supported"
+  | "proposal_only"
+  | "shadow_only"
+  | "missing_domain_object"
+  | "missing_adapter"
+  | "unsupported";
+
+export const AFTER_SALES_COVERAGE_STATUSES: readonly AfterSalesCoverage[] = [
+  "supported",
+  "proposal_only",
+  "shadow_only",
+  "missing_domain_object",
+  "missing_adapter",
+  "unsupported",
+];
+
+/**
+ * Coverage statuses where the scenario can never reach a real execution in
+ * this repo — these must never expect (or get) auto_execute.
+ */
+export const AFTER_SALES_UNSUPPORTED_COVERAGE: readonly AfterSalesCoverage[] = [
+  "missing_domain_object",
+  "missing_adapter",
+  "unsupported",
+];
+
+export interface AfterSalesOrderSpec {
+  id: string;
+  status: OrderStatus;
+  totalMinorUnits: number;
+  currency: string;
+}
+
+export interface AfterSalesShipmentSpec {
+  id: string;
+  status: ShipmentStatus;
+  carrier?: string;
+  expectedAt?: string;
+  /** Carrier scan shows "delivered" (delivered-not-received probes). */
+  deliveredScan?: boolean;
+}
+
+export interface AfterSalesCase {
+  id: string;
+  scenario: AfterSalesScenario;
+  /** Synthetic customer message (no real PII). */
+  customerMessage: string;
+  order: AfterSalesOrderSpec;
+  shipment: AfterSalesShipmentSpec | null;
+  customerIdentity: IdentityState;
+  evidenceState: EvidenceState;
+  /** Action a correct agent would propose; null = no action (refuse/handoff). */
+  expectedAction: ActionType | null;
+  /** Expected deterministic policy result ("none" when expectedAction is null). */
+  expectedPolicyDecision: PolicyDecisionValue | "none";
+  /** Expected human-handoff reason; null when no handoff. */
+  expectedHandoff: HandoffReason | null;
+  coverageStatus: AfterSalesCoverage;
+  /**
+   * Concrete gap note. Empty string or "none" is allowed ONLY when
+   * coverageStatus is "supported"; every other case must name its gap.
+   */
+  missingCapability: string;
+  /** Plain-language customer-visible outcome a correct run produces. */
+  expectedCustomerOutcome: string;
+  /** Proposal amount for financial actions (defaults to the order total). */
+  amount?: Money;
+  reasonCode?: string;
+  /** An identical active proposal already exists (duplicate-request probe). */
+  duplicate?: boolean;
+  /** The originating conversation looks injected. */
+  injection?: boolean;
+}

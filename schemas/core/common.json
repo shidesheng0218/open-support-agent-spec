@@ -4,7 +4,7 @@
   "title": "OSAS common definitions",
   "description": "Shared $defs reused across all OSAS schemas via relative $ref.",
   "$defs": {
-    "SpecVersion": { "const": "0.1" },
+    "SpecVersion": { "const": "0.2" },
     "Id": { "type": "string", "minLength": 1 },
     "DateTime": { "type": "string", "format": "date-time" },
     "Currency": { "type": "string", "pattern": "^[A-Z]{3}$" },
@@ -30,6 +30,7 @@
         "return_request",
         "reshipment",
         "cancel_order",
+        "exchange_request",
         "credit_apply",
         "subscription_cancel",
         "plan_change"

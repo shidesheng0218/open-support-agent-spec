@@ -1,0 +1,41 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://open-support-agent.dev/schemas/profiles/ecommerce/refund-transaction.json",
+  "title": "RefundTransaction",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "id",
+    "specVersion",
+    "tenantId",
+    "orderId",
+    "status",
+    "amount",
+    "requestedAt",
+    "createdAt",
+    "updatedAt"
+  ],
+  "properties": {
+    "id": { "$ref": "../../core/common.json#/$defs/Id" },
+    "specVersion": { "$ref": "../../core/common.json#/$defs/SpecVersion" },
+    "tenantId": { "$ref": "../../core/common.json#/$defs/Id" },
+    "orderId": { "$ref": "../../core/common.json#/$defs/Id" },
+    "proposalId": { "$ref": "../../core/common.json#/$defs/Id" },
+    "provider": { "type": "string" },
+    "externalTransactionId": { "type": "string" },
+    "status": {
+      "type": "string",
+      "enum": ["requested", "processing", "succeeded", "failed", "reversed"]
+    },
+    "amount": { "$ref": "../../core/common.json#/$defs/Money" },
+    "requestedAt": { "$ref": "../../core/common.json#/$defs/DateTime" },
+    "completedAt": { "$ref": "../../core/common.json#/$defs/DateTime" },
+    "failureCode": { "type": "string" },
+    "evidenceIds": {
+      "type": "array",
+      "items": { "$ref": "../../core/common.json#/$defs/Id" }
+    },
+    "createdAt": { "$ref": "../../core/common.json#/$defs/DateTime" },
+    "updatedAt": { "$ref": "../../core/common.json#/$defs/DateTime" }
+  }
+}

@@ -103,7 +103,7 @@ export async function buildApp(opts: BuildAppOptions = {}): Promise<FastifyInsta
   const auth = opts.auth ?? loadAuthConfig(env);
   const storage = opts.storage ?? loadStorageConfig(env);
   const llm = opts.llm ?? loadLlmConfig(env);
-  // v0.1.1: OSAS_EXECUTION_MODE — only "shadow" exists; "live" aborts startup
+  // v0.2.0: OSAS_EXECUTION_MODE — only "shadow" exists; "live" aborts startup
   // with LIVE_EXECUTION_NOT_AVAILABLE_IN_V0_1_1.
   const executionMode = opts.executionMode ?? loadExecutionMode(env);
   // Milestone 4: conformance mode — enabled only via explicit env, never in

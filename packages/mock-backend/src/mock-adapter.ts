@@ -1,6 +1,7 @@
 import {
   AdapterNotFoundError,
   requirePermission,
+  type ExchangeEligibility,
   type Permission,
   type SupportAdapter,
   type ToolContext,
@@ -17,13 +18,18 @@ import type {
   Customer,
   Escalation,
   Evidence,
+  ExchangeRequest,
   ExecutionResult,
   HumanHandoff,
   Invoice,
+  ItemClaim,
+  ItemClaimType,
   KnowledgeArticle,
   Order,
   ProposalStatus,
+  RefundTransaction,
   Shipment,
+  ShipmentIncident,
   Subscription,
   TenantPolicy,
 } from "@osas/core";
@@ -57,6 +63,10 @@ export class MockSupportAdapter implements SupportAdapter {
   private readonly knowledge = new Map<string, KnowledgeArticle>();
   private readonly orders = new Map<string, Order>();
   private readonly shipments = new Map<string, Shipment>();
+  private readonly shipmentIncidents = new Map<string, ShipmentIncident>();
+  private readonly refundTransactions = new Map<string, RefundTransaction>();
+  private readonly itemClaims = new Map<string, ItemClaim>();
+  private readonly exchangeRequests = new Map<string, ExchangeRequest>();
   private readonly subscriptions = new Map<string, Subscription>();
   private readonly invoices = new Map<string, Invoice>();
   private readonly creditBalances = new Map<string, CreditBalance>();
@@ -82,6 +92,10 @@ export class MockSupportAdapter implements SupportAdapter {
     for (const k of seed.knowledgeArticles) this.knowledge.set(k.id, k);
     for (const o of seed.orders) this.orders.set(o.id, o);
     for (const s of seed.shipments) this.shipments.set(s.id, s);
+    for (const s of seed.shipmentIncidents) this.shipmentIncidents.set(s.id, s);
+    for (const r of seed.refundTransactions) this.refundTransactions.set(r.id, r);
+    for (const c of seed.itemClaims) this.itemClaims.set(c.id, c);
+    for (const e of seed.exchangeRequests) this.exchangeRequests.set(e.id, e);
     for (const s of seed.subscriptions) this.subscriptions.set(s.id, s);
     for (const i of seed.invoices) this.invoices.set(i.id, i);
     for (const b of seed.creditBalances) this.creditBalances.set(b.id, b);
@@ -108,6 +122,10 @@ export class MockSupportAdapter implements SupportAdapter {
     this.knowledge.clear();
     this.orders.clear();
     this.shipments.clear();
+    this.shipmentIncidents.clear();
+    this.refundTransactions.clear();
+    this.itemClaims.clear();
+    this.exchangeRequests.clear();
     this.subscriptions.clear();
     this.invoices.clear();
     this.creditBalances.clear();
@@ -269,6 +287,114 @@ export class MockSupportAdapter implements SupportAdapter {
     return clone(this.requireTenant(this.shipments, ctx, id, "Shipment"));
   }
 
+  // ---- after-sales (v0.2 Phase 4) -------------------------------------------
+
+  async getShipmentIncident(ctx: ToolContext, id: string): Promise<ShipmentIncident> {
+    this.check(ctx, "read");
+    return clone(this.requireTenant(this.shipmentIncidents, ctx, id, "ShipmentIncident"));
+  }
+
+  async getRefundStatus(ctx: ToolContext, orderId: string): Promise<RefundTransaction[]> {
+    this.check(ctx, "read");
+    return clone(
+      [...this.refundTransactions.values()].filter(
+        (r) => r.tenantId === ctx.tenantId && r.orderId === orderId,
+      ),
+    );
+  }
+
+  async proposeItemClaim(
+    ctx: ToolContext,
+    input: {
+      caseId: string;
+      orderId: string;
+      lineId: string;
+      claimType: ItemClaimType;
+      quantity: number;
+      reasonCode?: string;
+      evidenceIds?: string[];
+      idempotencyKey: string;
+    },
+  ): Promise<ItemClaim> {
+    this.check(ctx, "draft");
+    this.requireTenant(this.cases, ctx, input.caseId, "Case");
+    this.requireTenant(this.orders, ctx, input.orderId, "Order");
+    const ts = nowIso();
+    const claim: ItemClaim = {
+      id: this.nextId("claim"),
+      specVersion: SPEC_VERSION,
+      tenantId: ctx.tenantId,
+      orderId: input.orderId,
+      lineId: input.lineId,
+      claimType: input.claimType,
+      quantity: input.quantity,
+      ...(input.evidenceIds !== undefined ? { evidenceIds: clone(input.evidenceIds) } : {}),
+      status: "submitted",
+      createdAt: ts,
+      updatedAt: ts,
+    };
+    this.itemClaims.set(claim.id, claim);
+    return clone(claim);
+  }
+
+  /** Evidence records filed against a specific order line (e.g. damage photos). */
+  async getOrderLineClaimEvidence(
+    ctx: ToolContext,
+    q: { orderId: string; lineId?: string },
+  ): Promise<Evidence[]> {
+    this.check(ctx, "read");
+    this.requireTenant(this.orders, ctx, q.orderId, "Order");
+    return clone(
+      [...this.evidence.values()].filter(
+        (e) =>
+          e.tenantId === ctx.tenantId &&
+          e.data.orderId === q.orderId &&
+          (q.lineId === undefined || e.data.lineId === q.lineId),
+      ),
+    );
+  }
+
+  /**
+   * Read-only exchange eligibility from the seeded ExchangeRequest fixtures:
+   * the mock's stand-in for an inventory feed. Unknown replacement SKUs fail
+   * closed (eligible=false, inventoryStatus="unknown").
+   */
+  async getExchangeEligibility(
+    ctx: ToolContext,
+    input: { orderId: string; originalLineId: string; replacementSku: string },
+  ): Promise<ExchangeEligibility> {
+    this.check(ctx, "read");
+    this.requireTenant(this.orders, ctx, input.orderId, "Order");
+    const known = [...this.exchangeRequests.values()].find(
+      (e) =>
+        e.tenantId === ctx.tenantId &&
+        e.orderId === input.orderId &&
+        e.originalLineId === input.originalLineId &&
+        e.replacementSku === input.replacementSku,
+    );
+    if (!known) {
+      return {
+        eligible: false,
+        inventoryStatus: "unknown",
+        reason: `no inventory data for replacement SKU ${input.replacementSku} on order ${input.orderId}`,
+      };
+    }
+    const inventoryStatus = known.inventoryStatus ?? "unknown";
+    return {
+      eligible: inventoryStatus === "in_stock",
+      inventoryStatus,
+      ...(known.priceDelta !== undefined ? { priceDelta: clone(known.priceDelta) } : {}),
+      ...(inventoryStatus === "in_stock"
+        ? {}
+        : { reason: `replacement SKU ${input.replacementSku} is ${inventoryStatus}` }),
+    };
+  }
+
+  async getExchangeRequest(ctx: ToolContext, id: string): Promise<ExchangeRequest> {
+    this.check(ctx, "read");
+    return clone(this.requireTenant(this.exchangeRequests, ctx, id, "ExchangeRequest"));
+  }
+
   // ---- saas reads ---------------------------------------------------------
 
   async getSubscription(ctx: ToolContext, id: string): Promise<Subscription> {
@@ -415,6 +541,15 @@ export class MockSupportAdapter implements SupportAdapter {
       case "return_request":
       case "reshipment":
         return { status: "succeeded", externalRef: `${proposal.actionType}_${ext}` };
+      case "exchange_request":
+        // Fail closed: an exchange is fulfilled by a human after approval.
+        // The policy engine's executeProposal refuses this actionType before
+        // the adapter is ever called; this branch is defense in depth.
+        return {
+          status: "failed",
+          detail:
+            "exchange_request is never adapter-executed; it requires human fulfillment after approval",
+        };
       default:
         return { status: "failed", detail: `Unsupported actionType ${String(proposal.actionType)}` };
     }
@@ -670,7 +805,7 @@ export class MockSupportAdapter implements SupportAdapter {
     return {
       specVersion: SPEC_VERSION,
       implementationId: "osas-mock-backend",
-      implementationVersion: "0.1.1",
+      implementationVersion: "0.2.0",
       profiles: [
         {
           name: "core",
@@ -694,6 +829,10 @@ export class MockSupportAdapter implements SupportAdapter {
             "ecommerce.shipment.read",
             "ecommerce.refund.propose",
             "ecommerce.refund.execute",
+            "ecommerce.shipment_incident.read",
+            "ecommerce.refund_status.read",
+            "ecommerce.item_claim.propose",
+            "ecommerce.exchange.propose",
           ],
         },
         {
@@ -703,7 +842,7 @@ export class MockSupportAdapter implements SupportAdapter {
       ],
       transports: ["http", "mcp"],
       executionModes: ["proposal_only", "shadow", "live"],
-      adapterVersion: "0.1.1",
+      adapterVersion: "0.2.0",
     };
   }
 }

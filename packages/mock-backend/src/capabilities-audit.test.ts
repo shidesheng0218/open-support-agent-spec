@@ -24,14 +24,14 @@ async function appendThree(adapter: MockSupportAdapter, tenantId = DEMO_TENANT_I
 }
 
 describe("mock adapter capability manifest (v0.1.1)", () => {
-  it("declares all 16 spec capabilities across the three profiles", async () => {
+  it("declares all 20 spec capabilities across the three profiles", async () => {
     const adapter = new MockSupportAdapter(createDemoFixtures());
     const manifest = await adapter.getCapabilities!(ctx);
     const declared = manifest.profiles.flatMap((p) => p.capabilities);
     expect([...declared].sort()).toEqual([...CAPABILITIES].sort());
     expect(manifest.transports).toEqual(["http", "mcp"]);
     expect(manifest.executionModes).toEqual(["proposal_only", "shadow", "live"]);
-    expect(manifest.specVersion).toBe("0.1");
+    expect(manifest.specVersion).toBe("0.2");
   });
 });
 

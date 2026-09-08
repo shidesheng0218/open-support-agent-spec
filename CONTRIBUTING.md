@@ -34,7 +34,10 @@ pnpm docker:up      # docker compose up --build (console :8080, api :3001)
 
 Conventions (fixed by [CONTRACTS.md](CONTRACTS.md)):
 
-- pnpm workspace, npm scope `@osas/*`, all packages `private`, version `0.1.0`.
+- pnpm workspace, npm scope `@osas/*`, version `0.2.0` in lockstep. Only
+  `@osas/core`, `@osas/schema-validator`, and `@osas/policy-engine` are public
+  npm packages; all other packages are `private` reference implementations (see
+  the publish policy in [CONTRACTS.md](CONTRACTS.md)).
 - TypeScript strict, ESM (`"type": "module"`); relative imports in TS use the `.js`
   suffix (NodeNext).
 - Runtime validation with Ajv v8 + ajv-formats only (no other validation libraries).
@@ -84,7 +87,7 @@ review, and the RFC is `Accepted` or `Rejected` by the founding maintainers. Onl
 ## Versioning
 
 The specification, schemas, and all `@osas/*` packages share one semantic version
-(currently `0.1.0`). While v0.x, minor bumps may be breaking; from v1.0, breaking changes
+(currently `0.2.0`). While v0.x, minor bumps may be breaking; from v1.0, breaking changes
 require a major bump. Details in [GOVERNANCE.md](GOVERNANCE.md#versioning).
 
 ## Reporting security issues

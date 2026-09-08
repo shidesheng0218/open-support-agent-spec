@@ -1,7 +1,7 @@
 {
-  "specVersion": "0.1",
+  "specVersion": "0.2",
   "implementationId": "osas-mock-backend",
-  "implementationVersion": "0.1.1",
+  "implementationVersion": "0.2.0",
   "profiles": [
     {
       "name": "core",
@@ -24,7 +24,11 @@
         "ecommerce.order.read",
         "ecommerce.shipment.read",
         "ecommerce.refund.propose",
-        "ecommerce.refund.execute"
+        "ecommerce.refund.execute",
+        "ecommerce.shipment_incident.read",
+        "ecommerce.refund_status.read",
+        "ecommerce.item_claim.propose",
+        "ecommerce.exchange.propose"
       ]
     },
     {
@@ -34,5 +38,5 @@
   ],
   "transports": ["http", "mcp"],
   "executionModes": ["proposal_only", "shadow", "live"],
-  "adapterVersion": "0.1.1"
+  "adapterVersion": "0.2.0"
 }

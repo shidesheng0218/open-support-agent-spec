@@ -1,0 +1,19 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://open-support-agent.dev/schemas/tools/osas_ecom_create_exchange_request.json",
+  "title": "osas_ecom_create_exchange_request input",
+  "description": "Proposal shortcut: drafts an exchange_request ActionProposal server-side (status proposed, requestedPermission request-approval). The model NEVER executes an exchange; fulfillment is always human after approval. Clients MUST NOT supply requestedPermission/requestedBy.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["caseId", "orderId", "originalLineId", "replacementSku", "idempotencyKey"],
+  "properties": {
+    "caseId": { "$ref": "../core/common.json#/$defs/Id" },
+    "orderId": { "$ref": "../core/common.json#/$defs/Id" },
+    "originalLineId": { "$ref": "../core/common.json#/$defs/Id" },
+    "replacementSku": { "type": "string", "minLength": 1 },
+    "replacementVariant": { "type": "string" },
+    "reasonCode": { "type": "string" },
+    "evidenceIds": { "type": "array", "items": { "$ref": "../core/common.json#/$defs/Id" } },
+    "idempotencyKey": { "type": "string", "minLength": 1 }
+  }
+}

@@ -222,6 +222,86 @@ export const TOOL_DEFINITIONS: ToolDefinition[] = [
     permissionRequired: "read",
     capabilityRequired: "ecommerce.shipment.read",
   },
+  {
+    name: "osas_ecom_get_shipment_incident",
+    profile: "ecommerce",
+    description: "Fetch a shipment incident (delay, loss, damage, delivered-not-received) by id.",
+    inputSchema: {
+      type: "object",
+      additionalProperties: false,
+      properties: { id: { type: "string" } },
+      required: ["id"],
+    },
+    adapterMethod: "getShipmentIncident",
+    permissionRequired: "read",
+    capabilityRequired: "ecommerce.shipment_incident.read",
+  },
+  {
+    name: "osas_ecom_get_refund_status",
+    profile: "ecommerce",
+    description:
+      "List refund transactions for an order. Read-only: reflects execution outcomes, never triggers them.",
+    inputSchema: {
+      type: "object",
+      additionalProperties: false,
+      properties: { orderId: { type: "string" } },
+      required: ["orderId"],
+    },
+    adapterMethod: "getRefundStatus",
+    permissionRequired: "read",
+    capabilityRequired: "ecommerce.refund_status.read",
+  },
+  {
+    name: "osas_ecom_create_item_claim_request",
+    profile: "ecommerce",
+    description:
+      "Proposal shortcut: record an ItemClaim (status submitted) for human review (idempotent). Never resolves the claim and never triggers a refund or exchange.",
+    inputSchema: {
+      type: "object",
+      additionalProperties: false,
+      properties: {
+        caseId: { type: "string" },
+        orderId: { type: "string" },
+        lineId: { type: "string" },
+        claimType: {
+          type: "string",
+          enum: ["damaged", "wrong_item", "missing_item", "defective"],
+        },
+        quantity: { type: "integer", minimum: 1 },
+        reasonCode: { type: "string" },
+        evidenceIds: { type: "array", items: { type: "string" } },
+        idempotencyKey: IDEMPOTENCY_KEY_SCHEMA,
+      },
+      required: ["caseId", "orderId", "lineId", "claimType", "quantity", "idempotencyKey"],
+    },
+    adapterMethod: "proposeItemClaim",
+    permissionRequired: "draft",
+    capabilityRequired: "ecommerce.item_claim.propose",
+  },
+  {
+    name: "osas_ecom_create_exchange_request",
+    profile: "ecommerce",
+    description:
+      "Proposal shortcut: draft an exchange_request ActionProposal (never executes; goes through policy evaluation and ALWAYS requires human approval — the model never executes an exchange).",
+    inputSchema: {
+      type: "object",
+      additionalProperties: false,
+      properties: {
+        caseId: { type: "string" },
+        orderId: { type: "string" },
+        originalLineId: { type: "string" },
+        replacementSku: { type: "string", minLength: 1 },
+        replacementVariant: { type: "string" },
+        reasonCode: { type: "string" },
+        evidenceIds: { type: "array", items: { type: "string" } },
+        idempotencyKey: IDEMPOTENCY_KEY_SCHEMA,
+      },
+      required: ["caseId", "orderId", "originalLineId", "replacementSku", "idempotencyKey"],
+    },
+    adapterMethod: "createActionProposal",
+    permissionRequired: "request-approval",
+    capabilityRequired: "ecommerce.exchange.propose",
+  },
   // ---- saas ----------------------------------------------------------------
   {
     name: "osas_saas_get_subscription",

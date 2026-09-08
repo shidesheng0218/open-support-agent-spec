@@ -1,6 +1,6 @@
 {
   "name": "@osas/evals",
-  "version": "0.1.1",
+  "version": "0.2.0",
   "private": true,
   "type": "module",
   "main": "./dist/index.js",
@@ -20,6 +20,7 @@
     "typecheck": "tsc --noEmit -p tsconfig.json",
     "test": "vitest run",
     "eval:policy": "tsx src/run-policy.ts",
+    "eval:after-sales": "tsx src/run-after-sales.ts",
     "eval:model": "tsx src/run-model.ts"
   },
   "dependencies": {

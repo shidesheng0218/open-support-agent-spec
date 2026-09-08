@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 import {
   ExecutionStatusError,
   InMemoryExecutionStore,
+  NonExecutableActionError,
   ReconcileStatusError,
   executeProposal,
   reconcile,
@@ -84,6 +85,37 @@ describe("executeProposal — §5", () => {
       await expect(
         executeProposal(approvedProposal({ status }), adapter, store),
       ).rejects.toBeInstanceOf(ExecutionStatusError);
+    }
+    expect(adapter.executeAction).not.toHaveBeenCalled();
+  });
+
+  it("refuses exchange_request even when approved (never model-executed)", async () => {
+    const store = new InMemoryExecutionStore();
+    const adapter = executor({ status: "succeeded" });
+    const proposal = approvedProposal({
+      actionType: "exchange_request",
+      reasonCode: "wrong_item",
+      params: { orderId: "ord_small", originalLineId: "line_1", replacementSku: "sku_mug_v2" },
+    });
+    await expect(executeProposal(proposal, adapter, store)).rejects.toBeInstanceOf(
+      NonExecutableActionError,
+    );
+    await expect(executeProposal(proposal, adapter, store)).rejects.toMatchObject({
+      code: "ACTION_NOT_EXECUTABLE",
+    });
+    // Fail closed: no adapter call, no state transition, nothing stored.
+    expect(adapter.executeAction).not.toHaveBeenCalled();
+    expect(proposal.status).toBe("approved");
+    expect(await store.get("tenant_demo", "idem_1")).toBeUndefined();
+  });
+
+  it("refuses exchange_request regardless of proposal status", async () => {
+    const store = new InMemoryExecutionStore();
+    const adapter = executor({ status: "succeeded" });
+    for (const status of ["proposed", "pending_approval", "approved"] as const) {
+      await expect(
+        executeProposal(approvedProposal({ status, actionType: "exchange_request" }), adapter, store),
+      ).rejects.toBeInstanceOf(NonExecutableActionError);
     }
     expect(adapter.executeAction).not.toHaveBeenCalled();
   });

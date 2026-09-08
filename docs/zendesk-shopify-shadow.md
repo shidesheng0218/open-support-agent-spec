@@ -2,15 +2,16 @@
 
 [中文版](zendesk-shopify-shadow.zh-CN.md)
 
-v0.1.1 Milestone 3 ships the reference integration pattern for running OSAS
-against a real helpdesk (Zendesk) and a real commerce backend (Shopify) in
+Milestone 3 (first shipped in v0.1.1, current in v0.2) provides the reference
+integration pattern for running OSAS against a real helpdesk (Zendesk) and a
+real commerce backend (Shopify) in
 **Shadow Mode**: the agent proposes and simulates, humans decide and execute.
 
 ## What Shadow Mode is
 
 `OSAS_EXECUTION_MODE=shadow | live` (default `shadow`).
 
-- **shadow** — the only supported mode in v0.1.1. The runtime may only:
+- **shadow** — the only supported mode in v0.2.0. The runtime may only:
   1. create `ActionProposal`s,
   2. run deterministic policy simulation,
   3. record a `ShadowRun` — "if automatic execution were allowed, this is
@@ -51,7 +52,7 @@ credentials are missing — they throw `ZendeskNotConfiguredError` /
 `ShopifyNotConfiguredError` and never fake a success.
 
 ```bash
-# Shadow Mode (default; "live" aborts startup in v0.1.1)
+# Shadow Mode (default; "live" aborts startup in v0.2.0)
 OSAS_EXECUTION_MODE=shadow
 
 # Zendesk
@@ -101,7 +102,8 @@ deployments and for their mock-HTTP test suites.
   key is cached in-process and forwarded as `X-Idempotency-Key`.
 - The Shopify adapter has **no refund write path**: `executeAction` always
   throws `CAPABILITY_UNSUPPORTED` without making any HTTP request. Adding
-  real refund execution is a deliberate non-goal of v0.1.1 and requires an
+  real refund execution remains a deliberate non-goal of the current spec
+  (shadow-only since v0.1.1 Milestone 3) and requires an
   independent RFC.
 - `ZendeskAdapter` region is not knowable from a ticket; Customer.region is
   the `"ZZ"` placeholder and identity is always `unverified` — policies that

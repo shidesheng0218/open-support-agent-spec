@@ -1,0 +1,11 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://open-support-agent.dev/schemas/tools/osas_ecom_get_refund_status.json",
+  "title": "osas_ecom_get_refund_status input",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["orderId"],
+  "properties": {
+    "orderId": { "$ref": "../core/common.json#/$defs/Id" }
+  }
+}

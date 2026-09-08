@@ -1,4 +1,4 @@
-// Local mirrors of OSAS v0.1 API payloads (CONTRACTS.md §2/§9).
+// Local mirrors of OSAS v0.2 API payloads (CONTRACTS.md §2/§9).
 // Intentionally NOT importing workspace packages — the console only sees HTTP JSON.
 
 export type Profile = "core" | "ecommerce" | "saas";

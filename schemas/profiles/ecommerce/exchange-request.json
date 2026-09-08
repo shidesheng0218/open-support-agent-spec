@@ -1,0 +1,52 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://open-support-agent.dev/schemas/profiles/ecommerce/exchange-request.json",
+  "title": "ExchangeRequest",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "id",
+    "specVersion",
+    "tenantId",
+    "orderId",
+    "originalLineId",
+    "replacementSku",
+    "returnRequired",
+    "status",
+    "createdAt",
+    "updatedAt"
+  ],
+  "properties": {
+    "id": { "$ref": "../../core/common.json#/$defs/Id" },
+    "specVersion": { "$ref": "../../core/common.json#/$defs/SpecVersion" },
+    "tenantId": { "$ref": "../../core/common.json#/$defs/Id" },
+    "orderId": { "$ref": "../../core/common.json#/$defs/Id" },
+    "originalLineId": { "$ref": "../../core/common.json#/$defs/Id" },
+    "replacementSku": { "type": "string", "minLength": 1 },
+    "replacementVariant": { "type": "string" },
+    "inventoryStatus": {
+      "type": "string",
+      "enum": ["unknown", "in_stock", "out_of_stock", "backordered"]
+    },
+    "priceDelta": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["currency", "minorUnits"],
+      "properties": {
+        "currency": { "$ref": "../../core/common.json#/$defs/Currency" },
+        "minorUnits": { "type": "integer" }
+      }
+    },
+    "returnRequired": { "type": "boolean" },
+    "status": {
+      "type": "string",
+      "enum": ["proposed", "pending_approval", "approved", "rejected", "fulfilled", "cancelled"]
+    },
+    "evidenceIds": {
+      "type": "array",
+      "items": { "$ref": "../../core/common.json#/$defs/Id" }
+    },
+    "createdAt": { "$ref": "../../core/common.json#/$defs/DateTime" },
+    "updatedAt": { "$ref": "../../core/common.json#/$defs/DateTime" }
+  }
+}

@@ -1,0 +1,22 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://open-support-agent.dev/schemas/tools/osas_ecom_create_item_claim_request.json",
+  "title": "osas_ecom_create_item_claim_request input",
+  "description": "Proposal shortcut: records an ItemClaim (status submitted) for human review. Never executes anything and never auto-resolves the claim. Clients MUST NOT supply requestedPermission/requestedBy.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["caseId", "orderId", "lineId", "claimType", "quantity", "idempotencyKey"],
+  "properties": {
+    "caseId": { "$ref": "../core/common.json#/$defs/Id" },
+    "orderId": { "$ref": "../core/common.json#/$defs/Id" },
+    "lineId": { "$ref": "../core/common.json#/$defs/Id" },
+    "claimType": {
+      "type": "string",
+      "enum": ["damaged", "wrong_item", "missing_item", "defective"]
+    },
+    "quantity": { "type": "integer", "minimum": 1 },
+    "reasonCode": { "type": "string" },
+    "evidenceIds": { "type": "array", "items": { "$ref": "../core/common.json#/$defs/Id" } },
+    "idempotencyKey": { "type": "string", "minLength": 1 }
+  }
+}

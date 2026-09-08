@@ -7,7 +7,50 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.0] - 2026-09-07
+
+This release covers Milestones 1–4 (capability declaration, policy version
+lifecycle and audit integrity; runtime substrate; Shadow Mode with the Zendesk
+and Shopify reference adapters; the black-box compat runner, Conformance Mode
+and evaluation suite), the new Chatwoot reference adapter, the third-party
+implementer guide, standalone policy-engine embedding, and RFC 0002. It opens
+the 0.2 spec line: `specVersion` is bumped from `"0.1"` to `"0.2"`, and the
+normative spec text moves to `docs/spec-v0.2.md` (+ zh-CN).
+
 ### Added
+
+- **`@osas/chatwoot-adapter`** reference adapter for Chatwoot (open-source
+  helpdesk): conversations ↔ Case (`cw_conv_{id}`), contacts ↔ Customer
+  (`cw_contact_{id}`), private notes, escalation via team assignment +
+  `[OSAS escalation]` private note, conversation/contact evidence capture with
+  console URLs as sources, idempotency-key replay + `X-Idempotency-Key`
+  header, env config (`CHATWOOT_BASE_URL`, `CHATWOOT_ACCOUNT_ID`,
+  `CHATWOOT_API_TOKEN`, optional `CHATWOOT_ESCALATION_TEAM_ID`), fail closed
+  (`CHATWOOT_NOT_CONFIGURED`) without credentials. Capability manifest
+  declares only the supported core-profile capabilities (`case.read`,
+  `customer.read`, `evidence.read`, `note.write`, `escalation.write`); all
+  unsupported methods throw `AdapterCapabilityError` (`CAPABILITY_UNSUPPORTED`)
+  without any HTTP call. Tests run against mock HTTP only — no external
+  credentials needed. Docs: [docs/chatwoot-adapter.md](docs/chatwoot-adapter.md)
+  (+ zh-CN).
+- **Third-party implementer guide**: [docs/implementing-osas.md](docs/implementing-osas.md)
+  (+ zh-CN) — the minimal implementation surface per profile, black-box
+  verification with `@osas/compat-runner` (read-only and stateful suites),
+  Conformance Mode expectations, how to declare compatibility
+  ("OSAS 0.2 <profile>-compatible"), and the path to a governance seat.
+- **Standalone policy-engine embedding**: `packages/policy-engine/README.md`
+  (+ zh-CN) documents using `@osas/policy-engine` without the OSAS API/MCP
+  server; new runnable minimal example `examples/embed-policy-engine/`
+  (auto-execute small refund, over-threshold approval, `PERMISSION_OVERREACH`
+  block — all asserted). `@osas/core`, `@osas/schema-validator`, and
+  `@osas/policy-engine` are now npm-publish-ready (`publishConfig.access:
+  public`, license, repository metadata; lockstep versioning unchanged) and
+  carry their own READMEs (EN + zh-CN).
+- **RFC 0002** ([rfcs/0002-osas-as-mcp-governance-profile.md](rfcs/0002-osas-as-mcp-governance-profile.md)):
+  positions OSAS as the vertical governance profile for customer-support
+  agents on top of the MCP/A2A/AG-UI ecosystem — MCP stays the tool
+  transport, governance semantics remain the spec's ownable surface, and
+  embedding is a first-class adoption path.
 
 - **Black-box compat runner (Milestone 4)**: new package `@osas/compat-runner`
   (`pnpm osas:compat -- --target http://localhost:3001 [--token <t>]`) — an

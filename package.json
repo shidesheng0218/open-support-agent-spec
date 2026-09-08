@@ -1,8 +1,8 @@
 {
   "name": "open-support-agent-spec",
-  "version": "0.1.1",
+  "version": "0.2.0",
   "private": true,
-  "description": "Open Support Agent Spec (OSAS) v0.1 — open interoperability spec for customer-support agents, with a TypeScript reference implementation.",
+  "description": "Open Support Agent Spec (OSAS) v0.2 — open interoperability spec for customer-support agents, with a TypeScript reference implementation.",
   "license": "Apache-2.0",
   "packageManager": "pnpm@11.7.0",
   "engines": {
@@ -11,7 +11,8 @@
   "scripts": {
     "build": "pnpm -r run build",
     "typecheck": "pnpm -r run typecheck",
-    "test": "node scripts/check-ci-workflow.mjs && pnpm run build && pnpm -r run test",
+    "check:versions": "node scripts/check-version-consistency.mjs",
+    "test": "node scripts/check-ci-workflow.mjs && node scripts/check-version-consistency.mjs && pnpm run build && pnpm -r run test",
     "test:compat": "pnpm --filter @osas/compat-suite run test",
     "test:e2e": "pnpm --filter @osas/e2e run test",
     "dev:api": "pnpm --filter @osas/api run dev",
@@ -25,6 +26,7 @@
     "db:reset": "pnpm --filter @osas/store-postgres run db:reset",
     "osas:compat": "pnpm --filter @osas/compat-runner run compat --",
     "eval:policy": "pnpm --filter @osas/evals run eval:policy",
+    "eval:after-sales": "pnpm --filter @osas/evals run eval:after-sales",
     "eval:model": "pnpm --filter @osas/evals run eval:model"
   },
   "devDependencies": {

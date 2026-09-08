@@ -1,6 +1,6 @@
 {
   "id": "pol_demo",
-  "specVersion": "0.1",
+  "specVersion": "0.2",
   "tenantId": "tenant_demo",
   "version": "1.0.0",
   "effectiveFrom": "2026-01-01T00:00:00Z",

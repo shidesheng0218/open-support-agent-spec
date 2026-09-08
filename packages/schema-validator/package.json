@@ -1,7 +1,8 @@
 {
   "name": "@osas/schema-validator",
-  "version": "0.1.1",
-  "private": true,
+  "version": "0.2.0",
+  "description": "Ajv 2020-12 based JSON Schema validation for OSAS objects against the schemas/ manifest.",
+  "license": "Apache-2.0",
   "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
@@ -14,6 +15,14 @@
   "files": [
     "dist"
   ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/shidesheng0218/open-support-agent-spec.git",
+    "directory": "packages/schema-validator"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
   "scripts": {
     "build": "tsc -p tsconfig.json",
     "typecheck": "tsc --noEmit -p tsconfig.json",

@@ -134,7 +134,7 @@ function SchemaBrowser({ manifest, onError }: { manifest: SchemaManifest | null;
 
 function ValidatorPlayground({ manifest }: { manifest: SchemaManifest | null }) {
   const [schemaName, setSchemaName] = useState("");
-  const [text, setText] = useState('{\n  "specVersion": "0.1"\n}');
+  const [text, setText] = useState('{\n  "specVersion": "0.2"\n}');
   const [result, setResult] = useState<ValidationResult | null>(null);
   const [error, setError] = useState<unknown>(null);
   const [busy, setBusy] = useState(false);

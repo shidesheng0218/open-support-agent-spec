@@ -1,5 +1,5 @@
 /**
- * OSAS v0.1 enums, constants, permission ladder, and state machines
+ * OSAS v0.2 enums, constants, permission ladder, and state machines
  * (CONTRACTS.md §2, §3).
  */
 import { nowIso } from "./ids.js";
@@ -18,11 +18,15 @@ import type {
   CoreActionType,
   EcommerceActionType,
   EvidenceKind,
+  ExchangeInventoryStatus,
+  ExchangeRequestStatus,
   ExecutionMode,
   ExecutionStatus,
   HandoffReason,
   HandoffStatus,
   InvoiceStatus,
+  ItemClaimStatus,
+  ItemClaimType,
   ModelTier,
   OrderStatus,
   Permission,
@@ -30,14 +34,17 @@ import type {
   PolicyVersionStatus,
   Profile,
   ProposalStatus,
+  RefundTransactionStatus,
   SaasActionType,
   ShadowRunOutcome,
+  ShipmentIncidentStatus,
+  ShipmentIncidentType,
   ShipmentStatus,
   SubscriptionStatus,
   Transport,
 } from "./types.js";
 
-export const SPEC_VERSION = "0.1" as const;
+export const SPEC_VERSION = "0.2" as const;
 
 /* ---------------- Profiles ---------------- */
 
@@ -176,6 +183,59 @@ export const SHIPMENT_STATUSES: readonly ShipmentStatus[] = [
   "exception",
 ];
 
+export const SHIPMENT_INCIDENT_TYPES: readonly ShipmentIncidentType[] = [
+  "delayed",
+  "lost",
+  "delivered_not_received",
+  "damaged_in_transit",
+];
+
+export const SHIPMENT_INCIDENT_STATUSES: readonly ShipmentIncidentStatus[] = [
+  "open",
+  "investigating",
+  "resolved",
+  "closed",
+];
+
+export const REFUND_TRANSACTION_STATUSES: readonly RefundTransactionStatus[] = [
+  "requested",
+  "processing",
+  "succeeded",
+  "failed",
+  "reversed",
+];
+
+export const ITEM_CLAIM_TYPES: readonly ItemClaimType[] = [
+  "damaged",
+  "wrong_item",
+  "missing_item",
+  "defective",
+];
+
+export const ITEM_CLAIM_STATUSES: readonly ItemClaimStatus[] = [
+  "submitted",
+  "under_review",
+  "approved",
+  "rejected",
+  "resolved",
+];
+
+export const EXCHANGE_INVENTORY_STATUSES: readonly ExchangeInventoryStatus[] = [
+  "unknown",
+  "in_stock",
+  "out_of_stock",
+  "backordered",
+];
+
+export const EXCHANGE_REQUEST_STATUSES: readonly ExchangeRequestStatus[] = [
+  "proposed",
+  "pending_approval",
+  "approved",
+  "rejected",
+  "fulfilled",
+  "cancelled",
+];
+
 export const SUBSCRIPTION_STATUSES: readonly SubscriptionStatus[] = [
   "trialing",
   "active",
@@ -195,6 +255,7 @@ export const ECOMMERCE_ACTION_TYPES: readonly EcommerceActionType[] = [
   "return_request",
   "reshipment",
   "cancel_order",
+  "exchange_request",
 ];
 export const SAAS_ACTION_TYPES: readonly SaasActionType[] = [
   "credit_apply",
@@ -215,13 +276,28 @@ export const ACTION_TYPE_PROFILE: Readonly<Record<ActionType, Profile>> = {
   return_request: "ecommerce",
   reshipment: "ecommerce",
   cancel_order: "ecommerce",
+  exchange_request: "ecommerce",
   credit_apply: "saas",
   subscription_cancel: "saas",
   plan_change: "saas",
 };
 
-/** Financial actionTypes need amount + >=1 evidence (§2). */
-export const FINANCIAL_ACTION_TYPES: readonly ActionType[] = ["refund", "reshipment", "credit_apply"];
+/** Financial actionTypes need amount + >=1 evidence (§2). exchange_request is
+ * included because a price delta may apply and the original-order evidence is
+ * mandatory — a missing-evidence exchange is blocked, never auto-approved. */
+export const FINANCIAL_ACTION_TYPES: readonly ActionType[] = [
+  "refund",
+  "reshipment",
+  "credit_apply",
+  "exchange_request",
+];
+
+/**
+ * ActionTypes the model must NEVER execute, even with an approval on record
+ * (§4/§5): the policy engine caps their decision at require_approval and
+ * executeProposal refuses them outright. Fulfillment is human-only.
+ */
+export const NEVER_AUTO_EXECUTE_ACTION_TYPES: readonly ActionType[] = ["exchange_request"];
 
 /* ---------------- State machines (§2) ---------------- */
 
@@ -286,7 +362,7 @@ export function transitionProposal(p: ActionProposal, to: ProposalStatus): Actio
   return { ...p, status: to, updatedAt: nowIso() };
 }
 
-/* ---------------- Capability manifest (v0.1.1) ---------------- */
+/* ---------------- Capability manifest (introduced in v0.1.1) ---------------- */
 
 export const CAPABILITIES: readonly Capability[] = [
   "case.read",
@@ -303,6 +379,10 @@ export const CAPABILITIES: readonly Capability[] = [
   "ecommerce.shipment.read",
   "ecommerce.refund.propose",
   "ecommerce.refund.execute",
+  "ecommerce.shipment_incident.read",
+  "ecommerce.refund_status.read",
+  "ecommerce.item_claim.propose",
+  "ecommerce.exchange.propose",
   "saas.subscription.read",
   "saas.credit.propose",
 ];
@@ -311,7 +391,7 @@ export const TRANSPORTS: readonly Transport[] = ["http", "mcp"];
 
 export const EXECUTION_MODES: readonly ExecutionMode[] = ["proposal_only", "shadow", "live"];
 
-/* ---------------- Policy version lifecycle (v0.1.1) ---------------- */
+/* ---------------- Policy version lifecycle (introduced in v0.1.1) ---------------- */
 
 export const POLICY_VERSION_STATUSES: readonly PolicyVersionStatus[] = [
   "draft",

@@ -4,10 +4,10 @@
 
 | Version | Status | Supported |
 |---|---|---|
-| 0.1.x | Draft | Yes — fixes land on `main` |
+| 0.2.x | Draft | Yes — fixes land on `main` |
 
-OSAS is at v0.1 Draft; there is no stable release line yet. Only the latest
-`0.1.x` state of `main` receives security fixes.
+OSAS is at v0.2 Draft; there is no stable release line yet. Only the latest
+`0.2.x` state of `main` receives security fixes.
 
 ## Reporting a vulnerability
 
@@ -40,9 +40,9 @@ unless you prefer otherwise.
   principal and permission. Do not introduce code paths that pass secrets to a
   model provider.
 - **Injection defense and no blind retries** are normative parts of the spec
-  (see [docs/spec-v0.1.md](docs/spec-v0.1.md) §9). Changes that weaken them are
+  (see [docs/spec-v0.2.md](docs/spec-v0.2.md) §9). Changes that weaken them are
   treated as security regressions.
 
 If you are building an independent implementation, treat the items above as
 minimum baselines, and see the normative security requirements in
-[docs/spec-v0.1.md](docs/spec-v0.1.md) §9.
+[docs/spec-v0.2.md](docs/spec-v0.2.md) §9.

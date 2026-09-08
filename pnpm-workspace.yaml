@@ -3,6 +3,7 @@ packages:
   - "apps/*"
   - "tests/*"
   - "evals"
+  - "examples/*"
 
 allowBuilds:
   esbuild: true

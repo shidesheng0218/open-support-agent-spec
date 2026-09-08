@@ -31,7 +31,9 @@ pnpm docker:up      # docker compose up --build（控制台 :8080，API :3001）
 
 约定（由 [CONTRACTS.md](CONTRACTS.md) 固定）：
 
-- pnpm workspace，npm scope 为 `@osas/*`，所有包 `private`，版本 `0.1.0`。
+- pnpm workspace，npm scope 为 `@osas/*`，版本 `0.2.0` lockstep 发布。仅
+  `@osas/core`、`@osas/schema-validator`、`@osas/policy-engine` 为公开 npm 包；其余包均为
+  `private` 参考实现（见 [CONTRACTS.md](CONTRACTS.md) 的发布策略）。
 - TypeScript strict、ESM（`"type": "module"`）；TS 中的相对导入使用 `.js` 后缀
   （NodeNext）。
 - 运行时校验只用 Ajv v8 + ajv-formats（不引入其他校验库）。
@@ -76,7 +78,7 @@ pnpm docker:up      # docker compose up --build（控制台 :8080，API :3001）
 
 ## 版本管理
 
-规范、Schema 与全部 `@osas/*` 包共用一个语义化版本（当前为 `0.1.0`）。v0.x 期间次
+规范、Schema 与全部 `@osas/*` 包共用一个语义化版本（当前为 `0.2.0`）。v0.x 期间次
 版本可能包含破坏性变更；自 v1.0 起，破坏性变更需要主版本号递增。
 详见 [GOVERNANCE.md](GOVERNANCE.md#versioning)。
 

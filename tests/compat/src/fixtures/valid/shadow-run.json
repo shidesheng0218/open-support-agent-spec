@@ -1,6 +1,6 @@
 {
   "id": "shadow_1",
-  "specVersion": "0.1",
+  "specVersion": "0.2",
   "tenantId": "tenant_demo",
   "proposalId": "prop_1",
   "policyDecision": {

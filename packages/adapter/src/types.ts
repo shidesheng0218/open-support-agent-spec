@@ -10,13 +10,20 @@ import type {
   Customer,
   Escalation,
   Evidence,
+  ExchangeInventoryStatus,
+  ExchangeRequest,
   ExecutionResult,
   HumanHandoff,
   Invoice,
+  ItemClaim,
+  ItemClaimType,
   KnowledgeArticle,
+  Money,
   Order,
   ProposalStatus,
+  RefundTransaction,
   Shipment,
+  ShipmentIncident,
   Subscription,
   TenantPolicy,
 } from "@osas/core";
@@ -24,6 +31,20 @@ import type {
 // Permission ladder per CONTRACTS.md §3: read < draft < request-approval < execute.
 // Defined identically to @osas/core's Permission (structurally interchangeable).
 export type Permission = "read" | "draft" | "request-approval" | "execute";
+
+/**
+ * Read-only exchange-eligibility check (v0.2 Phase 6). An adapter answers
+ * whether a proposed exchange is fulfillable: replacement stock and the price
+ * delta. `eligible` must be false whenever inventoryStatus is not "in_stock" —
+ * adapters fail closed and never guess eligibility.
+ */
+export interface ExchangeEligibility {
+  eligible: boolean;
+  inventoryStatus: ExchangeInventoryStatus;
+  /** Replacement price minus original line price; integer minor units. */
+  priceDelta?: Money;
+  reason?: string;
+}
 
 export interface Principal {
   actorType: "model" | "human" | "system";
@@ -68,6 +89,48 @@ export interface SupportAdapter {
   getOrder(ctx: ToolContext, id: string): Promise<Order>;
   listOrders(ctx: ToolContext, customerId: string): Promise<Order[]>;
   getShipment(ctx: ToolContext, id: string): Promise<Shipment>;
+  /**
+   * After-sales reads (v0.2 Phase 4, optional). Adapters that do not implement
+   * them MUST NOT declare the corresponding capability; the MCP layer fails
+   * such calls with CAPABILITY_UNSUPPORTED instead of faking a result.
+   */
+  getShipmentIncident?(ctx: ToolContext, id: string): Promise<ShipmentIncident>;
+  /** All known refund transactions for an order (empty array when none). */
+  getRefundStatus?(ctx: ToolContext, orderId: string): Promise<RefundTransaction[]>;
+  /**
+   * Record an ItemClaim with status "submitted" for human review (draft-level
+   * permission). Never resolves the claim and never triggers a refund/exchange.
+   */
+  proposeItemClaim?(
+    ctx: ToolContext,
+    input: {
+      caseId: string;
+      orderId: string;
+      lineId: string;
+      claimType: ItemClaimType;
+      quantity: number;
+      reasonCode?: string;
+      evidenceIds?: string[];
+      idempotencyKey: string;
+    },
+  ): Promise<ItemClaim>;
+  /**
+   * After-sales reads (v0.2 Phase 6, optional). Read-only: an adapter answers
+   * with evidence/eligibility data and never writes. Same declaration rule as
+   * the Phase 4 methods above — undeclared capability → CAPABILITY_UNSUPPORTED.
+   */
+  /** Evidence records attached to a specific order line (e.g. damage photos). */
+  getOrderLineClaimEvidence?(
+    ctx: ToolContext,
+    q: { orderId: string; lineId?: string },
+  ): Promise<Evidence[]>;
+  /** Read-only exchange-eligibility check; never creates or fulfills an exchange. */
+  getExchangeEligibility?(
+    ctx: ToolContext,
+    input: { orderId: string; originalLineId: string; replacementSku: string },
+  ): Promise<ExchangeEligibility>;
+  /** Load one ExchangeRequest record by id (read-only). */
+  getExchangeRequest?(ctx: ToolContext, id: string): Promise<ExchangeRequest>;
   getSubscription(ctx: ToolContext, id: string): Promise<Subscription>;
   listInvoices(ctx: ToolContext, customerId: string): Promise<Invoice[]>;
   getCreditBalance(ctx: ToolContext, customerId: string): Promise<CreditBalance>;

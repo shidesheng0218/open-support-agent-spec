@@ -15,7 +15,7 @@ export const daysAgo = (d: number): string =>
 export function makePolicy(): TenantPolicy {
   return {
     id: "pol_demo",
-    specVersion: "0.1",
+    specVersion: "0.2",
     tenantId: "tenant_demo",
     version: "1.0.0",
     effectiveFrom: daysAgo(30),
@@ -40,6 +40,9 @@ export function makePolicy(): TenantPolicy {
       },
       { actionType: "return_request", decision: "require_approval" },
       { actionType: "cancel_order", decision: "require_approval" },
+      // exchange_request is never model-executed; approval is mandatory and
+      // evaluateProposal additionally caps it at require_approval.
+      { actionType: "exchange_request", decision: "require_approval" },
       {
         actionType: "credit_apply",
         decision: "require_approval",
@@ -60,7 +63,7 @@ export function makePolicy(): TenantPolicy {
 export function makeCustomer(over: Partial<Customer> = {}): Customer {
   return {
     id: "cus_verified",
-    specVersion: "0.1",
+    specVersion: "0.2",
     tenantId: "tenant_demo",
     displayName: "Verified Customer",
     region: "US",
@@ -79,7 +82,7 @@ export function makeCustomer(over: Partial<Customer> = {}): Customer {
 export function makeEvidence(over: Partial<Evidence> = {}): Evidence {
   return {
     id: "ev_order",
-    specVersion: "0.1",
+    specVersion: "0.2",
     tenantId: "tenant_demo",
     caseId: "case_refund",
     kind: "order",
@@ -97,7 +100,7 @@ export function makeProposal(
 ): ActionProposal {
   return {
     id: "prop_1",
-    specVersion: "0.1",
+    specVersion: "0.2",
     tenantId: "tenant_demo",
     caseId: "case_refund",
     profile: "ecommerce",

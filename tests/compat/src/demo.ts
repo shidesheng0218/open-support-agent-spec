@@ -67,7 +67,7 @@ export function makeProposal(overrides: Any = {}): Any {
   const now = new Date().toISOString();
   return {
     id: `prop_compat_${n}`,
-    specVersion: "0.1",
+    specVersion: "0.2",
     tenantId: "tenant_demo",
     caseId: "case_refund",
     profile: "ecommerce",

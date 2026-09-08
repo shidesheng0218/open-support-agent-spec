@@ -1,3 +1,5 @@
+> **Historical spec — superseded by [spec-v0.2.md](spec-v0.2.md). Retained for reference; do not implement against this version.**
+
 # Open Support Agent Spec (OSAS) v0.1 — Draft
 
 [中文版](spec-v0.1.zh-CN.md)

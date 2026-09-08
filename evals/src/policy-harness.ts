@@ -33,7 +33,7 @@ const usd = (minorUnits: number) => ({ currency: "USD", minorUnits });
 export function evalPolicy(): TenantPolicy {
   return {
     id: "pol_eval",
-    specVersion: "0.1",
+    specVersion: "0.2",
     tenantId: EVAL_TENANT,
     version: "eval-1.0.0",
     effectiveFrom: "2025-01-01T00:00:00.000Z",
@@ -60,6 +60,9 @@ export function evalPolicy(): TenantPolicy {
       },
       { actionType: "return_request", decision: "require_approval" },
       { actionType: "cancel_order", decision: "require_approval" },
+      // exchange_request is never model-executed; the engine additionally caps
+      // it at require_approval (NEVER_AUTO_EXECUTE_ACTION_TYPES).
+      { actionType: "exchange_request", decision: "require_approval" },
       {
         actionType: "credit_apply",
         decision: "require_approval",
@@ -98,7 +101,7 @@ export function buildCustomer(c: EvalCase): Customer | undefined {
   if (identity === "missing") return undefined;
   return {
     id: `cus_eval_${identity}`,
-    specVersion: "0.1",
+    specVersion: "0.2",
     tenantId: EVAL_TENANT,
     displayName: `Eval ${identity}`,
     region: spec.region ?? "US",
@@ -117,7 +120,7 @@ export function buildEvidence(c: EvalCase): Evidence[] {
   return [
     {
       id: `ev_${c.id}`,
-      specVersion: "0.1",
+      specVersion: "0.2",
       tenantId: EVAL_TENANT,
       caseId: c.input.caseId,
       kind: "order",
@@ -144,7 +147,7 @@ export function buildProposal(c: EvalCase): ActionProposal | undefined {
   const now = iso(EVAL_NOW);
   return {
     id: `prop_${c.id}`,
-    specVersion: "0.1",
+    specVersion: "0.2",
     tenantId: EVAL_TENANT,
     caseId: c.input.caseId ?? `eval_case_${c.id}`,
     profile: c.profile,
@@ -209,8 +212,8 @@ export interface CaseResult {
 }
 
 export interface PolicyEvalReport {
-  specVersion: "0.1";
-  generator: "@osas/evals@0.1.1";
+  specVersion: "0.2";
+  generator: "@osas/evals@0.2.0";
   runAt: string;
   totalCases: number;
   perCategory: Record<string, { total: number; accurate: number; accuracy: number }>;
@@ -382,8 +385,8 @@ export function buildReport(results: CaseResult[]): PolicyEvalReport {
     gates.noSecurityBypass;
 
   return {
-    specVersion: "0.1",
-    generator: "@osas/evals@0.1.1",
+    specVersion: "0.2",
+    generator: "@osas/evals@0.2.0",
     runAt: new Date().toISOString(),
     totalCases: results.length,
     perCategory,

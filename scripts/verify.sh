@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
-# OSAS release-quality gate (milestone 0): typecheck, unit/contract tests,
-# compat suite, Docker build + boot, health checks, Playwright E2E.
+# OSAS release-quality gate (milestone 0): version consistency, typecheck,
+# unit/contract tests, compat suite, Docker build + boot, health checks,
+# Playwright E2E.
 # Docker is ALWAYS torn down at the end (trap on EXIT), green or red.
 set -euo pipefail
 
@@ -13,6 +14,9 @@ cleanup() {
   docker compose down --remove-orphans || true
 }
 trap cleanup EXIT
+
+step "version consistency"
+node scripts/check-version-consistency.mjs
 
 step "typecheck"
 pnpm typecheck
@@ -50,7 +54,7 @@ wait_for "Web /healthz (static nginx)" "http://localhost:8080/healthz"
 
 step "compat report is served from the image build"
 report="$(curl -fsS http://localhost:3001/v1/compat/report)"
-echo "$report" | grep -Eq '"specVersion": *"0\.1"'
+echo "$report" | grep -Eq '"specVersion": *"0\.2"'
 echo "$report" | grep -Eq '"ok": *true'
 echo "    ok: /v1/compat/report returns a green report generated during this build"
 

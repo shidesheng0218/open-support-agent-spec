@@ -22,15 +22,15 @@ afterEach(async () => {
 function readOnlyAdapter(): SupportAdapter {
   const adapter = new MockSupportAdapter(createDemoFixtures());
   const base: CapabilityManifest = {
-    specVersion: "0.1",
+    specVersion: "0.2",
     implementationId: "read-only-impl",
-    implementationVersion: "0.1.1",
+    implementationVersion: "0.2.0",
     profiles: [
       { name: "core", capabilities: ["case.read", "customer.read", "knowledge.read", "evidence.read"] },
     ],
     transports: ["http", "mcp"],
     executionModes: ["proposal_only"],
-    adapterVersion: "0.1.1",
+    adapterVersion: "0.2.0",
   };
   adapter.getCapabilities = async () => base;
   return adapter;
@@ -52,16 +52,16 @@ describe("capability manifest API (v0.1.1)", () => {
     const res = await app.inject({ method: "GET", url: "/.well-known/osas" });
     expect(res.statusCode).toBe(200);
     const body = res.json();
-    expect(body.specVersion).toBe("0.1");
+    expect(body.specVersion).toBe("0.2");
     expect(body.capabilities.implementationId).toBe("osas-mock-backend");
   });
 
-  it("GET /v1/capabilities returns the adapter's manifest with all 16 capabilities", async () => {
+  it("GET /v1/capabilities returns the adapter's manifest with all 20 capabilities", async () => {
     const res = await app.inject({ method: "GET", url: "/v1/capabilities" });
     expect(res.statusCode).toBe(200);
     const manifest = res.json() as CapabilityManifest;
     const declared = manifest.profiles.flatMap((p) => p.capabilities);
-    expect(declared).toHaveLength(16);
+    expect(declared).toHaveLength(20);
     expect(manifest.transports).toEqual(["http", "mcp"]);
   });
 

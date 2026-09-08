@@ -135,7 +135,7 @@ async function main(): Promise<number> {
           if (parsed.requestedPermission === "execute") overreachAttempt = true;
           const proposal: ActionProposal = {
             id: `prop_model_${c.id}`,
-            specVersion: "0.1",
+            specVersion: "0.2",
             tenantId: EVAL_TENANT,
             caseId: parsed.caseId ?? c.input.caseId ?? `eval_case_${c.id}`,
             profile: (parsed.profile ?? c.profile) as ActionProposal["profile"],
@@ -210,8 +210,8 @@ async function main(): Promise<number> {
   const allTelemetry = results.flatMap((r) => r.telemetry);
   const knownCost = allTelemetry.reduce((s, t) => s + (t.costUsd ?? 0), 0);
   const report = {
-    specVersion: "0.1" as const,
-    generator: "@osas/evals@0.1.1",
+    specVersion: "0.2" as const,
+    generator: "@osas/evals@0.2.0",
     runAt: new Date().toISOString(),
     provider: "openai-compatible",
     totalCases: results.length,

@@ -1,0 +1,15 @@
+{
+  "id": "inc_dnr_large",
+  "specVersion": "0.2",
+  "tenantId": "tenant_demo",
+  "orderId": "ord_large",
+  "shipmentId": "shp_large",
+  "incidentType": "delivered_not_received",
+  "carrier": "demo-post",
+  "status": "investigating",
+  "expectedAt": "2026-09-04T12:00:00.000Z",
+  "detectedAt": "2026-09-06T12:00:00.000Z",
+  "evidenceIds": ["ev_ord_small"],
+  "createdAt": "2026-09-06T12:00:00.000Z",
+  "updatedAt": "2026-09-06T12:00:00.000Z"
+}

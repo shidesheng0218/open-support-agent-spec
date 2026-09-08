@@ -1,0 +1,13 @@
+{
+  "id": "claim_1",
+  "specVersion": "0.2",
+  "tenantId": "tenant_demo",
+  "orderId": "ord_small",
+  "lineId": "line_1",
+  "claimType": "damaged",
+  "quantity": 1,
+  "evidenceIds": ["ev_ord_small"],
+  "status": "submitted",
+  "createdAt": "2026-09-06T12:00:00.000Z",
+  "updatedAt": "2026-09-06T12:00:00.000Z"
+}

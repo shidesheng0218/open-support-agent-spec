@@ -1,6 +1,6 @@
 {
   "id": "cus_verified",
-  "specVersion": "0.1",
+  "specVersion": "0.2",
   "tenantId": "tenant_demo",
   "displayName": "Ada Lovelace",
   "email": "ada@example.com",

@@ -1,6 +1,6 @@
 {
   "id": "shp_small",
-  "specVersion": "0.1",
+  "specVersion": "0.2",
   "tenantId": "tenant_demo",
   "orderId": "ord_small",
   "carrier": "mock-post",

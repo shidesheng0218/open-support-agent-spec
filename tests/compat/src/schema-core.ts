@@ -69,9 +69,9 @@ function registerSchemaCases(collector: ReportCollector, entry: ManifestEntry): 
   }
 
   if ("specVersion" in fixture) {
-    test(`${name}: specVersion "0.2" rejected`, () =>
-      runCase(collector, SUITE, `${name}: specVersion "0.2" rejected`, () => {
-        const bad = { ...clone(fixture), specVersion: "0.2" };
+    test(`${name}: specVersion "0.1" rejected`, () =>
+      runCase(collector, SUITE, `${name}: specVersion "0.1" rejected`, () => {
+        const bad = { ...clone(fixture), specVersion: "0.1" };
         expect(validateAgainst(name, bad)).toBe(false);
       }));
   }
@@ -107,9 +107,9 @@ export function registerSchemaCore(collector: ReportCollector): void {
   describe(SUITE, () => {
     const manifest = getManifest();
 
-    test("manifest specVersion is 0.1", () =>
-      runCase(collector, SUITE, "manifest specVersion is 0.1", () => {
-        expect(manifest.specVersion).toBe("0.1");
+    test("manifest specVersion is 0.2", () =>
+      runCase(collector, SUITE, "manifest specVersion is 0.2", () => {
+        expect(manifest.specVersion).toBe("0.2");
       }));
 
     test("manifest lists at least the 8 core objects", () =>

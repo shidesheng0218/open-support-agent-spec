@@ -5,6 +5,7 @@ import {
   CORE_ACTION_TYPES,
   ECOMMERCE_ACTION_TYPES,
   FINANCIAL_ACTION_TYPES,
+  NEVER_AUTO_EXECUTE_ACTION_TYPES,
   PROFILES,
   SAAS_ACTION_TYPES,
   SPEC_VERSION,
@@ -36,10 +37,23 @@ describe("action type registry", () => {
     for (const t of FINANCIAL_ACTION_TYPES) {
       expect(ACTION_TYPES).toContain(t);
     }
-    expect(FINANCIAL_ACTION_TYPES).toEqual(["refund", "reshipment", "credit_apply"]);
+    expect(FINANCIAL_ACTION_TYPES).toEqual([
+      "refund",
+      "reshipment",
+      "credit_apply",
+      "exchange_request",
+    ]);
+  });
+
+  it("exchange_request is an ecommerce action type and never auto-executable", () => {
+    expect(ECOMMERCE_ACTION_TYPES).toContain("exchange_request");
+    expect(ACTION_TYPE_PROFILE.exchange_request).toBe("ecommerce");
+    expect(NEVER_AUTO_EXECUTE_ACTION_TYPES).toContain("exchange_request");
+    // Only exchange_request is model-execution-forbidden today.
+    expect(NEVER_AUTO_EXECUTE_ACTION_TYPES).toEqual(["exchange_request"]);
   });
 
   it("SPEC_VERSION is 0.1", () => {
-    expect(SPEC_VERSION).toBe("0.1");
+    expect(SPEC_VERSION).toBe("0.2");
   });
 });

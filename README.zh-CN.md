@@ -10,20 +10,20 @@
   <p>
     <a href="README.md">English</a> ·
     <a href="#快速开始">快速开始</a> ·
-    <a href="docs/spec-v0.1.zh-CN.md">阅读规范</a> ·
+    <a href="docs/spec-v0.2.zh-CN.md">阅读规范</a> ·
     <a href="CONTRIBUTING.zh-CN.md">参与贡献</a>
   </p>
 </div>
 
 <p align="center">
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-Apache--2.0-2563EB?style=flat-square" alt="Apache 2.0 许可证" /></a>
-  <a href="docs/spec-v0.1.zh-CN.md"><img src="https://img.shields.io/badge/spec-v0.1%20Draft-F59E0B?style=flat-square" alt="v0.1 草案" /></a>
+  <a href="docs/spec-v0.2.zh-CN.md"><img src="https://img.shields.io/badge/spec-v0.2%20Draft-F59E0B?style=flat-square" alt="v0.2 草案" /></a>
   <a href="https://github.com/shidesheng0218/open-support-agent-spec/actions/workflows/ci.yml"><img src="https://github.com/shidesheng0218/open-support-agent-spec/actions/workflows/ci.yml/badge.svg" alt="CI 状态" /></a>
   <img src="https://img.shields.io/badge/Node-%3E%3D20-339933?style=flat-square&logo=node.js&logoColor=white" alt="Node.js 20 或更高" />
   <img src="https://img.shields.io/badge/pnpm-11-F69220?style=flat-square&logo=pnpm&logoColor=white" alt="pnpm 11" />
 </p>
 
-> **当前状态：v0.1 草案（Draft）。** OSAS 是正在积极演进中的开放规范草案，**并非**
+> **当前状态：v0.2 草案（Draft）。** OSAS 是正在积极演进中的开放规范草案，**并非**
 > 已确立的行业标准。在 v1.0 之前，接口、Schema 与行为都可能发生变化，详见
 > [状态与路线图](#状态与路线图)。
 
@@ -41,7 +41,7 @@
 
 ## 一眼看懂
 
-| 16 个 MCP 工具 | 3 个 Profile | 120 条策略案例 | 255 项兼容检查 |
+| 20 个 MCP 工具 | 3 个 Profile | 120 条策略 + 20 条售后案例 | 307 项兼容检查 |
 |---|---|---|---|
 | Core、电商、SaaS | Schema 驱动契约 | 离线安全评测 | HTTP 黑盒一致性 |
 
@@ -53,7 +53,7 @@ Adapter、兼容性套件与可复现的策略评测。
 ```mermaid
 flowchart LR
     M[大模型或 Mock Provider] --> G[模型网关<br/>路由 · 预算 · 注入检测]
-    G --> T[MCP 工具面<br/>16 个类型化工具]
+    G --> T[MCP 工具面<br/>20 个类型化工具]
     T --> A[Support Adapter<br/>自定义 · Mock · Zendesk · Shopify]
     A --> B[(客服 / 电商 / SaaS 后端)]
     G --> P[确定性策略引擎]
@@ -100,7 +100,7 @@ docker compose up --build
 |---|---|---|
 | Web 控制台 | [`localhost:8080`](http://localhost:8080) | `/demo`、`/developer`、`/agent`、`/platform` |
 | API 健康检查 | [`localhost:3001/health`](http://localhost:3001/health) | 服务与规范状态 |
-| 工具目录 | [`localhost:3001/v1/meta/tools`](http://localhost:3001/v1/meta/tools) | 16 个类型化 MCP 工具 |
+| 工具目录 | [`localhost:3001/v1/meta/tools`](http://localhost:3001/v1/meta/tools) | 20 个类型化 MCP 工具 |
 
 <details>
 <summary><strong>演示到底证明了什么？</strong></summary>
@@ -180,10 +180,13 @@ Docker 构建上下文为**仓库根目录**（两个 Dockerfile 都复制整个
   真实执行能力须经未来的 RFC 决定。
 - **参考 Adapter**（未配置时失败即关闭；演示环境不需要）：Zendesk
   （`ZENDESK_BASE_URL`/`ZENDESK_SUBDOMAIN`、`ZENDESK_EMAIL`、
-  `ZENDESK_API_TOKEN`、`ZENDESK_ESCALATION_GROUP_ID`）与只读 Shopify
+  `ZENDESK_API_TOKEN`、`ZENDESK_ESCALATION_GROUP_ID`）、只读 Shopify
   （`SHOPIFY_SHOP_DOMAIN`、`SHOPIFY_ADMIN_ACCESS_TOKEN`、可选
-  `SHOPIFY_API_VERSION`）。详见
-  [docs/zendesk-shopify-shadow.zh-CN.md](docs/zendesk-shopify-shadow.zh-CN.md)。
+  `SHOPIFY_API_VERSION`）与 Chatwoot（`CHATWOOT_BASE_URL`、
+  `CHATWOOT_ACCOUNT_ID`、`CHATWOOT_API_TOKEN`、可选
+  `CHATWOOT_ESCALATION_TEAM_ID`）。详见
+  [docs/zendesk-shopify-shadow.zh-CN.md](docs/zendesk-shopify-shadow.zh-CN.md)
+  与 [docs/chatwoot-adapter.zh-CN.md](docs/chatwoot-adapter.zh-CN.md)。
 
 ### 运行时配置（Milestone 4）
 
@@ -237,7 +240,7 @@ flowchart TB
 
 打开控制台（http://localhost:5173 或 http://localhost:8080），选择一个角色：
 
-1. **开发者**（`/developer`）—— 浏览 16 个 MCP 工具定义（`/v1/meta/tools`）、
+1. **开发者**（`/developer`）—— 浏览 20 个 MCP 工具定义（`/v1/meta/tools`）、
    查阅 JSON Schema（`/v1/schemas`），并在 playground 中用任意 Schema 校验任意
    JSON 载荷（`POST /v1/validate`）。
 2. **客服坐席**（`/agent`）—— 处理审批队列（`/v1/approvals?status=pending`，
@@ -287,7 +290,7 @@ flowchart LR
 | 边界 | 默认行为 |
 |---|---|
 | 模型权限 | `read` → `draft` → `request-approval`，永远不能 `execute` |
-| 执行模式 | v0.1 只有 `shadow`；`live` 模式拒绝启动 |
+| 执行模式 | v0.2 只有 `shadow`；`live` 模式拒绝启动 |
 | 凭据 | 后端密钥留在 Adapter 之后，不进入模型上下文 |
 | 提示注入 | 检测、阻断、人工接管并写入审计 |
 | 成本控制 | 达到每日/单 case 上限时，在调用 Provider 前阻断 |
@@ -319,10 +322,11 @@ packages/
   adapter/               @osas/adapter          SupportAdapter 接口 + BYO Adapter 模板
   zendesk-adapter/       @osas/zendesk-adapter  Zendesk 工单参考 Adapter（Milestone 3）
   shopify-adapter/       @osas/shopify-adapter  只读 Shopify 参考 Adapter（Milestone 3）
+  chatwoot-adapter/      @osas/chatwoot-adapter Chatwoot（开源客服平台）参考 Adapter
   ecommerce-shadow/      @osas/ecommerce-shadow Shadow Mode：ShadowRun、存储、执行模式
   mock-backend/          @osas/mock-backend     合成 fixtures + MockSupportAdapter
   store-postgres/        @osas/store-postgres   PostgreSQL 存储 + SQL 迁移（Milestone 2）
-  mcp-server/            @osas/mcp-server       16 个工具定义 + stdio MCP 服务器
+  mcp-server/            @osas/mcp-server       20 个工具定义 + stdio MCP 服务器
   compat-runner/         @osas/compat-runner    黑盒 HTTP 一致性 Runner（Milestone 4）
 apps/
   api/                   @osas/api              Fastify 5 HTTP API（端口 3001）
@@ -331,12 +335,13 @@ tests/
   compat/                @osas/compat-suite     Schema/兼容套件 + JSON 报告
   e2e/                   @osas/e2e              Playwright 冒烟（E2E=1）
 evals/                   @osas/evals            120 条合成评测集 + eval:policy/eval:model
+examples/                embed-policy-engine    @osas/policy-engine 最小独立嵌入示例
 docs/  rfcs/  .github/workflows/  docker-compose.yml
 ```
 
 ## 使用 MCP 服务器
 
-`@osas/mcp-server` 通过 stdio 将 Agent 全部能力暴露为 16 个 MCP 工具。客户端配置示例
+`@osas/mcp-server` 通过 stdio 将 Agent 全部能力暴露为 20 个 MCP 工具。客户端配置示例
 （先执行 `pnpm build`）：
 
 ```json
@@ -368,26 +373,35 @@ docs/  rfcs/  .github/workflows/  docker-compose.yml
 `packages/adapter/templates/byo-adapter.template.ts` 开始，每个方法都有 TODO 指引。
 Adapter 抛出 `AdapterNotFoundError`（→ API 404）/ `AdapterPermissionError`（→ 403），
 每次调用都会收到包含租户与调用主体（Principal）的 `ToolContext`。详见
-[Adapter 开发指南](docs/adapter-guide.zh-CN.md)；`@osas/zendesk-adapter` 与
-`@osas/shopify-adapter` 是完整的参考实现。
+[Adapter 开发指南](docs/adapter-guide.zh-CN.md)；`@osas/zendesk-adapter`、
+`@osas/shopify-adapter` 与 `@osas/chatwoot-adapter` 是完整的参考实现。关于发布策略：
+仅 `@osas/core`、`@osas/schema-validator`、`@osas/policy-engine` 发布到 npm；
+各 Adapter 及其余 workspace 包均为 private 参考实现 —— 无法通过 npm 安装
+（例如 `npm install @osas/chatwoot-adapter` 不可行），请从仓库源码构建或复制改造。
+如果只想在
+既有系统中引入治理层，可直接嵌入 `@osas/policy-engine` —— 见
+[包 README](packages/policy-engine/README.zh-CN.md) 与可运行示例
+[examples/embed-policy-engine](examples/embed-policy-engine)。
 
 ## 文档
 
-- 规范：[docs/spec-v0.1.zh-CN.md](docs/spec-v0.1.zh-CN.md) · [English](docs/spec-v0.1.md)
+- 规范：[docs/spec-v0.2.zh-CN.md](docs/spec-v0.2.zh-CN.md) · [English](docs/spec-v0.2.md)
 - Adapter 开发指南：[docs/adapter-guide.zh-CN.md](docs/adapter-guide.zh-CN.md) · [English](docs/adapter-guide.md)
 - Zendesk + Shopify Shadow Mode：[docs/zendesk-shopify-shadow.zh-CN.md](docs/zendesk-shopify-shadow.zh-CN.md) · [English](docs/zendesk-shopify-shadow.md)
+- Chatwoot Adapter：[docs/chatwoot-adapter.zh-CN.md](docs/chatwoot-adapter.zh-CN.md) · [English](docs/chatwoot-adapter.md)
+- 第三方实现指南：[docs/implementing-osas.zh-CN.md](docs/implementing-osas.zh-CN.md) · [English](docs/implementing-osas.md)
 - Conformance Mode（仅限测试）：[docs/conformance.zh-CN.md](docs/conformance.zh-CN.md) · [English](docs/conformance.md)
 - 工程契约：[CONTRACTS.md](CONTRACTS.md)
 - 贡献指南：[CONTRIBUTING.zh-CN.md](CONTRIBUTING.zh-CN.md) · [English](CONTRIBUTING.md)
 - 治理：[GOVERNANCE.md](GOVERNANCE.md)
 - 安全策略：[SECURITY.md](SECURITY.md)
 - 行为准则：[CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md)
-- RFC：[rfcs/](rfcs/)（从 [0001-v0.1-core](rfcs/0001-v0.1-core.md) 开始）
+- RFC：[rfcs/](rfcs/)（从 [0001-v0.1-core](rfcs/0001-v0.1-core.md) 开始；定位：[0002-osas-as-mcp-governance-profile](rfcs/0002-osas-as-mcp-governance-profile.md)）
 - 变更日志：[CHANGELOG.md](CHANGELOG.md)
 
 ## 状态与路线图
 
-OSAS v0.1 是**草案（Draft）**。通往 v1.0 的路径：
+OSAS v0.2 是**草案（Draft）**。通往 v1.0 的路径：
 
 - [ ] 至少 **3 个独立实现**（本参考实现之外）通过某一 Profile 的兼容性套件。
 - [ ] 全部规范性文档中英双语齐备，且保持同步更新。

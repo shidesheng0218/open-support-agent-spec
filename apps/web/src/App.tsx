@@ -21,7 +21,7 @@ export default function App() {
       <header className="topbar">
         <div className="brand">
           <span className="brand-title">OSAS Console</span>
-          <span className="brand-sub">Open Support Agent Spec v0.1 · 开放客服智能体规范</span>
+          <span className="brand-sub">Open Support Agent Spec v0.2 · 开放客服智能体规范</span>
         </div>
         <nav className="nav" data-testid="nav">
           {NAV.map((n) => (
@@ -47,7 +47,7 @@ export default function App() {
           <Route path="/demo" element={<Demo />} />
         </Routes>
       </main>
-      <footer className="footer">OSAS v0.1 Draft · Apache-2.0</footer>
+      <footer className="footer">OSAS v0.2 Draft · Apache-2.0</footer>
     </div>
   );
 }

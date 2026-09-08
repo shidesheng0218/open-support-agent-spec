@@ -1,0 +1,43 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://open-support-agent.dev/schemas/profiles/ecommerce/shipment-incident.json",
+  "title": "ShipmentIncident",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "id",
+    "specVersion",
+    "tenantId",
+    "orderId",
+    "shipmentId",
+    "incidentType",
+    "status",
+    "detectedAt",
+    "createdAt",
+    "updatedAt"
+  ],
+  "properties": {
+    "id": { "$ref": "../../core/common.json#/$defs/Id" },
+    "specVersion": { "$ref": "../../core/common.json#/$defs/SpecVersion" },
+    "tenantId": { "$ref": "../../core/common.json#/$defs/Id" },
+    "orderId": { "$ref": "../../core/common.json#/$defs/Id" },
+    "shipmentId": { "$ref": "../../core/common.json#/$defs/Id" },
+    "incidentType": {
+      "type": "string",
+      "enum": ["delayed", "lost", "delivered_not_received", "damaged_in_transit"]
+    },
+    "carrier": { "type": "string" },
+    "status": {
+      "type": "string",
+      "enum": ["open", "investigating", "resolved", "closed"]
+    },
+    "expectedAt": { "$ref": "../../core/common.json#/$defs/DateTime" },
+    "detectedAt": { "$ref": "../../core/common.json#/$defs/DateTime" },
+    "evidenceIds": {
+      "type": "array",
+      "items": { "$ref": "../../core/common.json#/$defs/Id" }
+    },
+    "createdAt": { "$ref": "../../core/common.json#/$defs/DateTime" },
+    "updatedAt": { "$ref": "../../core/common.json#/$defs/DateTime" }
+  }
+}

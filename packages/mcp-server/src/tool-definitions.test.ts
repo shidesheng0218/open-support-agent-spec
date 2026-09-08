@@ -12,6 +12,10 @@ const EXPECTED_NAMES = [
   "osas_ecom_get_order",
   "osas_ecom_list_orders",
   "osas_ecom_get_shipment",
+  "osas_ecom_get_shipment_incident",
+  "osas_ecom_get_refund_status",
+  "osas_ecom_create_item_claim_request",
+  "osas_ecom_create_exchange_request",
   "osas_saas_get_subscription",
   "osas_saas_list_invoices",
   "osas_saas_get_credit_balance",
@@ -21,8 +25,8 @@ const EXPECTED_NAMES = [
 ];
 
 describe("TOOL_DEFINITIONS", () => {
-  it("has exactly the 16 contract tool names (§7)", () => {
-    expect(TOOL_DEFINITIONS).toHaveLength(16);
+  it("has exactly the 20 contract tool names (§7)", () => {
+    expect(TOOL_DEFINITIONS).toHaveLength(20);
     expect(TOOL_DEFINITIONS.map((d) => d.name).sort()).toEqual([...EXPECTED_NAMES].sort());
   });
 
@@ -53,6 +57,7 @@ describe("TOOL_DEFINITIONS", () => {
       "osas_saas_create_credit_request",
       "osas_saas_create_cancellation_request",
       "osas_saas_create_plan_change_request",
+      "osas_ecom_create_exchange_request",
     ]) {
       const def = TOOL_DEFINITIONS.find((d) => d.name === name);
       expect(def?.adapterMethod).toBe("createActionProposal");
@@ -60,13 +65,20 @@ describe("TOOL_DEFINITIONS", () => {
     }
   });
 
+  it("the item-claim shortcut records a draft-level claim, never an executable proposal", () => {
+    const def = TOOL_DEFINITIONS.find((d) => d.name === "osas_ecom_create_item_claim_request");
+    expect(def?.adapterMethod).toBe("proposeItemClaim");
+    expect(def?.permissionRequired).toBe("draft");
+    expect(def?.capabilityRequired).toBe("ecommerce.item_claim.propose");
+  });
+
   it("read tools require only read permission", () => {
     const reads = TOOL_DEFINITIONS.filter((d) =>
-      ["getCase", "searchCases", "getCustomer", "searchKnowledge", "getOrder", "listOrders", "getShipment", "getSubscription", "listInvoices", "getCreditBalance"].includes(
+      ["getCase", "searchCases", "getCustomer", "searchKnowledge", "getOrder", "listOrders", "getShipment", "getShipmentIncident", "getRefundStatus", "getSubscription", "listInvoices", "getCreditBalance"].includes(
         d.adapterMethod,
       ),
     );
-    expect(reads).toHaveLength(10);
+    expect(reads).toHaveLength(12);
     for (const d of reads) expect(d.permissionRequired).toBe("read");
   });
 });

@@ -9,7 +9,7 @@ import {
 function makePolicy(version: string, over: Partial<TenantPolicy> = {}): TenantPolicy {
   return {
     id: `pol_${version}`,
-    specVersion: "0.1",
+    specVersion: "0.2",
     tenantId: "tenant_demo",
     version,
     effectiveFrom: "2026-01-01T00:00:00.000Z",

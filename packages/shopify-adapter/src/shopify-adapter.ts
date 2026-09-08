@@ -2,6 +2,7 @@ import {
   AdapterCapabilityError,
   AdapterNotFoundError,
   requirePermission,
+  type ExchangeEligibility,
   type SupportAdapter,
   type ToolContext,
 } from "@osas/adapter";
@@ -24,7 +25,9 @@ import type {
   Money,
   Order,
   OrderStatus,
+  RefundTransaction,
   Shipment,
+  ShipmentIncident,
   Subscription,
   TenantPolicy,
 } from "@osas/core";
@@ -33,16 +36,21 @@ import type { ShopifyConfig } from "./config.js";
 import { ShopifyApiError } from "./errors.js";
 import { createFetchHttpClient, type HttpClient, type HttpRequest } from "./http.js";
 import {
+  deriveShipmentIncident,
   fulfillmentEvidenceInput,
   mapShopifyFulfillment,
   mapShopifyOrder,
+  mapShopifyRefundTransactions,
   orderEvidenceInput,
   orderIdForShopify,
+  orderLineClaimEvidenceInput,
   parseShipmentId,
+  parseShipmentIncidentId,
   refundEligibilityEvidenceInput,
   refundableAmount,
   shopifyCustomerIdFromOsas,
   shopifyOrderIdFromOsas,
+  toMinorUnits,
   type ShopifyFulfillment,
   type ShopifyOrder,
 } from "./mappers.js";
@@ -97,7 +105,7 @@ export class ShopifyAdapter implements SupportAdapter {
   constructor(options: ShopifyAdapterOptions) {
     this.config = options.config;
     this.http = options.http ?? createFetchHttpClient();
-    this.adapterVersion = options.adapterVersion ?? "0.1.1";
+    this.adapterVersion = options.adapterVersion ?? "0.2.0";
   }
 
   private adminUrl(path: string): string {
@@ -206,7 +214,7 @@ export class ShopifyAdapter implements SupportAdapter {
    * Price a refund Proposal from live, read-only Shopify data: loads the
    * order and its fulfillments, computes the refundable amount, and captures
    * order/shipment/refund-eligibility Evidence. This is the ONLY refund
-   * surface in v0.1.1 — drafting a Proposal, never executing a refund.
+   * surface in v0.2.0 — drafting a Proposal, never executing a refund.
    */
   async buildRefundProposalDraft(ctx: ToolContext, orderId: string): Promise<RefundProposalDraft> {
     requirePermission(ctx.principal, "read");
@@ -234,13 +242,114 @@ export class ShopifyAdapter implements SupportAdapter {
     };
   }
 
+  // ---- supported: after-sales reads (v0.2 Phase 6, GET only) ---------------
+
+  /** All refund transactions Shopify has recorded for an order (read-only). */
+  async getRefundStatus(ctx: ToolContext, orderId: string): Promise<RefundTransaction[]> {
+    requirePermission(ctx.principal, "read");
+    const order = await this.fetchOrder(shopifyOrderIdFromOsas(orderId));
+    return mapShopifyRefundTransactions(order, ctx.tenantId);
+  }
+
+  /**
+   * Read-only incident view derived from fulfillment state (see
+   * deriveShipmentIncident). id = "shopify_inc_{orderId}_{fulfillmentId}".
+   */
+  async getShipmentIncident(ctx: ToolContext, id: string): Promise<ShipmentIncident> {
+    requirePermission(ctx.principal, "read");
+    const { orderId, fulfillmentId } = parseShipmentIncidentId(id);
+    const fulfillments = await this.fetchFulfillments(orderId);
+    const found = fulfillments.find((f) => String(f.id) === fulfillmentId);
+    if (!found) {
+      throw new AdapterNotFoundError(
+        `Shopify fulfillment ${fulfillmentId} not found on order ${orderId} for incident ${id}`,
+      );
+    }
+    return deriveShipmentIncident(found, ctx.tenantId);
+  }
+
+  /**
+   * Claim evidence for one order line: the order snapshot scoped to that line
+   * plus the fulfillment state. lineId may be a Shopify line-item id or SKU.
+   */
+  async getOrderLineClaimEvidence(
+    ctx: ToolContext,
+    q: { orderId: string; lineId?: string },
+  ): Promise<Evidence[]> {
+    requirePermission(ctx.principal, "read");
+    const shopifyId = shopifyOrderIdFromOsas(q.orderId);
+    const order = await this.fetchOrder(shopifyId);
+    if (
+      q.lineId !== undefined &&
+      !(order.line_items ?? []).some((li) => String(li.id) === q.lineId || li.sku === q.lineId)
+    ) {
+      throw new AdapterNotFoundError(
+        `line ${q.lineId} not found on Shopify order ${shopifyId}`,
+      );
+    }
+    const evidence: Evidence[] = [
+      await this.captureEvidence(
+        ctx,
+        orderLineClaimEvidenceInput(order, q.lineId, ctx.tenantId, this.config.shopDomain),
+      ),
+    ];
+    for (const f of await this.fetchFulfillments(shopifyId)) {
+      evidence.push(
+        await this.captureEvidence(ctx, fulfillmentEvidenceInput(f, ctx.tenantId, this.config.shopDomain)),
+      );
+    }
+    return evidence;
+  }
+
+  /**
+   * Read-only exchange eligibility. Fail closed by design: the read-only
+   * order/fulfillment JSON cannot resolve replacement-SKU inventory, so
+   * inventoryStatus is always "unknown" and eligible is always false — a
+   * human must verify stock before approving an exchange. priceDelta is
+   * computed only when the replacement SKU happens to appear on the same
+   * order (its price is then known from the line item).
+   */
+  async getExchangeEligibility(
+    ctx: ToolContext,
+    input: { orderId: string; originalLineId: string; replacementSku: string },
+  ): Promise<ExchangeEligibility> {
+    requirePermission(ctx.principal, "read");
+    const order = await this.fetchOrder(shopifyOrderIdFromOsas(input.orderId));
+    const lines = order.line_items ?? [];
+    const original = lines.find(
+      (li) => String(li.id) === input.originalLineId || li.sku === input.originalLineId,
+    );
+    if (!original) {
+      throw new AdapterNotFoundError(
+        `original line ${input.originalLineId} not found on Shopify order ${order.id}`,
+      );
+    }
+    const replacement = lines.find((li) => li.sku === input.replacementSku);
+    const currency = (order.currency ?? "USD").toUpperCase();
+    return {
+      eligible: false,
+      inventoryStatus: "unknown",
+      ...(replacement
+        ? {
+            priceDelta: {
+              currency,
+              minorUnits: toMinorUnits(replacement.price) - toMinorUnits(original.price),
+            },
+          }
+        : {}),
+      reason:
+        "read-only adapter: replacement-SKU inventory is not resolvable from order data; " +
+        "a human must verify stock before any exchange is approved",
+    };
+  }
+
   // ---- capability manifest ---------------------------------------------------
 
   async getCapabilities(_ctx: ToolContext): Promise<CapabilityManifest> {
     return {
       specVersion: SPEC_VERSION,
       implementationId: "osas-shopify-adapter",
-      implementationVersion: "0.1.1",
+      implementationVersion: "0.2.0",
       profiles: [
         {
           name: "ecommerce",
@@ -249,6 +358,8 @@ export class ShopifyAdapter implements SupportAdapter {
             "ecommerce.shipment.read",
             "evidence.read",
             "ecommerce.refund.propose",
+            "ecommerce.shipment_incident.read",
+            "ecommerce.refund_status.read",
           ],
         },
       ],

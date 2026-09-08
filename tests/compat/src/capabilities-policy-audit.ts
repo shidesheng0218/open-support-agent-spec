@@ -34,8 +34,8 @@ export function registerCapabilitiesPolicyAudit(collector: ReportCollector): voi
         expect(validateAgainst("core/capability-manifest", manifest)).toBe(true);
       }));
 
-    test("mock adapter declares all 16 spec capabilities", () =>
-      runCase(collector, SUITE, "mock manifest declares all 16 capabilities", async () => {
+    test("mock adapter declares all 20 spec capabilities", () =>
+      runCase(collector, SUITE, "mock manifest declares all 20 capabilities", async () => {
         const adapter = new MockSupportAdapter(createDemoFixtures());
         const manifest = await adapter.getCapabilities!(CTX);
         const declared = manifest.profiles.flatMap((p) => p.capabilities);
@@ -43,7 +43,7 @@ export function registerCapabilitiesPolicyAudit(collector: ReportCollector): voi
       }));
 
     test("every MCP tool declares a spec-known capabilityRequired", () =>
-      runCase(collector, SUITE, "all 16 tools map to a known capability", () => {
+      runCase(collector, SUITE, "all 20 tools map to a known capability", () => {
         for (const def of TOOL_DEFINITIONS) {
           expect(
             (CAPABILITIES as readonly string[]).includes(def.capabilityRequired),
@@ -56,9 +56,9 @@ export function registerCapabilitiesPolicyAudit(collector: ReportCollector): voi
       runCase(collector, SUITE, "read-only manifest validates + gates writes", async () => {
         const adapter = new MockSupportAdapter(createDemoFixtures());
         adapter.getCapabilities = async () => ({
-          specVersion: "0.1",
+          specVersion: "0.2",
           implementationId: "read-only-impl",
-          implementationVersion: "0.1.1",
+          implementationVersion: "0.2.0",
           profiles: [
             {
               name: "core",
@@ -67,7 +67,7 @@ export function registerCapabilitiesPolicyAudit(collector: ReportCollector): voi
           ],
           transports: ["http"],
           executionModes: ["proposal_only"],
-          adapterVersion: "0.1.1",
+          adapterVersion: "0.2.0",
         });
         const manifest = await adapter.getCapabilities(CTX);
         expect(validateAgainst("core/capability-manifest", manifest)).toBe(true);

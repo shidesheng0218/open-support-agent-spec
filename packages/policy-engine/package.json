@@ -1,7 +1,8 @@
 {
   "name": "@osas/policy-engine",
-  "version": "0.1.1",
-  "private": true,
+  "version": "0.2.0",
+  "description": "Deterministic policy engine for customer-support agent writes: tenant policy evaluation, permission ladder, idempotent execution, and audit hash chains.",
+  "license": "Apache-2.0",
   "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
@@ -14,10 +15,19 @@
   "files": [
     "dist"
   ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/shidesheng0218/open-support-agent-spec.git",
+    "directory": "packages/policy-engine"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
   "scripts": {
     "build": "tsc -p tsconfig.json",
     "typecheck": "tsc --noEmit -p tsconfig.json",
-    "test": "vitest run"
+    "test": "vitest run",
+    "demo": "pnpm --filter @osas-examples/embed-policy-engine run demo"
   },
   "dependencies": {
     "@osas/core": "workspace:*"

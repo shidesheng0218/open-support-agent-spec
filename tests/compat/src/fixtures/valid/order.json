@@ -1,6 +1,6 @@
 {
   "id": "ord_small",
-  "specVersion": "0.1",
+  "specVersion": "0.2",
   "tenantId": "tenant_demo",
   "customerId": "cus_verified",
   "status": "delivered",

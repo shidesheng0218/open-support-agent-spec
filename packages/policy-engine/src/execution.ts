@@ -1,4 +1,5 @@
 import {
+  NEVER_AUTO_EXECUTE_ACTION_TYPES,
   transitionProposal,
   type ActionProposal,
   type ExecutionResult,
@@ -69,6 +70,21 @@ export class ExecutionStatusError extends Error {
   }
 }
 
+/**
+ * Thrown when executeProposal is asked to execute an actionType that is never
+ * model-executed (NEVER_AUTO_EXECUTE_ACTION_TYPES, e.g. exchange_request).
+ * Fail closed: no status transition, no adapter call, regardless of approval.
+ */
+export class NonExecutableActionError extends Error {
+  readonly code = "ACTION_NOT_EXECUTABLE";
+  constructor(actionType: string) {
+    super(
+      `actionType '${actionType}' is never executed by the policy engine; fulfillment is human-only after approval`,
+    );
+    this.name = "NonExecutableActionError";
+  }
+}
+
 export class ReconcileStatusError extends Error {
   readonly code = "RECONCILE_STATUS_GUARD";
   constructor(status: ProposalStatus) {
@@ -102,6 +118,12 @@ export async function executeProposal(
   store: ExecutionStore,
   now: Date = new Date(),
 ): Promise<ExecuteOutcome> {
+  // Fail closed: some actionTypes (exchange_request) are never executed, even
+  // with an approval on record. Checked before replay and status guards.
+  if (NEVER_AUTO_EXECUTE_ACTION_TYPES.includes(proposal.actionType)) {
+    throw new NonExecutableActionError(proposal.actionType);
+  }
+
   const prior = await store.get(proposal.tenantId, proposal.idempotencyKey);
   if (prior) {
     return { proposal, execution: prior.result, replayed: true };

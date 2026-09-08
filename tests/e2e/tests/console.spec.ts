@@ -22,9 +22,9 @@ test("console loads with nav and health badge", async ({ page }) => {
   await expect(page.getByTestId("status-ok")).toBeVisible();
 });
 
-test("developer page lists all 16 MCP tools", async ({ page }) => {
+test("developer page lists all 20 MCP tools", async ({ page }) => {
   await page.goto("/developer");
-  await expect(page.getByTestId("tool-row")).toHaveCount(16);
+  await expect(page.getByTestId("tool-row")).toHaveCount(20);
   // expand one row to inspect its input schema
   await page.getByTestId("tool-row").first().click();
   await expect(page.locator("pre.json")).toBeVisible();

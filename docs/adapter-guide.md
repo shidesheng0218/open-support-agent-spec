@@ -3,9 +3,10 @@
 [中文版](adapter-guide.zh-CN.md)
 
 This guide explains how to build a `SupportAdapter` that connects OSAS to a
-real support/commerce/billing stack. Two reference implementations ship with
-v0.1.1: `@osas/zendesk-adapter` (ticketing) and `@osas/shopify-adapter`
-(read-only commerce) — read their source alongside this guide.
+real support/commerce/billing stack. Three reference implementations ship with
+v0.2.0: `@osas/zendesk-adapter` (ticketing), `@osas/shopify-adapter`
+(read-only commerce) and `@osas/chatwoot-adapter` (open-source helpdesk) —
+read their source alongside this guide.
 
 ## The contract
 
@@ -100,7 +101,7 @@ enforced by §4 rule 10.
 ## Execution discipline
 
 `executeAction` is execute-permission only and is never exposed as an MCP
-tool. In v0.1.1 Shadow Mode, reference integrations must not implement real
+tool. In v0.2.0 Shadow Mode, reference integrations must not implement real
 financial writes at all: the Shopify adapter's `executeAction` always throws
 `CAPABILITY_UNSUPPORTED` without making any HTTP call. Adding real execution
 capability requires a separate RFC.

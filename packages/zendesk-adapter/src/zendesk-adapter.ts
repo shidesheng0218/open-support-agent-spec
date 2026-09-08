@@ -91,7 +91,7 @@ export class ZendeskAdapter implements SupportAdapter {
   constructor(options: ZendeskAdapterOptions) {
     this.config = options.config;
     this.http = options.http ?? createFetchHttpClient();
-    this.adapterVersion = options.adapterVersion ?? "0.1.1";
+    this.adapterVersion = options.adapterVersion ?? "0.2.0";
   }
 
   private authHeader(): string {
@@ -293,7 +293,7 @@ export class ZendeskAdapter implements SupportAdapter {
     return {
       specVersion: SPEC_VERSION,
       implementationId: "osas-zendesk-adapter",
-      implementationVersion: "0.1.1",
+      implementationVersion: "0.2.0",
       profiles: [
         {
           name: "core",
@@ -307,7 +307,7 @@ export class ZendeskAdapter implements SupportAdapter {
         },
       ],
       transports: ["http"],
-      // Shadow Mode reference integration: no live execution, ever (v0.1.1).
+      // Shadow Mode reference integration: no live execution, ever (v0.2.0).
       executionModes: ["shadow"],
       adapterVersion: this.adapterVersion,
     };

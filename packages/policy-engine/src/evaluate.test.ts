@@ -256,6 +256,57 @@ describe("evaluateProposal — §4 policy matrix", () => {
   });
 });
 
+describe("evaluateProposal — exchange_request (never model-executed)", () => {
+  const exchangeProposal = (over: Record<string, unknown> = {}) =>
+    makeProposal({
+      actionType: "exchange_request",
+      reasonCode: "wrong_item",
+      params: {
+        orderId: "ord_small",
+        originalLineId: "line_1",
+        replacementSku: "sku_mug_v2",
+      },
+      amount: undefined,
+      evidenceIds: ["ev_order"],
+      ...over,
+    });
+
+  it("require_approval by default with the demo policy rule", () => {
+    const d = evaluateProposal(exchangeProposal(), baseCtx());
+    expect(d.decision).toBe("require_approval");
+  });
+
+  it("capped at require_approval even when a tenant rule says auto_execute", () => {
+    const policy = makePolicy();
+    policy.rules = policy.rules.map((r) =>
+      r.actionType === "exchange_request" ? { ...r, decision: "auto_execute" as const } : r,
+    );
+    const d = evaluateProposal(exchangeProposal(), baseCtx({ policy }));
+    expect(d.decision).toBe("require_approval");
+    expect(d.reasons.map((r) => r.code)).toContain("NEVER_AUTO_EXECUTE");
+  });
+
+  it("block: NO_RULE when no rule matches exchange_request (fail closed)", () => {
+    const policy = makePolicy();
+    policy.rules = policy.rules.filter((r) => r.actionType !== "exchange_request");
+    const d = evaluateProposal(exchangeProposal(), baseCtx({ policy }));
+    expect(d.decision).toBe("block");
+    expect(d.reasons.map((r) => r.code)).toContain("NO_RULE");
+  });
+
+  it("block: INSUFFICIENT_EVIDENCE when no evidence references the original order", () => {
+    const d = evaluateProposal(exchangeProposal({ evidenceIds: [] }), baseCtx());
+    expect(d.decision).toBe("block");
+    expect(d.reasons.map((r) => r.code)).toContain("INSUFFICIENT_EVIDENCE");
+  });
+
+  it("block: PROFILE_MISMATCH when proposed under a non-ecommerce profile", () => {
+    const d = evaluateProposal(exchangeProposal({ profile: "core" }), baseCtx());
+    expect(d.decision).toBe("block");
+    expect(d.reasons.map((r) => r.code)).toContain("PROFILE_MISMATCH");
+  });
+});
+
 describe("money helpers", () => {
   it("compares minorUnits within the same currency", () => {
     expect(

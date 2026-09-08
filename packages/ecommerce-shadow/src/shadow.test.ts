@@ -12,7 +12,7 @@ import {
 
 const proposal = (over: Partial<ActionProposal> = {}): ActionProposal => ({
   id: "prop_1",
-  specVersion: "0.1",
+  specVersion: "0.2",
   tenantId: "tenant_demo",
   caseId: "case_1",
   profile: "ecommerce",
@@ -71,7 +71,7 @@ describe("planShadowRun", () => {
     });
     expect(run.wouldAutoExecute).toBe(true);
     expect(run.humanOutcome).toBe("pending");
-    expect(run.specVersion).toBe("0.1");
+    expect(run.specVersion).toBe("0.2");
     expect(run.suggestedAction).toEqual({
       actionType: "refund",
       reasonCode: "damaged_item",

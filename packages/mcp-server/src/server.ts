@@ -98,6 +98,24 @@ async function invoke(
           },
         }),
       );
+    case "osas_ecom_create_exchange_request":
+      // Never executes: exchange_request is require_approval by default and the
+      // policy engine refuses to execute it even after approval.
+      return adapter.createActionProposal(
+        ctx,
+        proposalInput(ctx, principal, args, {
+          profile: "ecommerce",
+          actionType: "exchange_request",
+          params: {
+            orderId: asString(args.orderId, "orderId"),
+            originalLineId: asString(args.originalLineId, "originalLineId"),
+            replacementSku: asString(args.replacementSku, "replacementSku"),
+            ...(typeof args.replacementVariant === "string"
+              ? { replacementVariant: args.replacementVariant }
+              : {}),
+          },
+        }),
+      );
     default:
       break;
   }
@@ -137,6 +155,30 @@ async function invoke(
       return adapter.listOrders(ctx, asString(args.customerId, "customerId"));
     case "getShipment":
       return adapter.getShipment(ctx, asString(args.id, "id"));
+    case "getShipmentIncident":
+      if (!adapter.getShipmentIncident) {
+        throw new AdapterCapabilityError(def.capabilityRequired);
+      }
+      return adapter.getShipmentIncident(ctx, asString(args.id, "id"));
+    case "getRefundStatus":
+      if (!adapter.getRefundStatus) {
+        throw new AdapterCapabilityError(def.capabilityRequired);
+      }
+      return adapter.getRefundStatus(ctx, asString(args.orderId, "orderId"));
+    case "proposeItemClaim":
+      if (!adapter.proposeItemClaim) {
+        throw new AdapterCapabilityError(def.capabilityRequired);
+      }
+      return adapter.proposeItemClaim(ctx, {
+        caseId: asString(args.caseId, "caseId"),
+        orderId: asString(args.orderId, "orderId"),
+        lineId: asString(args.lineId, "lineId"),
+        claimType: asString(args.claimType, "claimType") as never,
+        quantity: typeof args.quantity === "number" ? args.quantity : 1,
+        ...(typeof args.reasonCode === "string" ? { reasonCode: args.reasonCode } : {}),
+        ...(Array.isArray(args.evidenceIds) ? { evidenceIds: args.evidenceIds as string[] } : {}),
+        idempotencyKey: asString(args.idempotencyKey, "idempotencyKey"),
+      });
     case "getSubscription":
       return adapter.getSubscription(ctx, asString(args.id, "id"));
     case "listInvoices":
@@ -149,7 +191,7 @@ async function invoke(
 }
 
 /**
- * Build an MCP server exposing the 16 OSAS tools (CONTRACTS.md §7) backed by
+ * Build an MCP server exposing the 20 OSAS tools (CONTRACTS.md §7) backed by
  * the given SupportAdapter. `executeAction` is deliberately NEVER registered
  * as a tool — execution belongs to the policy engine/API only.
  *

@@ -1,6 +1,6 @@
 {
   "id": "sub_active",
-  "specVersion": "0.1",
+  "specVersion": "0.2",
   "tenantId": "tenant_demo",
   "customerId": "cus_verified",
   "plan": "pro",

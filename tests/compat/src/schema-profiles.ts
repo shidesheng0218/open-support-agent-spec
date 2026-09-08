@@ -110,6 +110,85 @@ export function registerSchemaProfiles(collector: ReportCollector): void {
         ).toBe(false);
       }));
 
+    // --- ecommerce: after-sales objects (v0.2 Phase 4) ------------------------
+    test("shipment-incident: valid fixture passes", () =>
+      runCase(collector, SUITE, "shipment-incident: valid fixture passes", () => {
+        expect(validateAgainst("profiles/ecommerce/shipment-incident", fixture("shipment-incident"))).toBe(true);
+      }));
+
+    test("shipment-incident: bad incidentType enum rejected", () =>
+      runCase(collector, SUITE, "shipment-incident: bad incidentType rejected", () => {
+        const bad = { ...clone(fixture("shipment-incident")), incidentType: "vanished" };
+        expect(validateAgainst("profiles/ecommerce/shipment-incident", bad)).toBe(false);
+      }));
+
+    test("refund-transaction: valid fixture passes", () =>
+      runCase(collector, SUITE, "refund-transaction: valid fixture passes", () => {
+        expect(validateAgainst("profiles/ecommerce/refund-transaction", fixture("refund-transaction"))).toBe(true);
+      }));
+
+    test("refund-transaction: bad status enum rejected", () =>
+      runCase(collector, SUITE, "refund-transaction: bad status rejected", () => {
+        const bad = { ...clone(fixture("refund-transaction")), status: "mysterious" };
+        expect(validateAgainst("profiles/ecommerce/refund-transaction", bad)).toBe(false);
+      }));
+
+    test("item-claim: valid fixture passes", () =>
+      runCase(collector, SUITE, "item-claim: valid fixture passes", () => {
+        expect(validateAgainst("profiles/ecommerce/item-claim", fixture("item-claim"))).toBe(true);
+      }));
+
+    test("item-claim: quantity 0 rejected", () =>
+      runCase(collector, SUITE, "item-claim: quantity 0 rejected", () => {
+        const bad = { ...clone(fixture("item-claim")), quantity: 0 };
+        expect(validateAgainst("profiles/ecommerce/item-claim", bad)).toBe(false);
+      }));
+
+    test("exchange-request: valid fixture passes (negative priceDelta allowed)", () =>
+      runCase(collector, SUITE, "exchange-request: valid fixture passes", () => {
+        expect(validateAgainst("profiles/ecommerce/exchange-request", fixture("exchange-request"))).toBe(true);
+      }));
+
+    test("exchange-request: float priceDelta.minorUnits rejected", () =>
+      runCase(collector, SUITE, "exchange-request: float priceDelta rejected", () => {
+        const bad = clone(fixture("exchange-request"));
+        setAtPath(bad, "priceDelta.minorUnits", 2.5);
+        expect(validateAgainst("profiles/ecommerce/exchange-request", bad)).toBe(false);
+      }));
+
+    test("exchange_request proposal: require_approval with demo policy, block without evidence", () =>
+      runCase(collector, SUITE, "exchange_request policy behavior", () => {
+        const demo = loadDemo();
+        const proposal = makeProposal({
+          profile: "ecommerce",
+          actionType: "exchange_request",
+          reasonCode: "wrong_item",
+          params: { orderId: "ord_small", originalLineId: "line_1", replacementSku: "sku_mug_v2" },
+          evidenceIds: [freshEvidence(demo).id],
+        });
+        const approved = evaluateProposal(proposal as never, {
+          customer: customerById(demo, "cus_verified"),
+          evidence: [freshEvidence(demo)],
+          policy: demo.policy,
+          recentProposals: [],
+          injectionSuspected: false,
+        } as never) as unknown as JsonObject;
+        expect(approved.decision).toBe("require_approval");
+
+        const noEvidence = evaluateProposal(
+          { ...proposal, evidenceIds: [] } as never,
+          {
+            customer: customerById(demo, "cus_verified"),
+            evidence: [],
+            policy: demo.policy,
+            recentProposals: [],
+            injectionSuspected: false,
+          } as never,
+        ) as unknown as JsonObject;
+        expect(noEvidence.decision).toBe("block");
+        expect(reasonCodes(noEvidence)).toContain("INSUFFICIENT_EVIDENCE");
+      }));
+
     // --- cross-profile rule -----------------------------------------------------
     test("cross-profile: ecommerce proposal with saas actionType rejected", () =>
       runCase(

@@ -9,7 +9,7 @@ const PERSONAS = [
     to: "/developer",
     title: "Developer",
     zh: "开发者",
-    desc: "Browse the 16 MCP tools, inspect JSON Schemas, and validate payloads against the spec.",
+    desc: "Browse the 20 MCP tools, inspect JSON Schemas, and validate payloads against the spec.",
   },
   {
     to: "/agent",
@@ -42,7 +42,7 @@ export default function Overview() {
         Open Support Agent Spec <span className="zh-sub">开放客服智能体规范</span>
       </h1>
       <p className="page-sub">
-        OSAS <strong>v0.1 Draft</strong> — an open, Apache-2.0 specification for safe customer-support agents:
+        OSAS <strong>v0.2 Draft</strong> — an open, Apache-2.0 specification for safe customer-support agents:
         typed tools, deterministic policy gates, human approvals, full auditability. This console exercises the
         reference API against the mock backend (<span className="mono">tenant_demo</span>).
       </p>

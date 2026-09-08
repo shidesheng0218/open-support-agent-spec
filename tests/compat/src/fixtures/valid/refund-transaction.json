@@ -1,0 +1,16 @@
+{
+  "id": "rft_refunded",
+  "specVersion": "0.2",
+  "tenantId": "tenant_demo",
+  "orderId": "ord_refunded",
+  "proposalId": "prop_dup_refund",
+  "provider": "mock-payments",
+  "externalTransactionId": "rfnd_demo_1",
+  "status": "succeeded",
+  "amount": { "currency": "USD", "minorUnits": 4000 },
+  "requestedAt": "2026-09-01T12:00:00.000Z",
+  "completedAt": "2026-09-02T12:00:00.000Z",
+  "evidenceIds": ["ev_ord_small"],
+  "createdAt": "2026-09-01T12:00:00.000Z",
+  "updatedAt": "2026-09-02T12:00:00.000Z"
+}

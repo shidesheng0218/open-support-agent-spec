@@ -2,7 +2,7 @@
 
 [English](zendesk-shopify-shadow.md)
 
-v0.1.1 Milestone 3 提供了 OSAS 对接真实工单系统（Zendesk）与真实电商后端
+Milestone 3（首次发布于 v0.1.1，当前版本为 v0.2）提供了 OSAS 对接真实工单系统（Zendesk）与真实电商后端
 （Shopify）并以 **Shadow Mode（影子模式）** 运行的参考集成模式：Agent 负责
 提议与模拟，人工负责决策与执行。
 
@@ -10,7 +10,7 @@ v0.1.1 Milestone 3 提供了 OSAS 对接真实工单系统（Zendesk）与真实
 
 `OSAS_EXECUTION_MODE=shadow | live`（默认 `shadow`）。
 
-- **shadow** —— v0.1.1 唯一支持的模式。运行时只能：
+- **shadow** —— v0.2.0 唯一支持的模式。运行时只能：
   1. 创建 `ActionProposal`；
   2. 运行确定性的策略模拟（Policy Simulation）；
   3. 记录 `ShadowRun` —— "如果允许自动执行，将会执行什么"
@@ -49,7 +49,7 @@ Shadow Mode 不变量（由代码 + 测试强制）：
 绝不伪造成功。
 
 ```bash
-# Shadow Mode（默认；v0.1.1 中 "live" 会拒绝启动）
+# Shadow Mode（默认；v0.2.0 中 "live" 会拒绝启动）
 OSAS_EXECUTION_MODE=shadow
 
 # Zendesk
@@ -95,7 +95,7 @@ SHOPIFY_API_VERSION=2025-01                  # 可选，默认固定版本
 - Zendesk 写入（内部备注、升级）是幂等的：幂等键在进程内缓存，并以
   `X-Idempotency-Key` 头转发给上游。
 - Shopify Adapter **没有退款写路径**：`executeAction` 永远抛出
-  `CAPABILITY_UNSUPPORTED` 且不发任何 HTTP 请求。v0.1.1 刻意不提供真实
+  `CAPABILITY_UNSUPPORTED` 且不发任何 HTTP 请求。v0.2.0 刻意不提供真实
   退款执行；未来如需增加，必须经过独立 RFC。
 - 工单无法得知客户地区：`ZendeskAdapter` 的 Customer.region 使用占位
   `"ZZ"`，身份始终为 `unverified` —— 要求已验证身份的策略会（正确地）

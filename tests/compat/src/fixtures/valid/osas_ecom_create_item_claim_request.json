@@ -1,0 +1,10 @@
+{
+  "caseId": "case_refund",
+  "orderId": "ord_small",
+  "lineId": "line_1",
+  "claimType": "damaged",
+  "quantity": 1,
+  "reasonCode": "damaged",
+  "evidenceIds": ["ev_ord_small"],
+  "idempotencyKey": "idem_claim_1"
+}

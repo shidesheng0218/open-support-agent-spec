@@ -39,8 +39,8 @@ Releases are cut by the founding maintainers. The release gate is normative
 The specification, the JSON Schemas, and all `@osas/*` packages share **one semantic
 version** and are released in lockstep.
 
-- **v0.x (now):** any minor bump may be breaking; `specVersion` stays `"0.1"` for the
-  0.1.x line and is bumped with each new minor spec line.
+- **v0.x (now):** any minor bump may be breaking; `specVersion` stays `"0.2"` for the
+  0.2.x line and is bumped with each new minor spec line.
 - **v1.0 and later:** breaking changes require a major version bump; additive changes
   a minor bump; editorial/errata fixes a patch bump.
 
@@ -50,12 +50,12 @@ An implementation may declare **OSAS profile compatibility** (for `core`,
 `ecommerce`, or `saas`) only if the current compatibility suite
 (`@osas/compat-suite`) passes against that implementation and the machine-readable
 report (`tests/compat/report/latest.json` format) shows `ok: true` for the declared
-profile. Compatibility claims must name the spec version tested (e.g. "OSAS 0.1
+profile. Compatibility claims must name the spec version tested (e.g. "OSAS 0.2
 ecommerce-compatible").
 
 ## Path to v1.0
 
-OSAS v0.1 is a Draft. The gates for declaring v1.0:
+OSAS v0.2 is a Draft. The gates for declaring v1.0:
 
 1. **≥3 independent implementations** (beyond the reference implementation in this
    repository) pass the compat suite for a given profile.
