@@ -21,6 +21,8 @@ jobs:
       - run: pnpm typecheck
       # Milestone 4: offline policy eval is a hard CI gate (non-zero on gate failure).
       - run: pnpm eval:policy
+      - run: pnpm eval:after-sales
+      - run: pnpm eval:controlled
 
   compat:
     runs-on: ubuntu-latest
@@ -46,11 +48,14 @@ jobs:
     runs-on: ubuntu-latest
     needs: build-test
     env:
+      # Synthetic execution only; production/live remains fail-closed.
+      OSAS_EXECUTION_MODE: "sandbox"
       # Milestone 4: conformance mode is enabled ONLY for this throwaway CI
       # Docker environment (test-only key, never a real secret). The default
       # elsewhere is off, and production startup refuses it entirely.
       OSAS_CONFORMANCE_MODE: "true"
       OSAS_CONFORMANCE_KEY: "ci-conformance-test-key"
+      OSAS_PROVIDER_EVENT_KEY: "ci-provider-event-test-key"
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v4
@@ -85,12 +90,20 @@ jobs:
           echo "$report" | grep -Eq '"specVersion": *"0.2"'
           echo "$report" | grep -Eq '"ok": *true'
       - name: Black-box compat runner against the Docker API (conformance mode on)
-        run: pnpm osas:compat -- --target http://localhost:3001 --out compat-runner-report.json
+        run: pnpm osas:compat -- --target http://localhost:3001 --out "$GITHUB_WORKSPACE/compat-runner-report.json"
+      - name: Controlled Execution conformance against the Docker API
+        run: pnpm osas:compat -- --target http://localhost:3001 --profile controlled-execution --conformance-key ci-conformance-test-key --provider-event-key ci-provider-event-test-key --out "$GITHUB_WORKSPACE/controlled-execution-report.json"
       - uses: actions/upload-artifact@v4
         if: always()
         with:
           name: compat-runner-report
           path: compat-runner-report.json
+          if-no-files-found: warn
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: controlled-execution-report
+          path: controlled-execution-report.json
           if-no-files-found: warn
       - name: Assert web console served through nginx proxy
         run: |
@@ -103,6 +116,9 @@ jobs:
   e2e:
     runs-on: ubuntu-latest
     needs: docker
+    env:
+      # E2E exercises deterministic Sandbox execution, never real providers.
+      OSAS_EXECUTION_MODE: "sandbox"
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v4

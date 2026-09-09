@@ -1,5 +1,6 @@
 node_modules/
 dist/
+__pycache__/
 *.tsbuildinfo
 coverage/
 .DS_Store
@@ -11,3 +12,4 @@ playwright-report/
 test-results/
 tests/compat/report/
 evals/report/
+packages/compat-runner/*-report.json
