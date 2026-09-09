@@ -113,9 +113,11 @@ export const AUDIT_EVENT_TYPES: readonly AuditEventType[] = [
   "approval_requested",
   "approval_decided",
   "execution_started",
+  "execution_attempt_created",
   "execution_succeeded",
   "execution_failed",
   "execution_uncertain",
+  "provider_event_received",
   "reconciliation_opened",
   "reconciliation_resolved",
   "handoff_created",
@@ -389,7 +391,7 @@ export const CAPABILITIES: readonly Capability[] = [
 
 export const TRANSPORTS: readonly Transport[] = ["http", "mcp"];
 
-export const EXECUTION_MODES: readonly ExecutionMode[] = ["proposal_only", "shadow", "live"];
+export const EXECUTION_MODES: readonly ExecutionMode[] = ["proposal_only", "shadow", "sandbox", "live"];
 
 /* ---------------- Policy version lifecycle (introduced in v0.1.1) ---------------- */
 

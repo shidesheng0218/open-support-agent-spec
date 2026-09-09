@@ -29,8 +29,9 @@ v1.0 的硬性门槛**，实现者将在 v1.0 获得正式治理席位（见
 
 `schemas/manifest.json` 是权威清单，按 profile 分组：**core**
 （`core/` 下 14 项）、**ecommerce**（`profiles/ecommerce/` 下 2 项）、
-**saas**（`profiles/saas/` 下 3 项），以及 **tools**（`tools/` 下 16 个
-MCP 工具输入 Schema）。
+**saas**（`profiles/saas/` 下 3 项），以及 **tools**（`tools/` 下 20 个
+MCP 工具输入 Schema）。v0.3 Draft 的受控执行 Schema 单独列在
+`schemas/manifest-v0.3.json`。
 
 ### Core profile（所有实现必须具备）
 
@@ -73,6 +74,22 @@ MCP 工具输入 Schema）。
 - **审计哈希链**（规范 §12.3）：按租户追加式 SHA-256 链；
   `GET /v1/audit/verify` 返回 `{ intact: true, ... }`。
 - **Shadow Mode**（规范 §14）对兼容性为可选项——runner 不检查。
+
+### v0.3 Draft 受控执行 Profile
+
+`ecommerce-controlled-execution` 与稳定的 v0.2 套件分开验证。实现必须声明
+`sandbox` 和按动作类型的 `executionContracts`，并证明 Attempt、Receipt、幂等、
+不确定结果对账、Provider Event 去重和策略 fail-closed 边界。运行方式：
+
+```bash
+pnpm osas:compat -- --target http://localhost:3001 \
+  --profile controlled-execution \
+  --conformance-key <test-only-key> \
+  --provider-event-key <test-only-key> \
+  --out controlled-execution-report.json
+```
+
+该报告使用 `specVersion: "0.3"`，不会替代 v0.2 报告。
 
 ### Runner 期望的 HTTP 表面
 

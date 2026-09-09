@@ -1,0 +1,21 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://open-support-agent.dev/schemas/execution-v0.3/provider-event.json",
+  "title": "ProviderEvent",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["id", "specVersion", "tenantId", "provider", "providerEventId", "eventType", "idempotencyKey", "occurredAt", "payloadHash", "payload", "createdAt"],
+  "properties": {
+    "id": { "type": "string", "minLength": 1 },
+    "specVersion": { "const": "0.3" },
+    "tenantId": { "type": "string", "minLength": 1 },
+    "provider": { "type": "string", "minLength": 1 },
+    "providerEventId": { "type": "string", "minLength": 1 },
+    "eventType": { "type": "string", "minLength": 1 },
+    "idempotencyKey": { "type": "string", "minLength": 1 },
+    "occurredAt": { "type": "string", "format": "date-time" },
+    "payloadHash": { "type": "string", "minLength": 1 },
+    "payload": { "type": "object" },
+    "createdAt": { "type": "string", "format": "date-time" }
+  }
+}

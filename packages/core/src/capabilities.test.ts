@@ -76,7 +76,7 @@ describe("capability manifest enums (v0.1.1)", () => {
 
   it("defines transports and execution modes", () => {
     expect(TRANSPORTS).toEqual(["http", "mcp"]);
-    expect(EXECUTION_MODES).toEqual(["proposal_only", "shadow", "live"]);
+    expect(EXECUTION_MODES).toEqual(["proposal_only", "shadow", "sandbox", "live"]);
   });
 
   it("extends audit event types with policy lifecycle events", () => {

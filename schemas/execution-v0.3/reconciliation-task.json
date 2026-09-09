@@ -1,0 +1,21 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://open-support-agent.dev/schemas/execution-v0.3/reconciliation-task.json",
+  "title": "ReconciliationTask",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["id", "specVersion", "tenantId", "proposalId", "attemptId", "reason", "queryKey", "status", "createdAt"],
+  "properties": {
+    "id": { "type": "string", "minLength": 1 },
+    "specVersion": { "const": "0.3" },
+    "tenantId": { "type": "string", "minLength": 1 },
+    "proposalId": { "type": "string", "minLength": 1 },
+    "attemptId": { "type": "string", "minLength": 1 },
+    "reason": { "type": "string", "minLength": 1 },
+    "queryKey": { "type": "string", "minLength": 1 },
+    "status": { "enum": ["open", "resolved"] },
+    "resolvedBy": { "type": "string" },
+    "resolvedAt": { "type": "string", "format": "date-time" },
+    "createdAt": { "type": "string", "format": "date-time" }
+  }
+}

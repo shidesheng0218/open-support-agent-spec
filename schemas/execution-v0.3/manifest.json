@@ -1,0 +1,10 @@
+{
+  "specVersion": "0.3",
+  "schemas": [
+    { "name": "execution-attempt", "profile": "execution", "path": "execution-attempt.json" },
+    { "name": "execution-receipt", "profile": "execution", "path": "execution-receipt.json" },
+    { "name": "reconciliation-task", "profile": "execution", "path": "reconciliation-task.json" },
+    { "name": "provider-event", "profile": "execution", "path": "provider-event.json" },
+    { "name": "execution-capability", "profile": "execution", "path": "execution-capability.json" }
+  ]
+}

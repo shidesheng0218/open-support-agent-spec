@@ -42,7 +42,7 @@ default path.
 
 ## At a glance
 
-| 20 MCP tools | 3 profiles | 120 policy + 20 after-sales cases | 307 compatibility checks |
+| 20 MCP tools | 3 profiles | 120 policy + 100 after-sales cases | 307 compatibility checks |
 |---|---|---|---|
 | Core, ecommerce, SaaS | Schema-driven contracts | Offline safety evals | HTTP black-box conformance |
 
@@ -55,7 +55,7 @@ policy evaluations.
 ```mermaid
 flowchart LR
     M[LLM or Mock Provider] --> G[Model Gateway<br/>routing · budgets · injection detection]
-    G --> T[MCP Tool Surface<br/>16 typed tools]
+    G --> T[MCP Tool Surface<br/>20 typed tools]
     T --> A[Support Adapter<br/>BYO · Mock · Zendesk · Shopify]
     A --> B[(Helpdesk / Commerce / SaaS)]
     G --> P[Deterministic Policy Engine]
@@ -104,7 +104,7 @@ Then open:
 |---|---|---|
 | Web console | [`localhost:8080`](http://localhost:8080) | `/demo`, `/developer`, `/agent`, `/platform` |
 | API health | [`localhost:3001/health`](http://localhost:3001/health) | service and spec status |
-| Tool catalog | [`localhost:3001/v1/meta/tools`](http://localhost:3001/v1/meta/tools) | the 16 typed MCP tools |
+| Tool catalog | [`localhost:3001/v1/meta/tools`](http://localhost:3001/v1/meta/tools) | the 20 typed MCP tools |
 
 <details>
 <summary><strong>What the demo proves</strong></summary>
@@ -176,13 +176,19 @@ All knobs are env vars — see [.env.example](.env.example) for the annotated te
   `budget_warning` audit event; at the cap, model calls are blocked before the provider
   is touched. Usage is queryable via `GET /v1/usage` (policy_admin/auditor only).
 
-### Runtime configuration (Milestone 3)
+### Runtime configuration (Controlled Execution, v0.3 Draft)
 
-- **Execution mode** (`OSAS_EXECUTION_MODE`): `shadow` (default) is the only
-  supported mode — proposals are simulated, ShadowRuns record what would have
-  been auto-executed, and humans write final outcomes. `live` **refuses to
-  start** (`LIVE_EXECUTION_NOT_AVAILABLE_IN_V0_1_1`); live execution requires a
-  future RFC.
+- **Execution mode** (`OSAS_EXECUTION_MODE`): `shadow` (default) simulates
+  proposals without changing provider state; `proposal_only` only drafts;
+  `sandbox` runs the complete deterministic execution, idempotency, audit, and
+  reconciliation path against the synthetic Sandbox Adapter. `live` still
+  **refuses to start** (`LIVE_EXECUTION_NOT_AVAILABLE_IN_V0_1_1`) and is not
+  a production capability in this release.
+- The model never receives `execute`. Only the system executor may trigger an
+  execution attempt, and uncertain outcomes enter reconciliation instead of
+  being retried automatically. See
+  [Controlled Execution](docs/controlled-execution.md) and
+  [RFC 0003](rfcs/0003-controlled-execution-profile.md).
 - **Reference adapters** (fail closed when unconfigured; never required by the
   demo): Zendesk (`ZENDESK_BASE_URL`/`ZENDESK_SUBDOMAIN`, `ZENDESK_EMAIL`,
   `ZENDESK_API_TOKEN`, `ZENDESK_ESCALATION_GROUP_ID`), read-only Shopify
@@ -243,6 +249,12 @@ flowchart TB
   set (never in CI, never with the default mock). The model's semantic accuracy
   is reported independently — automation gates are never based on whether the
   model "sounds human".
+- **`pnpm eval:after-sales`** — evaluates 100 synthetic after-sales cases
+  (10 variants for each Top-10 scenario), with coverage, handoff, security,
+  duplicate, and fake-success gates.
+- **`pnpm eval:controlled`** — validates the v0.3 Draft execution fixtures,
+  uncertain-result non-retry behavior, Provider Event deduplication, and the
+  separate `ecommerce-controlled-execution` report.
 
 ## The three demo paths
 
@@ -299,7 +311,7 @@ blindly retries a write whose outcome is unknown.
 | Boundary | Default behavior |
 |---|---|
 | Model authority | `read` → `draft` → `request-approval`; never `execute` |
-| Execution | `shadow` only in v0.2; live mode refuses to start |
+| Execution | v0.2 keeps `shadow`; v0.3 Draft adds `proposal_only` and deterministic `sandbox`; `live` refuses to start |
 | Credentials | Backend secrets stay behind adapters, outside model context |
 | Prompt injection | Detected, blocked, handed off, and audited |
 | Cost controls | Daily and per-case budgets block provider calls at the cap |
@@ -322,7 +334,8 @@ policy engine / API backend may move a proposal to `executing`.
 ## Repository layout
 
 ```
-schemas/                 Authoritative JSON Schemas (draft 2020-12) + manifest.json
+schemas/                 Authoritative JSON Schemas (draft 2020-12) + manifests
+  execution-v0.3/        Controlled Execution Draft schemas
 packages/
   core/                  @osas/core             types, enums, state machines, detectInjection
   schema-validator/      @osas/schema-validator Ajv loader/validator over schemas/
@@ -332,18 +345,21 @@ packages/
   zendesk-adapter/       @osas/zendesk-adapter  Zendesk ticketing reference adapter (Milestone 3)
   shopify-adapter/       @osas/shopify-adapter  read-only Shopify reference adapter (Milestone 3)
   chatwoot-adapter/      @osas/chatwoot-adapter Chatwoot (open-source helpdesk) reference adapter
-  ecommerce-shadow/      @osas/ecommerce-shadow Shadow Mode: ShadowRun, stores, execution mode
+  ecommerce-shadow/      @osas/ecommerce-shadow Shadow/Sandbox execution, receipts, reconciliation
   mock-backend/          @osas/mock-backend     synthetic fixtures + MockSupportAdapter
   store-postgres/        @osas/store-postgres   PostgreSQL stores + SQL migrations (Milestone 2)
-  mcp-server/            @osas/mcp-server       16 tool definitions + stdio MCP server
-  compat-runner/         @osas/compat-runner    black-box HTTP conformance runner (Milestone 4)
+  mcp-server/            @osas/mcp-server       20 tool definitions + stdio MCP server
+  compat-runner/         @osas/compat-runner    black-box HTTP conformance runner (v0.2 + v0.3 profiles)
 apps/
   api/                   @osas/api              Fastify 5 HTTP API (port 3001)
   web/                   @osas/web              React 18 + Vite console (port 5173)
 tests/
   compat/                @osas/compat-suite     schema/compat suite + JSON report
   e2e/                   @osas/e2e              Playwright smoke (E2E=1)
-evals/                   @osas/evals            120-case synthetic dataset + eval:policy/eval:model
+evals/                   @osas/evals            120 policy + 100 after-sales synthetic cases
+implementations/
+  python-reference/      HTTP reference candidate (Core + Ecommerce + Sandbox)
+conformance/             public implementation registry and badges
 examples/                embed-policy-engine    minimal standalone embedding of @osas/policy-engine
 docs/  rfcs/  .github/workflows/  docker-compose.yml
 ```
@@ -402,18 +418,25 @@ embed `@osas/policy-engine` directly — see its
 - Chatwoot adapter: [docs/chatwoot-adapter.md](docs/chatwoot-adapter.md) · [中文](docs/chatwoot-adapter.zh-CN.md)
 - Implementing OSAS (third-party guide): [docs/implementing-osas.md](docs/implementing-osas.md) · [中文](docs/implementing-osas.zh-CN.md)
 - Conformance Mode (test-only): [docs/conformance.md](docs/conformance.md) · [中文](docs/conformance.zh-CN.md)
+- Controlled Execution (v0.3 Draft): [docs/controlled-execution.md](docs/controlled-execution.md) · [中文](docs/controlled-execution.zh-CN.md)
+- v0.3 Conformance Profiles: [docs/conformance-v0.3.md](docs/conformance-v0.3.md) · [中文](docs/conformance-v0.3.zh-CN.md)
 - Engineering contracts: [CONTRACTS.md](CONTRACTS.md)
 - Contributing: [CONTRIBUTING.md](CONTRIBUTING.md) · [中文](CONTRIBUTING.zh-CN.md)
 - Governance: [GOVERNANCE.md](GOVERNANCE.md)
 - Security policy: [SECURITY.md](SECURITY.md)
 - Code of conduct: [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md)
-- RFCs: [rfcs/](rfcs/) (start with [0001-v0.1-core](rfcs/0001-v0.1-core.md); positioning: [0002-osas-as-mcp-governance-profile](rfcs/0002-osas-as-mcp-governance-profile.md))
+- RFCs: [rfcs/](rfcs/) (start with [0001-v0.1-core](rfcs/0001-v0.1-core.md); positioning: [0002-osas-as-mcp-governance-profile](rfcs/0002-osas-as-mcp-governance-profile.md); controlled execution: [0003-controlled-execution-profile](rfcs/0003-controlled-execution-profile.md))
 - Changelog: [CHANGELOG.md](CHANGELOG.md)
 
 ## Status & roadmap
 
-OSAS v0.2 is a **Draft**. The path to v1.0:
+OSAS v0.2 remains a **Draft** and is kept backward-compatible while v0.3
+Controlled Execution is developed as a separate Draft profile. The path to v1.0:
 
+- [ ] v0.2.1 maintenance release has no documentation/schema/version drift.
+- [ ] v0.3 Controlled Execution Draft passes the Sandbox conformance suite.
+- [ ] A Python implementation passes Core + Ecommerce conformance; at least
+      three independent implementations pass before v1.0.
 - [ ] At least **3 independent implementations** (beyond this reference) pass the
       compat suite for a given profile.
 - [ ] All normative documents available in English and Chinese, kept in lockstep.

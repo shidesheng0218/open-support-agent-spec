@@ -99,6 +99,10 @@ describe("conformance endpoints", () => {
       policyVersions: 0,
       shadowRuns: 0,
       usageRecords: 0,
+      executionAttempts: 0,
+      executionReceipts: 0,
+      reconciliationTasks: 0,
+      providerEvents: 0,
     });
     expect(body.snapshot.auditChain.intact).toBe(true);
   });

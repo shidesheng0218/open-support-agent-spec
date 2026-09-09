@@ -30,8 +30,23 @@ describe("mock adapter capability manifest (v0.1.1)", () => {
     const declared = manifest.profiles.flatMap((p) => p.capabilities);
     expect([...declared].sort()).toEqual([...CAPABILITIES].sort());
     expect(manifest.transports).toEqual(["http", "mcp"]);
-    expect(manifest.executionModes).toEqual(["proposal_only", "shadow", "live"]);
+    expect(manifest.executionModes).toEqual(["proposal_only", "shadow", "sandbox"]);
     expect(manifest.specVersion).toBe("0.2");
+  });
+
+  it("publishes a controlled execution contract without advertising live", async () => {
+    const adapter = new MockSupportAdapter(createDemoFixtures());
+    const manifest = await adapter.getCapabilities!(ctx);
+    expect(manifest.executionContracts).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          actionType: "refund",
+          supportedModes: ["proposal_only", "shadow", "sandbox"],
+          supportsReconciliation: true,
+        }),
+      ]),
+    );
+    expect(manifest.executionModes).not.toContain("live");
   });
 });
 

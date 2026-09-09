@@ -4,7 +4,7 @@ import { resolveSchemasDir } from "./paths.js";
 
 export interface SchemaManifestEntry {
   name: string;
-  profile: "core" | "ecommerce" | "saas" | "tools";
+  profile: "core" | "ecommerce" | "saas" | "tools" | "execution";
   path: string;
 }
 

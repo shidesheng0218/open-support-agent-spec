@@ -17,8 +17,9 @@ export interface RunnerSuite {
 }
 
 export interface CompatRunReport {
-  specVersion: "0.2";
-  generator: "@osas/compat-runner@0.2.0";
+  specVersion: "0.2" | "0.3";
+  generator: "@osas/compat-runner@0.2.0" | "@osas/compat-runner@0.3.0-draft";
+  profile: "osas-v0.2" | "ecommerce-controlled-execution";
   target: string;
   runAt: string;
   mode: {
@@ -45,6 +46,10 @@ export interface RunnerOptions {
    * production deployment.
    */
   conformanceKey?: string;
+  /** Provider Event key used only by the controlled-execution profile. */
+  providerEventKey?: string;
+  /** Select the stable v0.2 suite or the separate v0.3 Draft suite. */
+  profile?: "v0.2" | "controlled-execution";
   /** Per-request timeout in ms. Default 10000. */
   timeoutMs?: number;
   /** Injectable fetch (tests). Defaults to global fetch. */

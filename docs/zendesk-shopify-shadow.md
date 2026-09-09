@@ -9,9 +9,9 @@ real commerce backend (Shopify) in
 
 ## What Shadow Mode is
 
-`OSAS_EXECUTION_MODE=shadow | live` (default `shadow`).
+`OSAS_EXECUTION_MODE=proposal_only | shadow | sandbox | live` (default `shadow`).
 
-- **shadow** — the only supported mode in v0.2.0. The runtime may only:
+- **shadow** — the v0.2-compatible default. The runtime may only:
   1. create `ActionProposal`s,
   2. run deterministic policy simulation,
   3. record a `ShadowRun` — "if automatic execution were allowed, this is
@@ -21,6 +21,11 @@ real commerce backend (Shopify) in
 - **live** — refuses to start. Booting with `OSAS_EXECUTION_MODE=live`
   aborts with `LIVE_EXECUTION_NOT_AVAILABLE_IN_V0_1_1`. Real execution
   capability requires a future RFC.
+
+- **sandbox** — a v0.3 Draft deterministic synthetic path. It exercises
+  execution attempts, receipts, idempotency, audit, and reconciliation without
+  calling Shopify, Zendesk, or any external provider. The real reference
+  adapters remain proposal/shadow-only in this release.
 
 Shadow Mode invariants (enforced by code + tests):
 

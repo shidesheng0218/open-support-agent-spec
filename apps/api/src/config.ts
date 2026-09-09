@@ -28,6 +28,13 @@ export function loadStorageConfig(env: NodeJS.ProcessEnv = process.env): Storage
   return { mode: "postgres", databaseUrl };
 }
 
+/** Optional internal key for Provider Event ingestion. It is never exposed to
+ * models or external principals; an absent key disables the endpoint. */
+export function loadProviderEventKey(env: NodeJS.ProcessEnv = process.env): string | undefined {
+  const key = env.OSAS_PROVIDER_EVENT_KEY?.trim();
+  return key || undefined;
+}
+
 /**
  * Conformance Mode (Milestone 4): test-only reset/fixture/snapshot endpoints
  * for the black-box compat runner. Fails closed: never allowed with

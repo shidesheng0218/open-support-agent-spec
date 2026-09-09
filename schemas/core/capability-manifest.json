@@ -44,10 +44,37 @@
     "executionModes": {
       "type": "array",
       "minItems": 1,
-      "items": { "type": "string", "enum": ["proposal_only", "shadow", "live"] },
+      "items": { "type": "string", "enum": ["proposal_only", "shadow", "sandbox", "live"] },
       "uniqueItems": true
     },
-    "adapterVersion": { "type": "string", "minLength": 1 }
+    "adapterVersion": { "type": "string", "minLength": 1 },
+    "executionContracts": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "actionType",
+          "supportedModes",
+          "approvalRequired",
+          "supportsIdempotency",
+          "supportsReconciliation",
+          "supportsCompensation"
+        ],
+        "properties": {
+          "actionType": { "type": "string", "minLength": 1 },
+          "supportedModes": {
+            "type": "array",
+            "items": { "enum": ["proposal_only", "shadow", "sandbox", "live"] },
+            "uniqueItems": true
+          },
+          "approvalRequired": { "type": "boolean" },
+          "supportsIdempotency": { "type": "boolean" },
+          "supportsReconciliation": { "type": "boolean" },
+          "supportsCompensation": { "type": "boolean" }
+        }
+      }
+    }
   },
   "$defs": {
     "Capability": {

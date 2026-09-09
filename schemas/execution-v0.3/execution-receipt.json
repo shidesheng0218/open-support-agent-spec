@@ -1,0 +1,21 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://open-support-agent.dev/schemas/execution-v0.3/execution-receipt.json",
+  "title": "ExecutionReceipt",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["id", "specVersion", "tenantId", "proposalId", "attemptId", "status", "safeToRetry", "createdAt"],
+  "properties": {
+    "id": { "type": "string", "minLength": 1 },
+    "specVersion": { "const": "0.3" },
+    "tenantId": { "type": "string", "minLength": 1 },
+    "proposalId": { "type": "string", "minLength": 1 },
+    "attemptId": { "type": "string", "minLength": 1 },
+    "status": { "enum": ["succeeded", "failed", "uncertain"] },
+    "externalRef": { "type": "string" },
+    "providerStatus": { "type": "string" },
+    "detail": { "type": "string" },
+    "safeToRetry": { "type": "boolean" },
+    "createdAt": { "type": "string", "format": "date-time" }
+  }
+}

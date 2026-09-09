@@ -57,7 +57,19 @@ function emptyFixtures(): DemoFixtures {
 
 async function snapshot(app: FastifyInstance, ctx: ToolContext) {
   const adapter: SupportAdapter = app.adapter;
-  const [cases, proposals, handoffs, auditEvents, policyVersions, shadowRuns, usage] =
+  const [
+    cases,
+    proposals,
+    handoffs,
+    auditEvents,
+    policyVersions,
+    shadowRuns,
+    usage,
+    executionAttempts,
+    executionReceipts,
+    reconciliationTasks,
+    providerEvents,
+  ] =
     await Promise.all([
       adapter.searchCases(ctx, {}),
       adapter.listProposals(ctx, {}),
@@ -66,6 +78,10 @@ async function snapshot(app: FastifyInstance, ctx: ToolContext) {
       app.policyStore.list(ctx.tenantId),
       app.shadowRunStore.list(ctx.tenantId),
       app.usageStore.query({ tenantId: ctx.tenantId }),
+      app.executionAttemptStore.list(ctx.tenantId),
+      app.executionReceiptStore.list(ctx.tenantId),
+      app.reconciliationStore.list(ctx.tenantId),
+      app.providerEventStore.list(ctx.tenantId),
     ]);
   return {
     tenantId: ctx.tenantId,
@@ -77,6 +93,10 @@ async function snapshot(app: FastifyInstance, ctx: ToolContext) {
       policyVersions: policyVersions.length,
       shadowRuns: shadowRuns.length,
       usageRecords: usage.length,
+      executionAttempts: executionAttempts.length,
+      executionReceipts: executionReceipts.length,
+      reconciliationTasks: reconciliationTasks.length,
+      providerEvents: providerEvents.length,
     },
     auditChain: verifyAuditChain(auditEvents),
   };
@@ -95,12 +115,23 @@ async function resetAll(app: FastifyInstance, fixtures: DemoFixtures): Promise<v
     // PostgreSQL-backed stores: clear the rows (adapter state above is still
     // the in-memory mock). Table set mirrors migrations 0001/0002.
     await app.pgPool.query(
-      "DELETE FROM execution_records; DELETE FROM shadow_runs; " +
+      "DELETE FROM provider_events; DELETE FROM reconciliation_tasks; " +
+        "DELETE FROM execution_receipts; DELETE FROM execution_attempts; " +
+        "DELETE FROM execution_records; DELETE FROM shadow_runs; " +
         "DELETE FROM model_usage; DELETE FROM audit_events; DELETE FROM policy_versions",
     );
     return;
   }
-  for (const store of [app.executionStore, app.policyStore, app.shadowRunStore, app.usageStore]) {
+  for (const store of [
+    app.executionStore,
+    app.policyStore,
+    app.shadowRunStore,
+    app.usageStore,
+    app.executionAttemptStore,
+    app.executionReceiptStore,
+    app.reconciliationStore,
+    app.providerEventStore,
+  ]) {
     (store as Partial<Resettable>).reset?.();
   }
 }

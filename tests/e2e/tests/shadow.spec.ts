@@ -11,7 +11,7 @@ async function createProposal(request: APIRequestContext, key: string): Promise<
       profile: "ecommerce",
       actionType: "refund",
       reasonCode: "damaged",
-      params: { orderId: "ord_small" },
+      params: { orderId: "ord_small", e2eRunId: key },
       requestedPermission: "request-approval",
       requestedBy: { actorType: "model", actorId: "mock-local" },
       amount: { currency: "USD", minorUnits: 2500 },

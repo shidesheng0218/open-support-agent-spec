@@ -16,22 +16,33 @@ export class HttpClient {
     this.baseUrl = opts.target.replace(/\/+$/, "");
   }
 
-  private headers(role?: string, conformanceKey?: string): Record<string, string> {
+  private headers(
+    role?: string,
+    conformanceKey?: string,
+    providerEventKey?: string,
+  ): Record<string, string> {
     const h: Record<string, string> = {};
     if (this.opts.token) h.authorization = `Bearer ${this.opts.token}`;
     // Demo-auth targets read these headers; jwt-mode targets ignore them.
     h["x-tenant-id"] = this.opts.tenant ?? "tenant_demo";
     h["x-osas-role"] = role ?? this.opts.role ?? "policy_admin";
     if (conformanceKey) h["x-osas-conformance-key"] = conformanceKey;
+    if (providerEventKey) h["x-osas-provider-key"] = providerEventKey;
     return h;
   }
 
   async request(
     method: string,
     path: string,
-    opts: { body?: unknown; role?: string; conformanceKey?: string; tenant?: string } = {},
+    opts: {
+      body?: unknown;
+      role?: string;
+      conformanceKey?: string;
+      providerEventKey?: string;
+      tenant?: string;
+    } = {},
   ): Promise<{ status: number; body: unknown }> {
-    const headers = this.headers(opts.role, opts.conformanceKey);
+    const headers = this.headers(opts.role, opts.conformanceKey, opts.providerEventKey);
     if (opts.tenant) headers["x-tenant-id"] = opts.tenant;
     if (opts.body !== undefined) headers["content-type"] = "application/json";
     const res = await (this.opts.fetchFn ?? fetch)(`${this.baseUrl}${path}`, {
@@ -50,11 +61,11 @@ export class HttpClient {
     return { status: res.status, body };
   }
 
-  get(path: string, opts?: { role?: string; conformanceKey?: string; tenant?: string }) {
+  get(path: string, opts?: { role?: string; conformanceKey?: string; providerEventKey?: string; tenant?: string }) {
     return this.request("GET", path, opts);
   }
 
-  post(path: string, body?: unknown, opts?: { role?: string; conformanceKey?: string; tenant?: string }) {
+  post(path: string, body?: unknown, opts?: { role?: string; conformanceKey?: string; providerEventKey?: string; tenant?: string }) {
     return this.request("POST", path, { ...opts, body });
   }
 

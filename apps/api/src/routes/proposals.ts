@@ -94,6 +94,11 @@ export async function proposalRoutes(app: FastifyInstance): Promise<void> {
   app.post("/v1/proposals/:id/execute", async (req) => {
     const ctx = ctxFor(req);
     const { id } = req.params as { id: string };
+    if (app.executionMode.mode !== "sandbox") {
+      throw new ConflictError(
+        "Proposal-only and Shadow modes are simulation-only; configure sandbox for synthetic execution",
+      );
+    }
     const proposal = await adapter.getProposal(ctx, id);
     const actionCapability = EXECUTE_CAPABILITY[proposal.actionType];
     if (actionCapability) await requireAdapterCapability(adapter, ctx, actionCapability);
@@ -108,9 +113,20 @@ export async function proposalRoutes(app: FastifyInstance): Promise<void> {
     }
     const outcome = await runExecution(adapter, ctx, app.executionStore, proposal, {
       sink: app.auditStore,
+      mode: app.executionMode.mode,
+      attemptStore: app.executionAttemptStore,
+      receiptStore: app.executionReceiptStore,
+      reconciliationStore: app.reconciliationStore,
       ...(app.pgPool ? { pgPool: app.pgPool } : {}),
     });
-    return { proposal: outcome.proposal, execution: outcome.execution, replayed: outcome.replayed };
+    return {
+      proposal: outcome.proposal,
+      execution: outcome.execution,
+      replayed: outcome.replayed,
+      ...(outcome.attempt ? { attempt: outcome.attempt } : {}),
+      ...(outcome.receipt ? { receipt: outcome.receipt } : {}),
+      ...(outcome.reconciliation ? { reconciliation: outcome.reconciliation } : {}),
+    };
   });
 
   app.post("/v1/proposals/:id/reconcile", async (req) => {
@@ -121,6 +137,14 @@ export async function proposalRoutes(app: FastifyInstance): Promise<void> {
       throw new SchemaInvalidError([{ message: 'body must be { outcome: "succeeded" | "failed", note? }' }]);
     }
     const proposal = await adapter.getProposal(ctx, id);
-    return runReconcile(adapter, ctx, proposal, body.outcome, body.note, app.auditStore);
+    return runReconcile(
+      adapter,
+      ctx,
+      proposal,
+      body.outcome,
+      body.note,
+      app.auditStore,
+      app.reconciliationStore,
+    );
   });
 }

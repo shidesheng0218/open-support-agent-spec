@@ -15,13 +15,15 @@ services:
       OSAS_STORAGE: ${OSAS_STORAGE:-memory}
       DATABASE_URL: ${DATABASE_URL:-postgres://osas:osas@db:5432/osas}
       OSAS_LLM_PROVIDER: ${OSAS_LLM_PROVIDER:-mock}
-      # Execution mode (Milestone 3): shadow only; "live" refuses to start.
+      # Execution mode: shadow is the product default; CI/E2E may override to
+      # sandbox for deterministic synthetic execution.
       OSAS_EXECUTION_MODE: ${OSAS_EXECUTION_MODE:-shadow}
       # Conformance mode (Milestone 4): OFF by default; CI enables it for the
       # throwaway Docker test environment only. Never enable in production —
       # startup fails closed when NODE_ENV=production.
       OSAS_CONFORMANCE_MODE: ${OSAS_CONFORMANCE_MODE:-false}
       OSAS_CONFORMANCE_KEY: ${OSAS_CONFORMANCE_KEY:-}
+      OSAS_PROVIDER_EVENT_KEY: ${OSAS_PROVIDER_EVENT_KEY:-}
     ports:
       - "3001:3001"
 

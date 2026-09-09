@@ -44,8 +44,13 @@ declare module "fastify" {
     policyStore: PolicyStore;
     /** Milestone 3: ShadowRun persistence (memory or Postgres). */
     shadowRunStore: import("@osas/ecommerce-shadow").ShadowRunStore;
-    /** Milestone 3: always "shadow" in v0.2.0 — "live" aborts startup. */
+    /** v0.2 defaults to shadow; v0.3 sandbox is synthetic-only. */
     executionMode: import("@osas/ecommerce-shadow").ExecutionModeConfig;
+    executionAttemptStore: import("@osas/ecommerce-shadow").ExecutionAttemptStore;
+    executionReceiptStore: import("@osas/ecommerce-shadow").ExecutionReceiptStore;
+    reconciliationStore: import("@osas/ecommerce-shadow").ReconciliationStore;
+    providerEventStore: import("@osas/ecommerce-shadow").ProviderEventStore;
+    providerEventKey?: string;
     gateway: ModelGateway;
     usageStore: UsageStore;
     /** Present when OSAS_STORAGE=postgres (audit stream mirror). */

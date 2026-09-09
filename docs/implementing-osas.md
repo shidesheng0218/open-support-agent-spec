@@ -30,10 +30,11 @@ ISO 8601 `date-time`; IDs are opaque strings.
 
 ## The minimal implementation path
 
-`schemas/manifest.json` is the authoritative inventory. It groups schemas by
+`schemas/manifest.json` is the v0.2 authoritative inventory. It groups schemas by
 profile: **core** (14 entries under `core/`), **ecommerce** (2 under
 `profiles/ecommerce/`), **saas** (3 under `profiles/saas/`), and **tools**
-(16 MCP tool input schemas under `tools/`).
+(20 MCP tool input schemas under `tools/`). The v0.3 Draft execution schemas
+are listed separately in `schemas/manifest-v0.3.json`.
 
 ### Core profile (required by every implementation)
 
@@ -78,6 +79,24 @@ compatibility claim today:
   `GET /v1/audit/verify` → `{ intact: true, ... }`.
 - **Shadow Mode** (spec §14) is optional for compatibility — the runner does
   not exercise it.
+
+### v0.3 Draft Controlled Execution profile
+
+The `ecommerce-controlled-execution` profile is tested separately from the
+stable v0.2 suite. Implementations must declare `sandbox` and per-action
+`executionContracts`, then prove attempts, receipts, idempotency, uncertain
+result reconciliation, Provider Event deduplication, and fail-closed policy
+boundaries. Run it with:
+
+```bash
+pnpm osas:compat -- --target http://localhost:3001 \
+  --profile controlled-execution \
+  --conformance-key <test-only-key> \
+  --provider-event-key <test-only-key> \
+  --out controlled-execution-report.json
+```
+
+This report is `specVersion: "0.3"` and does not replace the v0.2 report.
 
 ### HTTP surface the runner expects
 

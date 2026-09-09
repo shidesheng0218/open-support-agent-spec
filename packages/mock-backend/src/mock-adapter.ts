@@ -841,8 +841,50 @@ export class MockSupportAdapter implements SupportAdapter {
         },
       ],
       transports: ["http", "mcp"],
-      executionModes: ["proposal_only", "shadow", "live"],
+      executionModes: ["proposal_only", "shadow", "sandbox"],
       adapterVersion: "0.2.0",
+      executionContracts: [
+        {
+          actionType: "refund",
+          supportedModes: ["proposal_only", "shadow", "sandbox"],
+          approvalRequired: true,
+          supportsIdempotency: true,
+          supportsReconciliation: true,
+          supportsCompensation: false,
+        },
+        {
+          actionType: "return_request",
+          supportedModes: ["proposal_only", "shadow", "sandbox"],
+          approvalRequired: true,
+          supportsIdempotency: true,
+          supportsReconciliation: true,
+          supportsCompensation: false,
+        },
+        {
+          actionType: "reshipment",
+          supportedModes: ["proposal_only", "shadow", "sandbox"],
+          approvalRequired: true,
+          supportsIdempotency: true,
+          supportsReconciliation: true,
+          supportsCompensation: false,
+        },
+        {
+          actionType: "cancel_order",
+          supportedModes: ["proposal_only", "shadow", "sandbox"],
+          approvalRequired: true,
+          supportsIdempotency: true,
+          supportsReconciliation: true,
+          supportsCompensation: false,
+        },
+        {
+          actionType: "exchange_request",
+          supportedModes: ["proposal_only", "shadow", "sandbox"],
+          approvalRequired: true,
+          supportsIdempotency: true,
+          supportsReconciliation: true,
+          supportsCompensation: false,
+        },
+      ],
     };
   }
 }

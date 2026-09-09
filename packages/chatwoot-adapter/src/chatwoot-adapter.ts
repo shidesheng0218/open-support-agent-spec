@@ -371,6 +371,7 @@ export class ChatwootAdapter implements SupportAdapter {
       transports: ["http"],
       // Shadow Mode reference integration: no live execution, ever (v0.2.0).
       executionModes: ["shadow"],
+      executionContracts: [],
       adapterVersion: this.adapterVersion,
     };
   }

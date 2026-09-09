@@ -17,7 +17,7 @@ describe("after-sales top-10 dataset", () => {
   it(`contains exactly ${AFTER_SALES_CASE_COUNT} valid cases covering all 10 scenarios`, () => {
     expect(dataset.cases).toHaveLength(AFTER_SALES_CASE_COUNT);
     for (const scenario of AFTER_SALES_SCENARIOS) {
-      expect(dataset.byScenario[scenario]?.length ?? 0, scenario).toBeGreaterThanOrEqual(2);
+      expect(dataset.byScenario[scenario]?.length ?? 0, scenario).toBeGreaterThanOrEqual(10);
     }
   });
 

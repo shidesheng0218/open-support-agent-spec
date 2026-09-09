@@ -5,7 +5,9 @@ import { requireAdapterCapability, type SupportAdapter, type ToolContext } from 
 import type { CaseStatus, Profile } from "@osas/core";
 import { verifyAuditChain } from "@osas/policy-engine";
 import * as schemaValidator from "@osas/schema-validator";
+import { createValidator, resolveSchemasDir } from "@osas/schema-validator";
 import { TOOL_DEFINITIONS } from "@osas/mcp-server";
+import { join } from "node:path";
 import {
   API_VERSION,
   SPEC_VERSION,
@@ -46,6 +48,7 @@ export { validateSchema };
 
 export async function basicRoutes(app: FastifyInstance): Promise<void> {
   const adapter: SupportAdapter = app.adapter;
+  const executionSchemas = createValidator(join(resolveSchemasDir(), "execution-v0.3"));
 
   app.get("/health", async () => ({ status: "ok", specVersion: SPEC_VERSION, version: API_VERSION }));
 
@@ -62,6 +65,9 @@ export async function basicRoutes(app: FastifyInstance): Promise<void> {
         policies: "/v1/policies/:tenantId",
         auditVerify: "/v1/audit/verify",
         compatReport: "/v1/compat/report",
+        executions: "/v1/executions/:id",
+        reconciliation: "/v1/reconciliation",
+        providerEvents: "/v1/provider-events",
       },
     };
   });
@@ -120,6 +126,24 @@ export async function basicRoutes(app: FastifyInstance): Promise<void> {
   });
 
   app.get("/v1/schemas", async () => schemaValidator.loadManifest());
+
+  // v0.3 Draft schemas are published separately so the stable v0.2 manifest
+  // and its compatibility contract remain unchanged.
+  app.get("/v1/schemas/execution-v0.3", async () => executionSchemas.loadManifest());
+
+  app.get("/v1/schemas/execution-v0.3/:name", async (req, reply) => {
+    const { name } = req.params as { name: string };
+    try {
+      return executionSchemas.loadSchema(name);
+    } catch (err) {
+      if (isUnknownSchema(err)) {
+        return reply
+          .code(404)
+          .send({ error: { code: "NOT_FOUND", message: `Schema "execution-v0.3/${name}" not found` } });
+      }
+      throw err;
+    }
+  });
 
   app.get("/v1/schemas/:name", async (req, reply) => {
     const { name } = req.params as { name: string };

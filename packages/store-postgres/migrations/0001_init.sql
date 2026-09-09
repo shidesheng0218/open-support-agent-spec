@@ -97,6 +97,76 @@ CREATE TABLE IF NOT EXISTS execution_records (
   PRIMARY KEY (tenant_id, idempotency_key)
 );
 
+-- v0.3 controlled execution records. Full JSON payloads preserve forward
+-- compatibility while dedicated columns support tenant-scoped queries.
+CREATE TABLE IF NOT EXISTS execution_attempts (
+  tenant_id           text NOT NULL REFERENCES tenants (tenant_id),
+  attempt_id          text NOT NULL,
+  proposal_id         text NOT NULL,
+  idempotency_key     text NOT NULL,
+  mode                text NOT NULL,
+  status              text NOT NULL,
+  request_hash        text NOT NULL,
+  provider_request_id text,
+  started_at          timestamptz NOT NULL,
+  finished_at         timestamptz,
+  payload             jsonb NOT NULL,
+  PRIMARY KEY (tenant_id, attempt_id)
+);
+CREATE INDEX IF NOT EXISTS execution_attempts_proposal_idx
+  ON execution_attempts (tenant_id, proposal_id, started_at);
+
+CREATE TABLE IF NOT EXISTS execution_receipts (
+  tenant_id      text NOT NULL REFERENCES tenants (tenant_id),
+  receipt_id     text NOT NULL,
+  proposal_id    text NOT NULL,
+  attempt_id     text NOT NULL,
+  status         text NOT NULL,
+  external_ref   text,
+  provider_status text,
+  detail         text,
+  safe_to_retry  boolean NOT NULL,
+  payload        jsonb NOT NULL,
+  created_at     timestamptz NOT NULL,
+  PRIMARY KEY (tenant_id, receipt_id)
+);
+CREATE INDEX IF NOT EXISTS execution_receipts_proposal_idx
+  ON execution_receipts (tenant_id, proposal_id, created_at);
+
+CREATE TABLE IF NOT EXISTS reconciliation_tasks (
+  tenant_id    text NOT NULL REFERENCES tenants (tenant_id),
+  task_id      text NOT NULL,
+  proposal_id  text NOT NULL,
+  attempt_id   text NOT NULL,
+  reason       text NOT NULL,
+  query_key    text NOT NULL,
+  status       text NOT NULL,
+  resolved_by  text,
+  resolved_at  timestamptz,
+  payload      jsonb NOT NULL,
+  created_at   timestamptz NOT NULL,
+  PRIMARY KEY (tenant_id, task_id)
+);
+CREATE INDEX IF NOT EXISTS reconciliation_tasks_status_idx
+  ON reconciliation_tasks (tenant_id, status, created_at);
+
+CREATE TABLE IF NOT EXISTS provider_events (
+  tenant_id         text NOT NULL REFERENCES tenants (tenant_id),
+  event_id          text NOT NULL,
+  provider          text NOT NULL,
+  provider_event_id text NOT NULL,
+  event_type        text NOT NULL,
+  idempotency_key   text NOT NULL,
+  occurred_at       timestamptz NOT NULL,
+  payload_hash      text NOT NULL,
+  payload           jsonb NOT NULL,
+  created_at        timestamptz NOT NULL,
+  PRIMARY KEY (tenant_id, event_id),
+  UNIQUE (tenant_id, provider, provider_event_id)
+);
+CREATE INDEX IF NOT EXISTS provider_events_idempotency_idx
+  ON provider_events (tenant_id, idempotency_key, occurred_at);
+
 -- Milestone 3 fills the semantics; the table exists now so shadow evaluations
 -- have a stable home.
 CREATE TABLE IF NOT EXISTS shadow_runs (

@@ -1,0 +1,21 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://open-support-agent.dev/schemas/execution-v0.3/execution-attempt.json",
+  "title": "ExecutionAttempt",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["id", "specVersion", "tenantId", "proposalId", "idempotencyKey", "mode", "status", "requestHash", "startedAt"],
+  "properties": {
+    "id": { "type": "string", "minLength": 1 },
+    "specVersion": { "const": "0.3" },
+    "tenantId": { "type": "string", "minLength": 1 },
+    "proposalId": { "type": "string", "minLength": 1 },
+    "idempotencyKey": { "type": "string", "minLength": 1 },
+    "mode": { "enum": ["proposal_only", "shadow", "sandbox", "live"] },
+    "status": { "enum": ["started", "succeeded", "failed", "uncertain"] },
+    "requestHash": { "type": "string", "minLength": 1 },
+    "providerRequestId": { "type": "string" },
+    "startedAt": { "type": "string", "format": "date-time" },
+    "finishedAt": { "type": "string", "format": "date-time" }
+  }
+}

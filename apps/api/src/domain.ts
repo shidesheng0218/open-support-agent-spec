@@ -1,3 +1,4 @@
+import { randomUUID } from "node:crypto";
 import type { SupportAdapter, ToolContext } from "@osas/adapter";
 import type {
   ActionProposal,
@@ -7,6 +8,10 @@ import type {
   Customer,
   Evidence,
   ExecutionResult,
+  ExecutionMode,
+  ExecutionAttempt,
+  ExecutionReceipt,
+  ReconciliationTask,
   HandoffReason,
   HumanHandoff,
   PolicyDecision,
@@ -21,6 +26,14 @@ import {
   withTransaction,
 } from "@osas/store-postgres";
 import type { Pool } from "@osas/store-postgres";
+import {
+  createExecutionAttempt,
+  createExecutionReceipt,
+  createReconciliationTask,
+  type ExecutionAttemptStore,
+  type ExecutionReceiptStore,
+  type ReconciliationStore,
+} from "@osas/ecommerce-shadow";
 import { ConflictError } from "./plugins.js";
 
 type AuditInput = Omit<AuditEvent, "id" | "specVersion" | "createdAt" | "tenantId">;
@@ -229,6 +242,9 @@ export interface ExecutionOutcome {
   proposal: ActionProposal;
   execution: ExecutionResult;
   replayed: boolean;
+  attempt?: ExecutionAttempt;
+  receipt?: ExecutionReceipt;
+  reconciliation?: ReconciliationTask;
 }
 
 // §5: execute an approved proposal through the engine + ExecutionStore.
@@ -241,16 +257,52 @@ export async function runExecution(
   ctx: ToolContext,
   store: ExecutionStore,
   proposal: ActionProposal,
-  opts: { sink?: AuditSink; pgPool?: Pool } = {},
+  opts: {
+    sink?: AuditSink;
+    pgPool?: Pool;
+    mode?: ExecutionMode;
+    attemptStore?: ExecutionAttemptStore;
+    receiptStore?: ExecutionReceiptStore;
+    reconciliationStore?: ReconciliationStore;
+  } = {},
 ): Promise<ExecutionOutcome> {
+  if (opts.mode === "proposal_only" || opts.mode === "shadow") {
+    throw new ConflictError(
+      "Proposal-only and Shadow modes are simulation-only; configure OSAS_EXECUTION_MODE=sandbox for synthetic execution",
+    );
+  }
   const stored = await store.get(ctx.tenantId, proposal.idempotencyKey);
   if (stored) {
-    return { proposal, execution: stored.result, replayed: true };
+    const attempts = opts.attemptStore ? await opts.attemptStore.list(ctx.tenantId, proposal.id) : [];
+    const receipts = opts.receiptStore ? await opts.receiptStore.list(ctx.tenantId, proposal.id) : [];
+    return {
+      proposal,
+      execution: stored.result,
+      replayed: true,
+      ...(attempts.at(-1) ? { attempt: attempts.at(-1) } : {}),
+      ...(receipts.at(-1) ? { receipt: receipts.at(-1) } : {}),
+    };
   }
   if (proposal.status !== "approved") {
     throw new ConflictError(
       `Proposal ${proposal.id} is "${proposal.status}"; only approved proposals can be executed`,
     );
+  }
+
+  const attempt = opts.attemptStore
+    ? await opts.attemptStore.create(
+        createExecutionAttempt(proposal, opts.mode ?? "shadow", { id: `attempt_${randomUUID()}` }),
+      )
+    : undefined;
+  if (attempt) {
+    await audit(adapter, ctx, {
+      caseId: proposal.caseId,
+      proposalId: proposal.id,
+      eventType: "execution_attempt_created",
+      actorType: "system",
+      actorId: "osas-api",
+      detail: { attemptId: attempt.id, mode: attempt.mode, requestHash: attempt.requestHash },
+    }, opts.sink);
   }
 
   await adapter.updateProposalStatus(ctx, proposal.id, "executing");
@@ -275,8 +327,30 @@ export async function runExecution(
   const finish = async (
     outcome: { proposal: ActionProposal; execution: ExecutionResult },
     sink?: AuditSink,
-  ): Promise<ActionProposal> => {
+  ): Promise<{ proposal: ActionProposal; receipt?: ExecutionReceipt; reconciliation?: ReconciliationTask }> => {
     const persisted = await adapter.updateProposalStatus(ctx, proposal.id, outcome.proposal.status);
+    const receipt =
+      attempt && opts.receiptStore
+        ? await opts.receiptStore.create(
+            createExecutionReceipt(attempt, outcome.execution, { id: `receipt_${randomUUID()}` }),
+          )
+        : undefined;
+    let reconciliation: ReconciliationTask | undefined;
+    if (attempt && opts.attemptStore) {
+      await opts.attemptStore.create({
+        ...attempt,
+        status: outcome.execution.status,
+        ...(outcome.execution.providerRequestId
+          ? { providerRequestId: outcome.execution.providerRequestId }
+          : {}),
+        finishedAt: new Date().toISOString(),
+      });
+    }
+    if (attempt && outcome.execution.status === "uncertain" && opts.reconciliationStore) {
+      reconciliation = await opts.reconciliationStore.create(
+        createReconciliationTask(attempt, outcome.execution, { id: `recon_${randomUUID()}` }),
+      );
+    }
     const base = {
       caseId: proposal.caseId,
       proposalId: proposal.id,
@@ -284,13 +358,13 @@ export async function runExecution(
       actorId: "osas-api",
     };
     if (outcome.execution.status === "succeeded") {
-      await audit(adapter, ctx, { ...base, eventType: "execution_succeeded", detail: { ...outcome.execution } }, sink);
+      await audit(adapter, ctx, { ...base, eventType: "execution_succeeded", detail: { ...outcome.execution, ...(receipt ? { receiptId: receipt.id } : {}) } }, sink);
     } else if (outcome.execution.status === "failed") {
-      await audit(adapter, ctx, { ...base, eventType: "execution_failed", detail: { ...outcome.execution } }, sink);
+      await audit(adapter, ctx, { ...base, eventType: "execution_failed", detail: { ...outcome.execution, ...(receipt ? { receiptId: receipt.id } : {}) } }, sink);
     } else {
       // uncertain: never auto-retry — park + open reconciliation + handoff.
-      await audit(adapter, ctx, { ...base, eventType: "execution_uncertain", detail: { ...outcome.execution } }, sink);
-      await audit(adapter, ctx, { ...base, eventType: "reconciliation_opened", detail: { idempotencyKey: proposal.idempotencyKey } }, sink);
+      await audit(adapter, ctx, { ...base, eventType: "execution_uncertain", detail: { ...outcome.execution, ...(receipt ? { receiptId: receipt.id } : {}) } }, sink);
+      await audit(adapter, ctx, { ...base, eventType: "reconciliation_opened", detail: { idempotencyKey: proposal.idempotencyKey, ...(reconciliation ? { reconciliationId: reconciliation.id } : {}) } }, sink);
       const handoff = await adapter.createHandoff(ctx, {
         tenantId: ctx.tenantId,
         caseId: proposal.caseId,
@@ -304,23 +378,47 @@ export async function runExecution(
         detail: { handoffId: handoff.id, reason: handoff.reason },
       }, sink);
     }
-    return persisted;
+    return { proposal: persisted, ...(receipt ? { receipt } : {}), ...(reconciliation ? { reconciliation } : {}) };
   };
 
   if (opts.pgPool) {
-    const { outcome, persisted } = await withTransaction(opts.pgPool, async (client) => {
+    const transactionResult = await withTransaction(opts.pgPool, async (client) => {
       const out = await executeProposal(proposal, executor, new PostgresExecutionStore(client));
-      const persistedProposal = await finish(out, {
+      const finished = await finish(out, {
         append: (event) => new PostgresAuditStore(client).append(event),
       });
-      return { outcome: out, persisted: persistedProposal };
+      return { outcome: out, ...finished };
     });
-    return { proposal: persisted, execution: outcome.execution, replayed: false };
+    return {
+      proposal: transactionResult.proposal,
+      execution: transactionResult.outcome.execution,
+      replayed: false,
+      ...(transactionResult.receipt ? { receipt: transactionResult.receipt } : {}),
+      ...(transactionResult.reconciliation ? { reconciliation: transactionResult.reconciliation } : {}),
+      ...(attempt
+        ? {
+            attempt: {
+              ...attempt,
+              status: transactionResult.outcome.execution.status,
+              finishedAt: new Date().toISOString(),
+            },
+          }
+        : {}),
+    };
   }
 
   const outcome = await executeProposal(proposal, executor, store);
-  const persisted = await finish(outcome, opts.sink);
-  return { proposal: persisted, execution: outcome.execution, replayed: false };
+  const finished = await finish(outcome, opts.sink);
+  return {
+    proposal: finished.proposal,
+    execution: outcome.execution,
+    replayed: false,
+    ...(attempt
+      ? { attempt: { ...attempt, status: outcome.execution.status, finishedAt: new Date().toISOString() } }
+      : {}),
+    ...(finished.receipt ? { receipt: finished.receipt } : {}),
+    ...(finished.reconciliation ? { reconciliation: finished.reconciliation } : {}),
+  };
 }
 
 // §5 reconcile: reconciliation_required -> executed|failed + reconciliation_resolved.
@@ -331,6 +429,7 @@ export async function runReconcile(
   outcome: "succeeded" | "failed",
   note?: string,
   sink?: AuditSink,
+  reconciliationStore?: ReconciliationStore,
 ): Promise<ActionProposal> {
   const resolved = reconcile(proposal, outcome); // throws ReconcileStatusError -> 409
   const updated = await adapter.updateProposalStatus(ctx, proposal.id, resolved.status);
@@ -342,5 +441,10 @@ export async function runReconcile(
     actorId: ctx.principal.actorId,
     detail: { outcome, note },
   }, sink);
+  if (reconciliationStore) {
+    const tasks = await reconciliationStore.list(ctx.tenantId, "open");
+    const task = tasks.find((candidate) => candidate.proposalId === proposal.id);
+    if (task) await reconciliationStore.resolve(task, ctx.principal.actorId);
+  }
   return updated;
 }

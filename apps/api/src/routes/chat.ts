@@ -338,9 +338,13 @@ export async function chatRoutes(app: FastifyInstance): Promise<void> {
     });
 
     let execution;
-    if (evaluation.decision.decision === "auto_execute") {
+    if (evaluation.decision.decision === "auto_execute" && app.executionMode.mode === "sandbox") {
       execution = await runExecution(adapter, ctx, app.executionStore, evaluation.proposal, {
         sink: app.auditStore,
+        mode: app.executionMode.mode,
+        attemptStore: app.executionAttemptStore,
+        receiptStore: app.executionReceiptStore,
+        reconciliationStore: app.reconciliationStore,
         ...(app.pgPool ? { pgPool: app.pgPool } : {}),
       });
     }

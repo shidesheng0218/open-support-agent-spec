@@ -366,6 +366,7 @@ export class ShopifyAdapter implements SupportAdapter {
       transports: ["http"],
       // No live execution — refund.execute is deliberately undeclared.
       executionModes: ["shadow"],
+      executionContracts: [],
       adapterVersion: this.adapterVersion,
     };
   }

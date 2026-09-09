@@ -6,12 +6,13 @@
  */
 
 export class LiveExecutionNotAvailableError extends Error {
+  // Preserve the v0.2 error code so existing clients can continue to classify
+  // the fail-closed live-mode response while the v0.3 Draft adds Sandbox.
   readonly code = "LIVE_EXECUTION_NOT_AVAILABLE_IN_V0_1_1";
   constructor() {
     super(
-      "OSAS_EXECUTION_MODE=live is not available in v0.2.0. " +
-        "Shadow Mode is the only supported execution mode: proposals are simulated " +
-        "(ShadowRun) and final outcomes are written by humans. " +
+      "OSAS_EXECUTION_MODE=live is not available in v0.3 Draft. " +
+        "Proposal-only, Shadow, and Sandbox are the supported non-live modes. " +
         'Run with OSAS_EXECUTION_MODE=shadow (the default).',
     );
     this.name = "LiveExecutionNotAvailableError";
@@ -21,7 +22,7 @@ export class LiveExecutionNotAvailableError extends Error {
 export class ExecutionModeConfigError extends Error {
   readonly code = "EXECUTION_MODE_CONFIG_INVALID";
   constructor(value: string) {
-    super(`OSAS_EXECUTION_MODE must be "shadow" or "live"; got "${value}"`);
+    super(`OSAS_EXECUTION_MODE must be "proposal_only", "shadow", "sandbox" or "live"; got "${value}"`);
     this.name = "ExecutionModeConfigError";
   }
 }

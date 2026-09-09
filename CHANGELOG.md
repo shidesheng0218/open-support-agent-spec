@@ -7,6 +7,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **Controlled Execution Profile (v0.3 Draft)**: deterministic `sandbox` mode,
+  execution attempts and receipts, provider-event deduplication, reconciliation
+  tasks, execution capability contracts, and PostgreSQL persistence for the new
+  records. `live` remains fail-closed and no real provider write path was added.
+- New `GET /v1/executions/:id`, `GET /v1/reconciliation`, and
+  `POST /v1/provider-events` routes. Provider events require the internal
+  `OSAS_PROVIDER_EVENT_KEY` / `x-osas-provider-key` boundary and are schema
+  validated and audit recorded.
+- RFC 0003 and bilingual controlled-execution documentation.
+- The synthetic after-sales evaluation set now contains 100 cases (10 per Top-10
+  scenario), while the existing 120-case policy evaluation remains unchanged.
+
+### Changed
+
+- Capability manifests can publish per-action `executionContracts`; the mock
+  sandbox declares synthetic support without advertising `live`.
+- PostgreSQL migrations persist execution attempts, receipts, reconciliation
+  tasks, and provider events with tenant-scoped uniqueness constraints.
+
 ## [0.2.0] - 2026-09-07
 
 This release covers Milestones 1–4 (capability declaration, policy version

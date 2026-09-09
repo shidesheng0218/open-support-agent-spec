@@ -245,9 +245,11 @@ export type AuditEventType =
   | "approval_requested"
   | "approval_decided"
   | "execution_started"
+  | "execution_attempt_created"
   | "execution_succeeded"
   | "execution_failed"
   | "execution_uncertain"
+  | "provider_event_received"
   | "reconciliation_opened"
   | "reconciliation_resolved"
   | "handoff_created"
@@ -334,7 +336,20 @@ export type Capability =
 
 export type Transport = "http" | "mcp";
 
-export type ExecutionMode = "proposal_only" | "shadow" | "live";
+export type ExecutionMode = "proposal_only" | "shadow" | "sandbox" | "live";
+
+/** Controlled execution profile version. It is intentionally separate from
+ * the stable v0.2 domain objects until the v0.3 RFC is accepted. */
+export type ControlledExecutionSpecVersion = "0.3";
+
+export interface ExecutionCapability {
+  actionType: ActionType;
+  supportedModes: ExecutionMode[];
+  approvalRequired: boolean;
+  supportsIdempotency: boolean;
+  supportsReconciliation: boolean;
+  supportsCompensation: boolean;
+}
 
 export interface CapabilityProfileGrant {
   name: Profile;
@@ -354,6 +369,7 @@ export interface CapabilityManifest {
   transports: Transport[];
   executionModes: ExecutionMode[];
   adapterVersion: string;
+  executionContracts?: ExecutionCapability[];
 }
 
 /* ---------------- Policy version lifecycle (v0.1.1) ---------------- */
@@ -676,4 +692,69 @@ export interface ExecutionResult {
   status: ExecutionStatus;
   externalRef?: string;
   detail?: string;
+  providerStatus?: string;
+  providerRequestId?: string;
+  safeToRetry?: boolean;
+}
+
+/* ---------------- Controlled Execution Profile (v0.3 Draft) ---------------- */
+
+export type ExecutionAttemptStatus = "started" | "succeeded" | "failed" | "uncertain";
+
+export interface ExecutionAttempt {
+  id: string;
+  specVersion: ControlledExecutionSpecVersion;
+  tenantId: string;
+  proposalId: string;
+  idempotencyKey: string;
+  mode: ExecutionMode;
+  status: ExecutionAttemptStatus;
+  requestHash: string;
+  providerRequestId?: string;
+  startedAt: IsoDateTime;
+  finishedAt?: IsoDateTime;
+}
+
+export interface ExecutionReceipt {
+  id: string;
+  specVersion: ControlledExecutionSpecVersion;
+  tenantId: string;
+  proposalId: string;
+  attemptId: string;
+  status: ExecutionStatus;
+  externalRef?: string;
+  providerStatus?: string;
+  detail?: string;
+  safeToRetry: boolean;
+  createdAt: IsoDateTime;
+}
+
+export type ReconciliationTaskStatus = "open" | "resolved";
+
+export interface ReconciliationTask {
+  id: string;
+  specVersion: ControlledExecutionSpecVersion;
+  tenantId: string;
+  proposalId: string;
+  attemptId: string;
+  reason: string;
+  queryKey: string;
+  status: ReconciliationTaskStatus;
+  resolvedBy?: string;
+  resolvedAt?: IsoDateTime;
+  createdAt: IsoDateTime;
+}
+
+export interface ProviderEvent {
+  id: string;
+  specVersion: ControlledExecutionSpecVersion;
+  tenantId: string;
+  provider: string;
+  providerEventId: string;
+  eventType: string;
+  idempotencyKey: string;
+  occurredAt: IsoDateTime;
+  payloadHash: string;
+  payload: Record<string, unknown>;
+  createdAt: IsoDateTime;
 }

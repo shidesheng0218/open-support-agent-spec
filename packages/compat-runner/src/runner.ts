@@ -44,6 +44,7 @@ class Collector {
   }
 
   build(options: RunnerOptions, stateful: boolean): CompatRunReport {
+    const controlled = options.profile === "controlled-execution";
     const suites: RunnerSuite[] = [...this.suites.entries()].map(([name, checks]) => ({
       name,
       passed: checks.filter((c) => c.status === "pass").length,
@@ -60,8 +61,9 @@ class Collector {
       { passed: 0, failed: 0, skipped: 0 },
     );
     return {
-      specVersion: "0.2",
-      generator: "@osas/compat-runner@0.2.0",
+      specVersion: controlled ? "0.3" : "0.2",
+      generator: controlled ? "@osas/compat-runner@0.3.0-draft" : "@osas/compat-runner@0.2.0",
+      profile: controlled ? "ecommerce-controlled-execution" : "osas-v0.2",
       target: options.target,
       runAt: new Date().toISOString(),
       mode: { stateful },
@@ -135,6 +137,200 @@ const freshEvidence = (id: string) => ({
   retrievedAt: new Date().toISOString(),
 });
 
+async function runControlledExecutionSuite(
+  client: HttpClient,
+  c: Collector,
+  tenant: string,
+  conformanceKey: string | undefined,
+  providerEventKey: string | undefined,
+  wellKnown: unknown,
+  manifest: unknown,
+): Promise<void> {
+  c.suite("controlled-execution");
+
+  await c.check("discovery advertises Sandbox and a refund execution contract", () => {
+    if (!isObject(wellKnown) || wellKnown.executionMode !== "sandbox") {
+      fail(`target executionMode is ${isObject(wellKnown) ? String(wellKnown.executionMode) : "unknown"}, expected sandbox`);
+    }
+    if (!isObject(manifest) || !Array.isArray(manifest.executionModes)) {
+      fail("manifest.executionModes is missing");
+    }
+    if (!(manifest.executionModes as unknown[]).includes("sandbox")) {
+      fail("manifest does not declare sandbox execution");
+    }
+    const contracts = Array.isArray(manifest.executionContracts)
+      ? (manifest.executionContracts as Record<string, unknown>[])
+      : [];
+    const refund = contracts.find((contract) => contract.actionType === "refund");
+    if (!refund || !Array.isArray(refund.supportedModes) || !refund.supportedModes.includes("sandbox")) {
+      fail("manifest does not declare a sandbox refund contract");
+    }
+    for (const field of ["approvalRequired", "supportsIdempotency", "supportsReconciliation", "supportsCompensation"]) {
+      if (typeof refund[field] !== "boolean") fail(`refund contract lacks boolean ${field}`);
+    }
+  });
+
+  if (!conformanceKey) {
+    await c.check("controlled profile requires a conformance key", () => {
+      fail("pass --conformance-key or set OSAS_CONFORMANCE_KEY for controlled execution checks");
+    });
+    return;
+  }
+  if (!providerEventKey) {
+    await c.check("controlled profile requires a provider event key", () => {
+      fail("pass --provider-event-key or set OSAS_PROVIDER_EVENT_KEY for Provider Event checks");
+    });
+    return;
+  }
+
+  const reset = await client.post("/v1/conformance/reset", undefined, { conformanceKey });
+  if (reset.status !== 200) {
+    await c.check("controlled profile can reset its deterministic fixture", () => {
+      expectStatus(reset.status, 200, "controlled conformance reset", reset.body);
+    });
+    return;
+  }
+
+  let successId = "";
+  let successAttemptId = "";
+  await c.check("sandbox refund success returns an attempt and receipt", async () => {
+    const created = await client.post("/v1/proposals", {
+      caseId: "case_refund",
+      profile: "ecommerce",
+      actionType: "refund",
+      reasonCode: "damaged",
+      params: { orderId: "ord_small" },
+      requestedPermission: "request-approval",
+      requestedBy: { actorType: "human", actorId: "compat-runner" },
+      amount: usd(2500),
+      evidenceIds: ["ev_ord_small"],
+      idempotencyKey: `idem_controlled_success_${Date.now()}`,
+    });
+    expectStatus(created.status, 201, "create sandbox proposal", created.body);
+    successId = isObject(created.body) ? String(created.body.id) : fail("proposal has no id");
+    const evaluated = await client.post(`/v1/proposals/${successId}/evaluate`);
+    expectStatus(evaluated.status, 200, "evaluate sandbox proposal", evaluated.body);
+    if (!isObject(evaluated.body) || !isObject(evaluated.body.decision) || evaluated.body.decision.decision !== "auto_execute") {
+      fail(`expected auto_execute, got ${JSON.stringify(evaluated.body)}`);
+    }
+    const executed = await client.post(`/v1/proposals/${successId}/execute`);
+    expectStatus(executed.status, 200, "execute sandbox proposal", executed.body);
+    if (!isObject(executed.body) || !isObject(executed.body.attempt) || !isObject(executed.body.receipt)) {
+      fail("execution response lacks attempt or receipt");
+    }
+    const executionBody = executed.body as Record<string, unknown>;
+    const attempt = executionBody.attempt as Record<string, unknown>;
+    const receipt = executionBody.receipt as Record<string, unknown>;
+    successAttemptId = String(attempt.id);
+    if (!isObject(executionBody.execution) || executionBody.execution.status !== "succeeded" || receipt.status !== "succeeded") {
+      fail(`expected succeeded execution, got ${JSON.stringify(executed.body)}`);
+    }
+  });
+
+  await c.check("GET /v1/executions/:id returns the persisted attempt and receipt", async () => {
+    if (!successAttemptId) fail("success attempt was not created");
+    const res = await client.get(`/v1/executions/${successAttemptId}`);
+    expectStatus(res.status, 200, "get execution", res.body);
+    if (!isObject(res.body) || !isObject(res.body.attempt) || !isObject(res.body.receipt)) {
+      fail("execution resource lacks attempt or receipt");
+    }
+    if (res.body.attempt.id !== successAttemptId || res.body.receipt.status !== "succeeded") {
+      fail("execution resource does not match the successful receipt");
+    }
+  });
+
+  await c.check("repeating the successful execute request is an idempotent replay", async () => {
+    if (!successId) fail("success proposal was not created");
+    const replay = await client.post(`/v1/proposals/${successId}/execute`);
+    expectStatus(replay.status, 200, "replay sandbox proposal", replay.body);
+    if (!isObject(replay.body) || replay.body.replayed !== true) fail("execution was not marked replayed");
+  });
+
+  let uncertainId = "";
+  let reconciliationId = "";
+  await c.check("sandbox timeout creates reconciliation_required without retrying", async () => {
+    const created = await client.post("/v1/proposals", {
+      caseId: "case_refund",
+      profile: "ecommerce",
+      actionType: "refund",
+      reasonCode: "damaged",
+      params: { orderId: "ord_small", simulate: "timeout" },
+      requestedPermission: "request-approval",
+      requestedBy: { actorType: "human", actorId: "compat-runner" },
+      amount: usd(2500),
+      evidenceIds: ["ev_ord_small"],
+      idempotencyKey: `idem_controlled_uncertain_${Date.now()}`,
+    });
+    expectStatus(created.status, 201, "create uncertain proposal", created.body);
+    uncertainId = isObject(created.body) ? String(created.body.id) : fail("uncertain proposal has no id");
+    const evaluated = await client.post(`/v1/proposals/${uncertainId}/evaluate`);
+    expectStatus(evaluated.status, 200, "evaluate uncertain proposal", evaluated.body);
+    const executed = await client.post(`/v1/proposals/${uncertainId}/execute`);
+    expectStatus(executed.status, 200, "execute uncertain proposal", executed.body);
+    if (!isObject(executed.body)) {
+      fail("uncertain execution did not open reconciliation");
+    }
+    const uncertainBody = executed.body as Record<string, unknown>;
+    if (!isObject(uncertainBody.execution) || uncertainBody.execution.status !== "uncertain" || !isObject(uncertainBody.reconciliation) || !isObject(uncertainBody.receipt)) {
+      fail("uncertain execution did not open reconciliation");
+    }
+    reconciliationId = String((uncertainBody.reconciliation as Record<string, unknown>).id);
+    if ((uncertainBody.receipt as Record<string, unknown>).safeToRetry !== false) fail("uncertain receipt was marked retryable");
+    const open = await client.get("/v1/reconciliation?status=open");
+    expectStatus(open.status, 200, "list open reconciliation", open.body);
+    if (!Array.isArray(open.body) || !(open.body as Record<string, unknown>[]).some((task) => task.id === reconciliationId)) {
+      fail("open reconciliation task is not queryable");
+    }
+  });
+
+  await c.check("Provider Event resolves the uncertain result and is deduplicated", async () => {
+    if (!uncertainId || !reconciliationId) fail("uncertain execution was not created");
+    const fetched = await client.get(`/v1/proposals/${uncertainId}`);
+    expectStatus(fetched.status, 200, "get uncertain proposal", fetched.body);
+    if (!isObject(fetched.body) || typeof fetched.body.idempotencyKey !== "string") fail("proposal lookup failed");
+    const body = {
+      provider: "sandbox",
+      providerEventId: `evt_controlled_${Date.now()}`,
+      eventType: "refund.succeeded",
+      idempotencyKey: fetched.body.idempotencyKey,
+      occurredAt: new Date().toISOString(),
+      payload: { status: "succeeded", externalRef: "sandbox_refund_confirmed" },
+    };
+    const event = await client.post("/v1/provider-events", body, { providerEventKey });
+    expectStatus(event.status, 200, "provider event", event.body);
+    if (!isObject(event.body) || event.body.duplicate !== false || !isObject(event.body.reconciliation) || event.body.reconciliation.status !== "resolved") {
+      fail("provider event did not resolve reconciliation");
+    }
+    const duplicate = await client.post("/v1/provider-events", body, { providerEventKey });
+    expectStatus(duplicate.status, 200, "duplicate provider event", duplicate.body);
+    if (!isObject(duplicate.body) || duplicate.body.duplicate !== true) fail("provider event was not deduplicated");
+  });
+
+  await c.check("policy-blocked action cannot be executed", async () => {
+    const created = await client.post("/v1/proposals", {
+      caseId: "case_unverified",
+      profile: "ecommerce",
+      actionType: "refund",
+      reasonCode: "damaged",
+      params: { orderId: "ord_small" },
+      requestedPermission: "request-approval",
+      requestedBy: { actorType: "human", actorId: "compat-runner" },
+      amount: usd(2500),
+      evidenceIds: ["ev_ord_small"],
+      idempotencyKey: `idem_controlled_blocked_${Date.now()}`,
+    });
+    expectStatus(created.status, 201, "create blocked proposal", created.body);
+    const id = isObject(created.body) ? String(created.body.id) : fail("blocked proposal has no id");
+    const evaluated = await client.post(`/v1/proposals/${id}/evaluate`);
+    expectStatus(evaluated.status, 200, "evaluate blocked proposal", evaluated.body);
+    if (!isObject(evaluated.body) || !isObject(evaluated.body.decision) || evaluated.body.decision.decision !== "block") {
+      fail("unverified proposal was not blocked");
+    }
+    const executed = await client.post(`/v1/proposals/${id}/execute`);
+    expectStatus(executed.status, 409, "execute blocked proposal", executed.body);
+  });
+}
+
 export async function runCompat(options: RunnerOptions): Promise<CompatRunReport> {
   const client = new HttpClient(options);
   const c = new Collector();
@@ -153,13 +349,18 @@ export async function runCompat(options: RunnerOptions): Promise<CompatRunReport
     wellKnown = res.body;
   });
 
-  await c.check('specVersion is "0.2"', async () => {
+  await c.check(
+    options.profile === "controlled-execution"
+      ? 'stable discovery specVersion remains "0.2" for the v0.3 Draft profile'
+      : 'specVersion is "0.2"',
+    async () => {
     if (!isObject(wellKnown)) fail("no well-known document to inspect");
     if (wellKnown.specVersion !== "0.2") {
       fail(`specVersion is ${JSON.stringify(wellKnown.specVersion)}, expected "0.2"`);
     }
     return `specVersion=${wellKnown.specVersion}`;
-  });
+    },
+  );
 
   let manifest: unknown;
   await c.check("CapabilityManifest is published and validates against core/capability-manifest", async () => {
@@ -292,6 +493,17 @@ export async function runCompat(options: RunnerOptions): Promise<CompatRunReport
       "all stateful checks",
       "conformance key not configured (set OSAS_CONFORMANCE_MODE=true + OSAS_CONFORMANCE_KEY or --conformance-key)",
     );
+    if (options.profile === "controlled-execution") {
+      await runControlledExecutionSuite(
+        client,
+        c,
+        tenant,
+        conformanceKey,
+        options.providerEventKey,
+        wellKnown,
+        manifest,
+      );
+    }
     return c.build(options, false);
   }
 
@@ -445,6 +657,18 @@ export async function runCompat(options: RunnerOptions): Promise<CompatRunReport
     const res = await client.post("/v1/conformance/reset", undefined, { conformanceKey });
     expectStatus(res.status, 200, "final reset", res.body);
   });
+
+  if (options.profile === "controlled-execution") {
+    await runControlledExecutionSuite(
+      client,
+      c,
+      tenant,
+      conformanceKey,
+      options.providerEventKey,
+      wellKnown,
+      manifest,
+    );
+  }
 
   return c.build(options, true);
 }

@@ -24,13 +24,22 @@ pnpm typecheck
 step "unit / contract tests"
 pnpm test
 
+step "offline policy and after-sales evaluations"
+pnpm eval:policy
+pnpm eval:after-sales
+pnpm eval:controlled
+
 step "compat suite (regenerates tests/compat/report/latest.json)"
 pnpm test:compat
 
 step "docker compose build (API image regenerates the compat report at build time)"
 docker compose build
 
-step "docker compose up -d"
+step "docker compose up -d (Sandbox + test-only conformance)"
+OSAS_EXECUTION_MODE=sandbox \
+OSAS_CONFORMANCE_MODE=true \
+OSAS_CONFORMANCE_KEY=verify-conformance-test-key \
+OSAS_PROVIDER_EVENT_KEY=verify-provider-event-test-key \
 docker compose up -d
 
 wait_for() {
@@ -57,6 +66,14 @@ report="$(curl -fsS http://localhost:3001/v1/compat/report)"
 echo "$report" | grep -Eq '"specVersion": *"0\.2"'
 echo "$report" | grep -Eq '"ok": *true'
 echo "    ok: /v1/compat/report returns a green report generated during this build"
+
+step "Controlled Execution conformance"
+pnpm osas:compat -- \
+  --target http://localhost:3001 \
+  --profile controlled-execution \
+  --conformance-key verify-conformance-test-key \
+  --provider-event-key verify-provider-event-test-key \
+  --out controlled-execution-report.json
 
 step "playwright e2e against the docker stack (E2E_BASE_URL=http://localhost:8080)"
 pnpm --filter @osas/e2e exec playwright install chromium

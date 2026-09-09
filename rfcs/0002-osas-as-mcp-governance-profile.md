@@ -42,7 +42,7 @@ vacuum it targets is filled by closed, vendor-specific guardrails.
 Positioning commitments (normative for the project's direction, not for the
 schema level):
 
-1. **MCP remains the tool transport.** The OSAS tool surface (16 tools across
+1. **MCP remains the tool transport.** The OSAS tool surface (20 tools across
    the `core`/`ecommerce`/`saas` profiles) is and stays MCP-native; new tool
    transports MUST NOT be introduced. An implementation may expose the tools
    over plain HTTP in addition, as the reference API does, but MCP support is

@@ -21,6 +21,7 @@
     "test": "vitest run",
     "eval:policy": "tsx src/run-policy.ts",
     "eval:after-sales": "tsx src/run-after-sales.ts",
+    "eval:controlled": "tsx src/run-controlled-execution.ts",
     "eval:model": "tsx src/run-model.ts"
   },
   "dependencies": {

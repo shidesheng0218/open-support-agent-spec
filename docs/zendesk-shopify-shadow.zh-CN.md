@@ -8,9 +8,9 @@ Milestone 3（首次发布于 v0.1.1，当前版本为 v0.2）提供了 OSAS 对
 
 ## 什么是 Shadow Mode
 
-`OSAS_EXECUTION_MODE=shadow | live`（默认 `shadow`）。
+`OSAS_EXECUTION_MODE=proposal_only | shadow | sandbox | live`（默认 `shadow`）。
 
-- **shadow** —— v0.2.0 唯一支持的模式。运行时只能：
+- **shadow** —— v0.2 兼容默认模式。运行时只能：
   1. 创建 `ActionProposal`；
   2. 运行确定性的策略模拟（Policy Simulation）；
   3. 记录 `ShadowRun` —— "如果允许自动执行，将会执行什么"
@@ -19,6 +19,10 @@ Milestone 3（首次发布于 v0.1.1，当前版本为 v0.2）提供了 OSAS 对
      可附评语与外部单据引用）。
 - **live** —— 拒绝启动。以 `OSAS_EXECUTION_MODE=live` 启动会立即中止并报
   `LIVE_EXECUTION_NOT_AVAILABLE_IN_V0_1_1`。真实执行能力须经未来的 RFC 决定。
+
+- **sandbox** —— v0.3 Draft 的确定性合成路径。完整演练执行尝试、凭证、幂等、
+  审计和对账，但不会调用 Shopify、Zendesk 或任何外部 Provider；本版本的真实
+  Adapter 仍只支持提议/Shadow。
 
 Shadow Mode 不变量（由代码 + 测试强制）：
 

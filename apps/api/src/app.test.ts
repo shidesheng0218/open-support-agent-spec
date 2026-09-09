@@ -17,7 +17,7 @@ let app: FastifyInstance;
 let seq = 0;
 
 beforeEach(async () => {
-  app = await buildApp({ logger: false });
+  app = await buildApp({ logger: false, env: { OSAS_EXECUTION_MODE: "sandbox" } });
 });
 
 afterEach(async () => {

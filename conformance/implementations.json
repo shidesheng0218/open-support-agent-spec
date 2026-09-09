@@ -1,0 +1,24 @@
+{
+  "schemaVersion": "1",
+  "updatedAt": "2026-09-09",
+  "implementations": [
+    {
+      "implementationId": "osas-typescript-reference",
+      "repository": "https://github.com/shidesheng0218/open-support-agent-spec",
+      "language": "typescript",
+      "status": "reference",
+      "profiles": ["core", "ecommerce", "saas", "ecommerce-controlled-execution"],
+      "independent": false,
+      "notes": "Normative reference implementation; Sandbox only, live disabled."
+    },
+    {
+      "implementationId": "osas-python-reference-candidate",
+      "repository": null,
+      "language": "python",
+      "status": "candidate",
+      "profiles": ["core", "ecommerce", "ecommerce-controlled-execution"],
+      "independent": false,
+      "notes": "In-repository adoption sample; publish separately before counting toward v1.0."
+    }
+  ]
+}

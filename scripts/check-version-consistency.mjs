@@ -119,6 +119,31 @@ for (const rel of ["packages/core/src/enums.ts", "apps/api/src/plugins.ts"]) {
   }
 }
 
+/* ---------- 4b. canonical tool/document consistency ---------- */
+
+{
+  const toolSchemaNames = readdirSync(join(root, "schemas/tools"))
+    .filter((f) => f.endsWith(".json"))
+    .map((f) => f.slice(0, -5))
+    .sort();
+  const toolSource = read("packages/mcp-server/src/tool-definitions.ts");
+  const sourceNames = [...toolSource.matchAll(/name:\s*"(osas_[^"]+)"/g)]
+    .map((m) => m[1])
+    .sort();
+  if (toolSchemaNames.length !== 20) {
+    fail(`schemas/tools: expected 20 tool schemas, found ${toolSchemaNames.length}`);
+  }
+  if (sourceNames.length !== toolSchemaNames.length || sourceNames.some((name, i) => name !== toolSchemaNames[i])) {
+    fail("packages/mcp-server/src/tool-definitions.ts and schemas/tools are not a 1:1 canonical tool list");
+  }
+  for (const rel of ["README.md", "README.zh-CN.md", "rfcs/0002-osas-as-mcp-governance-profile.md"]) {
+    const text = read(rel);
+    if (/\b16 tools\b|16 个 MCP 工具|16 个工具/i.test(text)) {
+      fail(`${rel}: stale 16-tool claim; current canonical tool count is 20`);
+    }
+  }
+}
+
 /* ---------- 5. historical spec files must exist ---------- */
 
 for (const rel of ["docs/spec-v0.1.md", "docs/spec-v0.1.zh-CN.md"]) {

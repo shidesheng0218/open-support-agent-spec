@@ -44,14 +44,21 @@ export async function approvalRoutes(app: FastifyInstance): Promise<void> {
 
     const proposal = await adapter.getProposal(ctx, approval.proposalId);
     let execution: unknown;
-    if (body.decision === "approved") {
+    if (body.decision === "approved" && app.executionMode.mode === "sandbox") {
       // §5: human approval -> approved -> execute through the engine.
       await adapter.updateProposalStatus(ctx, proposal.id, "approved");
       const approved = await adapter.getProposal(ctx, proposal.id);
       execution = await runExecution(adapter, ctx, app.executionStore, approved, {
         sink: app.auditStore,
+        mode: app.executionMode.mode,
+        attemptStore: app.executionAttemptStore,
+        receiptStore: app.executionReceiptStore,
+        reconciliationStore: app.reconciliationStore,
         ...(app.pgPool ? { pgPool: app.pgPool } : {}),
       });
+    } else if (body.decision === "approved") {
+      // Proposal-only and Shadow modes record the human decision but never invoke an executor.
+      await adapter.updateProposalStatus(ctx, proposal.id, "approved");
     } else {
       await adapter.updateProposalStatus(ctx, proposal.id, "rejected");
     }

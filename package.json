@@ -26,8 +26,9 @@
     "db:reset": "pnpm --filter @osas/store-postgres run db:reset",
     "osas:compat": "pnpm --filter @osas/compat-runner run compat --",
     "eval:policy": "pnpm --filter @osas/evals run eval:policy",
-    "eval:after-sales": "pnpm --filter @osas/evals run eval:after-sales",
-    "eval:model": "pnpm --filter @osas/evals run eval:model"
+  "eval:after-sales": "pnpm --filter @osas/evals run eval:after-sales",
+  "eval:controlled": "pnpm --filter @osas/evals run eval:controlled",
+  "eval:model": "pnpm --filter @osas/evals run eval:model"
   },
   "devDependencies": {
     "@types/node": "^22.9.0",

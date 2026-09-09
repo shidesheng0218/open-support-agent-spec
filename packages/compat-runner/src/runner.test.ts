@@ -34,7 +34,11 @@ describe("compat runner against the reference API", () => {
     const target = await listen(
       await buildApp({
         logger: false,
-        env: { OSAS_CONFORMANCE_MODE: "true", OSAS_CONFORMANCE_KEY: CONFORMANCE_KEY },
+        env: {
+          OSAS_CONFORMANCE_MODE: "true",
+          OSAS_CONFORMANCE_KEY: CONFORMANCE_KEY,
+          OSAS_EXECUTION_MODE: "sandbox",
+        },
       }),
     );
     const report = await runCompat({ target, conformanceKey: CONFORMANCE_KEY });
@@ -43,6 +47,30 @@ describe("compat runner against the reference API", () => {
     expect(report.ok).toBe(true);
     const stateful = report.suites.find((s) => s.name === "stateful");
     expect(stateful?.passed).toBeGreaterThanOrEqual(8);
+  });
+
+  it("passes the v0.3 controlled-execution profile against Sandbox mode", async () => {
+    const target = await listen(
+      await buildApp({
+        logger: false,
+        env: {
+          OSAS_CONFORMANCE_MODE: "true",
+          OSAS_CONFORMANCE_KEY: CONFORMANCE_KEY,
+          OSAS_EXECUTION_MODE: "sandbox",
+          OSAS_PROVIDER_EVENT_KEY: "sandbox-provider-key",
+        },
+      }),
+    );
+    const report = await runCompat({
+      target,
+      conformanceKey: CONFORMANCE_KEY,
+      providerEventKey: "sandbox-provider-key",
+      profile: "controlled-execution",
+    });
+    expect(report.specVersion).toBe("0.3");
+    expect(report.profile).toBe("ecommerce-controlled-execution");
+    expect(report.totals.failed).toBe(0);
+    expect(report.suites.find((s) => s.name === "controlled-execution")?.passed).toBeGreaterThanOrEqual(6);
   });
 
   it("fails (non-zero exit semantics) against a target without OSAS endpoints", async () => {

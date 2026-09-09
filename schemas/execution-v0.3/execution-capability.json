@@ -1,0 +1,16 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://open-support-agent.dev/schemas/execution-v0.3/execution-capability.json",
+  "title": "ExecutionCapability",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["actionType", "supportedModes", "approvalRequired", "supportsIdempotency", "supportsReconciliation", "supportsCompensation"],
+  "properties": {
+    "actionType": { "type": "string", "minLength": 1 },
+    "supportedModes": { "type": "array", "items": { "enum": ["proposal_only", "shadow", "sandbox", "live"] }, "uniqueItems": true },
+    "approvalRequired": { "type": "boolean" },
+    "supportsIdempotency": { "type": "boolean" },
+    "supportsReconciliation": { "type": "boolean" },
+    "supportsCompensation": { "type": "boolean" }
+  }
+}

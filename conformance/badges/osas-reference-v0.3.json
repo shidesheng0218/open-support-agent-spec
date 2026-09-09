@@ -1,0 +1,19 @@
+{
+  "schemaVersion": "1",
+  "implementationId": "osas-typescript-reference",
+  "specVersion": "0.3",
+  "profile": "ecommerce-controlled-execution",
+  "status": "draft-conformance",
+  "verifiedAt": "2026-09-09",
+  "independent": false,
+  "executionModes": ["proposal_only", "shadow", "sandbox"],
+  "live": false,
+  "evidence": {
+    "runner": "@osas/compat-runner --profile controlled-execution",
+    "requiredEnvironment": [
+      "OSAS_EXECUTION_MODE=sandbox",
+      "OSAS_CONFORMANCE_MODE=true",
+      "OSAS_PROVIDER_EVENT_KEY=<test-only-key>"
+    ]
+  }
+}

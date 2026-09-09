@@ -41,7 +41,7 @@
 
 ## 一眼看懂
 
-| 20 个 MCP 工具 | 3 个 Profile | 120 条策略 + 20 条售后案例 | 307 项兼容检查 |
+| 20 个 MCP 工具 | 3 个 Profile | 120 条策略 + 100 条售后案例 | 307 项兼容检查 |
 |---|---|---|---|
 | Core、电商、SaaS | Schema 驱动契约 | 离线安全评测 | HTTP 黑盒一致性 |
 
@@ -172,12 +172,17 @@ Docker 构建上下文为**仓库根目录**（两个 Dockerfile 都复制整个
   达到 80% 写入 `budget_warning` 审计事件；达到上限后模型调用在触达 Provider
   之前被阻断。用量可通过 `GET /v1/usage` 查询（仅 policy_admin/auditor）。
 
-### 运行时配置（Milestone 3）
+### 运行时配置（受控执行，v0.3 Draft）
 
-- **执行模式**（`OSAS_EXECUTION_MODE`）：`shadow`（默认）是唯一支持的模式——
-  Proposal 只做模拟，ShadowRun 记录"如果允许自动执行将执行什么"，最终结果由
-  人工写入。`live` **拒绝启动**（`LIVE_EXECUTION_NOT_AVAILABLE_IN_V0_1_1`）；
-  真实执行能力须经未来的 RFC 决定。
+- **执行模式**（`OSAS_EXECUTION_MODE`）：`shadow`（默认）只模拟 Proposal，
+  不改变 Provider 状态；`proposal_only` 只生成建议；`sandbox` 通过确定性的
+  Sandbox Adapter 完整运行执行、幂等、审计与对账链路。`live` 仍然
+  **拒绝启动**（`LIVE_EXECUTION_NOT_AVAILABLE_IN_V0_1_1`），本版本不提供
+  生产执行能力。
+- 模型永远拿不到 `execute` 权限；只有系统执行主体可以触发执行尝试；不确定结果
+  必须进入对账，禁止自动重试。详见
+  [受控执行](docs/controlled-execution.zh-CN.md) 与
+  [RFC 0003](rfcs/0003-controlled-execution-profile.zh-CN.md)。
 - **参考 Adapter**（未配置时失败即关闭；演示环境不需要）：Zendesk
   （`ZENDESK_BASE_URL`/`ZENDESK_SUBDOMAIN`、`ZENDESK_EMAIL`、
   `ZENDESK_API_TOKEN`、`ZENDESK_ESCALATION_GROUP_ID`）、只读 Shopify
@@ -235,6 +240,10 @@ flowchart TB
   `OSAS_LLM_PROVIDER=openai-compatible` 及 base URL/模型时才运行（不进 CI，
   默认 mock 下不运行）。模型的语义准确率独立展示——自动执行门禁从不以模型
   "回答得像不像人"为准。
+- **`pnpm eval:after-sales`** —— 对 100 条合成售后案例进行评测（Top 10
+  场景各 10 条），包含覆盖、接管、安全、重复请求和虚假成功门禁。
+- **`pnpm eval:controlled`** —— 校验 v0.3 Draft 执行对象、未知结果禁止重试、
+  Provider Event 去重，并生成独立的 `ecommerce-controlled-execution` 报告。
 
 ## 三条演示路径
 
@@ -290,7 +299,7 @@ flowchart LR
 | 边界 | 默认行为 |
 |---|---|
 | 模型权限 | `read` → `draft` → `request-approval`，永远不能 `execute` |
-| 执行模式 | v0.2 只有 `shadow`；`live` 模式拒绝启动 |
+| 执行模式 | v0.2 保持 `shadow`；v0.3 Draft 增加 `proposal_only` 与确定性的 `sandbox`；`live` 拒绝启动 |
 | 凭据 | 后端密钥留在 Adapter 之后，不进入模型上下文 |
 | 提示注入 | 检测、阻断、人工接管并写入审计 |
 | 成本控制 | 达到每日/单 case 上限时，在调用 Provider 前阻断 |
@@ -313,7 +322,8 @@ flowchart LR
 ## 仓库结构
 
 ```
-schemas/                 权威 JSON Schema（draft 2020-12）+ manifest.json
+schemas/                 权威 JSON Schema（draft 2020-12）+ manifests
+  execution-v0.3/        受控执行 Draft Schema
 packages/
   core/                  @osas/core             类型、枚举、状态机、detectInjection
   schema-validator/      @osas/schema-validator 基于 Ajv 的 schemas/ 加载与校验
@@ -323,18 +333,21 @@ packages/
   zendesk-adapter/       @osas/zendesk-adapter  Zendesk 工单参考 Adapter（Milestone 3）
   shopify-adapter/       @osas/shopify-adapter  只读 Shopify 参考 Adapter（Milestone 3）
   chatwoot-adapter/      @osas/chatwoot-adapter Chatwoot（开源客服平台）参考 Adapter
-  ecommerce-shadow/      @osas/ecommerce-shadow Shadow Mode：ShadowRun、存储、执行模式
+  ecommerce-shadow/      @osas/ecommerce-shadow Shadow/Sandbox 执行、凭证、对账
   mock-backend/          @osas/mock-backend     合成 fixtures + MockSupportAdapter
   store-postgres/        @osas/store-postgres   PostgreSQL 存储 + SQL 迁移（Milestone 2）
   mcp-server/            @osas/mcp-server       20 个工具定义 + stdio MCP 服务器
-  compat-runner/         @osas/compat-runner    黑盒 HTTP 一致性 Runner（Milestone 4）
+  compat-runner/         @osas/compat-runner    黑盒 HTTP 一致性 Runner（v0.2 + v0.3 Profile）
 apps/
   api/                   @osas/api              Fastify 5 HTTP API（端口 3001）
   web/                   @osas/web              React 18 + Vite 控制台（端口 5173）
 tests/
   compat/                @osas/compat-suite     Schema/兼容套件 + JSON 报告
   e2e/                   @osas/e2e              Playwright 冒烟（E2E=1）
-evals/                   @osas/evals            120 条合成评测集 + eval:policy/eval:model
+evals/                   @osas/evals            120 条策略 + 100 条售后合成评测集
+implementations/
+  python-reference/      HTTP 参考候选（Core + Ecommerce + Sandbox）
+conformance/             公共实现登记表与徽章
 examples/                embed-policy-engine    @osas/policy-engine 最小独立嵌入示例
 docs/  rfcs/  .github/workflows/  docker-compose.yml
 ```
@@ -391,18 +404,24 @@ Adapter 抛出 `AdapterNotFoundError`（→ API 404）/ `AdapterPermissionError`
 - Chatwoot Adapter：[docs/chatwoot-adapter.zh-CN.md](docs/chatwoot-adapter.zh-CN.md) · [English](docs/chatwoot-adapter.md)
 - 第三方实现指南：[docs/implementing-osas.zh-CN.md](docs/implementing-osas.zh-CN.md) · [English](docs/implementing-osas.md)
 - Conformance Mode（仅限测试）：[docs/conformance.zh-CN.md](docs/conformance.zh-CN.md) · [English](docs/conformance.md)
+- 受控执行（v0.3 Draft）：[docs/controlled-execution.zh-CN.md](docs/controlled-execution.zh-CN.md) · [English](docs/controlled-execution.md)
+- v0.3 Conformance Profile：[docs/conformance-v0.3.zh-CN.md](docs/conformance-v0.3.zh-CN.md) · [English](docs/conformance-v0.3.md)
 - 工程契约：[CONTRACTS.md](CONTRACTS.md)
 - 贡献指南：[CONTRIBUTING.zh-CN.md](CONTRIBUTING.zh-CN.md) · [English](CONTRIBUTING.md)
 - 治理：[GOVERNANCE.md](GOVERNANCE.md)
 - 安全策略：[SECURITY.md](SECURITY.md)
 - 行为准则：[CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md)
-- RFC：[rfcs/](rfcs/)（从 [0001-v0.1-core](rfcs/0001-v0.1-core.md) 开始；定位：[0002-osas-as-mcp-governance-profile](rfcs/0002-osas-as-mcp-governance-profile.md)）
+- RFC：[rfcs/](rfcs/)（从 [0001-v0.1-core](rfcs/0001-v0.1-core.md) 开始；定位：[0002-osas-as-mcp-governance-profile](rfcs/0002-osas-as-mcp-governance-profile.md)；受控执行：[0003-controlled-execution-profile](rfcs/0003-controlled-execution-profile.zh-CN.md)）
 - 变更日志：[CHANGELOG.md](CHANGELOG.md)
 
 ## 状态与路线图
 
-OSAS v0.2 是**草案（Draft）**。通往 v1.0 的路径：
+OSAS v0.2 仍是**草案（Draft）**，并在 v0.3 受控执行 Draft 开发期间保持向后兼容。
+通往 v1.0 的路径：
 
+- [ ] v0.2.1 维护版本不存在文档、Schema、版本号漂移。
+- [ ] v0.3 受控执行 Draft 通过 Sandbox Conformance。
+- [ ] Python 实现通过 Core + Ecommerce Conformance；v1.0 前至少有 3 个独立实现。
 - [ ] 至少 **3 个独立实现**（本参考实现之外）通过某一 Profile 的兼容性套件。
 - [ ] 全部规范性文档中英双语齐备，且保持同步更新。
 - [ ] 无阻塞核心语义的未决 RFC；治理结构扩展为多方共治

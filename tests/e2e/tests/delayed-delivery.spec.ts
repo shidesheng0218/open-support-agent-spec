@@ -68,10 +68,11 @@ test("delayed delivery: escalation only, no refund/reshipment execution", async 
   await page.getByTestId("audit-proposal-filter").fill(proposal.id);
   await page.getByTestId("audit-load").click();
   const rows = page.getByTestId("audit-row");
-  await expect(rows).toHaveCount(4);
+  await expect(rows).toHaveCount(5);
   await expect(rows).toContainText([
     "proposal_created",
     "policy_evaluated",
+    "execution_attempt_created",
     "execution_started",
     "execution_succeeded",
   ]);
@@ -95,6 +96,7 @@ test("delayed delivery: escalation only, no refund/reshipment execution", async 
   expect(events.map((e) => e.eventType)).toEqual([
     "proposal_created",
     "policy_evaluated",
+    "execution_attempt_created",
     "execution_started",
     "execution_succeeded",
   ]);

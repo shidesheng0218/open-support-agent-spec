@@ -13,25 +13,34 @@ import {
 import { validateInline } from "@osas/schema-validator";
 import {
   PostgresAuditStore,
+  PostgresExecutionAttemptStore,
+  PostgresExecutionReceiptStore,
   PostgresExecutionStore,
   PostgresPolicyStore,
+  PostgresProviderEventStore,
+  PostgresReconciliationStore,
   PostgresShadowRunStore,
   PostgresUsageStore,
   assertConnectable,
   createPool,
 } from "@osas/store-postgres";
 import {
+  InMemoryExecutionAttemptStore,
+  InMemoryExecutionReceiptStore,
+  InMemoryProviderEventStore,
+  InMemoryReconciliationStore,
   InMemoryShadowRunStore,
   loadExecutionMode,
   type ExecutionModeConfig,
   type ShadowRunStore,
 } from "@osas/ecommerce-shadow";
-import { createSeededAdapter } from "./seed.js";
+import { createSandboxAdapter, createSeededAdapter } from "./seed.js";
 import { SYSTEM_PRINCIPAL, loggerOptions, registerPlugins } from "./plugins.js";
 import { createAuthHook, loadAuthConfig, type AuthConfig } from "./auth.js";
 import {
   loadConformanceConfig,
   loadLlmConfig,
+  loadProviderEventKey,
   loadStorageConfig,
   type ConformanceConfig,
   type LlmConfig,
@@ -103,17 +112,23 @@ export async function buildApp(opts: BuildAppOptions = {}): Promise<FastifyInsta
   const auth = opts.auth ?? loadAuthConfig(env);
   const storage = opts.storage ?? loadStorageConfig(env);
   const llm = opts.llm ?? loadLlmConfig(env);
-  // v0.2.0: OSAS_EXECUTION_MODE — only "shadow" exists; "live" aborts startup
-  // with LIVE_EXECUTION_NOT_AVAILABLE_IN_V0_1_1.
+  // v0.3 Draft: proposal_only/shadow/sandbox are non-live modes; live aborts
+  // startup with LIVE_EXECUTION_NOT_AVAILABLE_IN_V0_3_DRAFT.
   const executionMode = opts.executionMode ?? loadExecutionMode(env);
   // Milestone 4: conformance mode — enabled only via explicit env, never in
   // production, and only with a test-only key (loadConformanceConfig throws).
   const conformance = opts.conformance ?? loadConformanceConfig(env);
-  const adapter = opts.adapter ?? createSeededAdapter();
+  const adapter =
+    opts.adapter ?? (executionMode.mode === "sandbox" ? createSandboxAdapter() : createSeededAdapter());
   const app = Fastify({ logger: opts.logger === false ? false : loggerOptions });
   await app.register(cors, { origin: true });
   app.decorate("adapter", adapter);
   app.decorate("executionMode", executionMode);
+  app.decorate("executionAttemptStore", new InMemoryExecutionAttemptStore());
+  app.decorate("executionReceiptStore", new InMemoryExecutionReceiptStore());
+  app.decorate("reconciliationStore", new InMemoryReconciliationStore());
+  app.decorate("providerEventStore", new InMemoryProviderEventStore());
+  app.decorate("providerEventKey", loadProviderEventKey(env));
 
   let shadowRunStore: ShadowRunStore = opts.shadowRunStore ?? new InMemoryShadowRunStore();
   let usageStore: UsageStore = opts.usageStore ?? new InMemoryUsageStore();
@@ -122,6 +137,10 @@ export async function buildApp(opts: BuildAppOptions = {}): Promise<FastifyInsta
     const pool = createPool(storage.databaseUrl!);
     await assertConnectable(pool);
     app.decorate("executionStore", new PostgresExecutionStore(pool));
+    app.decorate("executionAttemptStore", new PostgresExecutionAttemptStore(pool));
+    app.decorate("executionReceiptStore", new PostgresExecutionReceiptStore(pool));
+    app.decorate("reconciliationStore", new PostgresReconciliationStore(pool));
+    app.decorate("providerEventStore", new PostgresProviderEventStore(pool));
     app.decorate("policyStore", new PostgresPolicyStore(pool));
     app.decorate("auditStore", new PostgresAuditStore(pool));
     app.decorate("pgPool", pool);

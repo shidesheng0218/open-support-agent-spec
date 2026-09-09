@@ -120,8 +120,8 @@ export const AFTER_SALES_SCENARIOS: readonly AfterSalesScenario[] = [
 ];
 
 export const AFTER_SALES_FILE = "after-sales-top10.json";
-/** 10 scenarios × 2 cases (one normal, one boundary/risk). */
-export const AFTER_SALES_CASE_COUNT = 20;
+/** 10 scenarios × 10 synthetic cases (normal and boundary/risk variants). */
+export const AFTER_SALES_CASE_COUNT = 100;
 
 export type AfterSalesCoverage =
   | "supported"
