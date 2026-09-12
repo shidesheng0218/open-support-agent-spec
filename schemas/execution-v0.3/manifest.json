@@ -6,5 +6,7 @@
     { "name": "reconciliation-task", "profile": "execution", "path": "reconciliation-task.json" },
     { "name": "provider-event", "profile": "execution", "path": "provider-event.json" },
     { "name": "execution-capability", "profile": "execution", "path": "execution-capability.json" }
+    ,{ "name": "after-sales-case", "profile": "ecommerce-after-sales", "path": "after-sales-case.json" }
+    ,{ "name": "after-sales-decision", "profile": "ecommerce-after-sales", "path": "after-sales-decision.json" }
   ]
 }

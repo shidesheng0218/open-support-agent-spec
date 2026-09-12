@@ -48,6 +48,7 @@ import {
 } from "./config.js";
 import { registerRoutes } from "./routes/index.js";
 import { conformanceRoutes } from "./routes/conformance.js";
+import { InMemoryAfterSalesStore } from "./routes/after-sales.js";
 
 export interface BuildAppOptions {
   adapter?: SupportAdapter;
@@ -129,6 +130,7 @@ export async function buildApp(opts: BuildAppOptions = {}): Promise<FastifyInsta
   app.decorate("reconciliationStore", new InMemoryReconciliationStore());
   app.decorate("providerEventStore", new InMemoryProviderEventStore());
   app.decorate("providerEventKey", loadProviderEventKey(env));
+  app.decorate("afterSalesStore", new InMemoryAfterSalesStore());
 
   let shadowRunStore: ShadowRunStore = opts.shadowRunStore ?? new InMemoryShadowRunStore();
   let usageStore: UsageStore = opts.usageStore ?? new InMemoryUsageStore();

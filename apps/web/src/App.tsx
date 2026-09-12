@@ -5,11 +5,13 @@ import Agent from "./pages/Agent";
 import Shadow from "./pages/Shadow";
 import Platform from "./pages/Platform";
 import Demo from "./pages/Demo";
+import AfterSales from "./pages/AfterSales";
 
 const NAV = [
   { to: "/", label: "Overview", zh: "概览", end: true },
   { to: "/developer", label: "Developer", zh: "开发者", end: false },
   { to: "/agent", label: "Agent", zh: "人工坐席", end: false },
+  { to: "/after-sales", label: "After-sales", zh: "售后运营", end: false },
   { to: "/shadow", label: "Shadow", zh: "影子模式", end: false },
   { to: "/platform", label: "Platform", zh: "平台治理", end: false },
   { to: "/demo", label: "Demo", zh: "演示", end: false },
@@ -42,6 +44,7 @@ export default function App() {
           <Route path="/" element={<Overview />} />
           <Route path="/developer" element={<Developer />} />
           <Route path="/agent" element={<Agent />} />
+          <Route path="/after-sales" element={<AfterSales />} />
           <Route path="/shadow" element={<Shadow />} />
           <Route path="/platform" element={<Platform />} />
           <Route path="/demo" element={<Demo />} />

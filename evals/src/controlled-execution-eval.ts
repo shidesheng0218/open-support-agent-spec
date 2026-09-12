@@ -75,11 +75,35 @@ export function buildControlledExecutionReport(): ControlledExecutionEvalReport 
     payload: { status: "succeeded" },
     createdAt: now,
   };
+  const afterSalesCase = {
+    id: "ascase_eval_1",
+    tenantId: "tenant_demo",
+    sourceCaseId: "case_refund",
+    scenarioCode: "refund_request",
+    orderId: "ord_small",
+    customerId: "cus_verified",
+    status: "pending_approval",
+    riskLevel: "high",
+    evidenceIds: ["ev_ord_small"],
+    policyVersion: "1.0.0",
+    idempotencyKey: "idem_eval_after_sales_1",
+    createdAt: now,
+    updatedAt: now,
+  };
+  const afterSalesDecision = {
+    outcome: "approval_required",
+    reasonCodes: ["OVER_THRESHOLD"],
+    requiredEvidence: ["order"],
+    missingEvidence: [],
+    operatorSummary: "Human approval is required for this amount.",
+  };
   const schemaValues = [
     ["execution-attempt", attempt],
     ["execution-receipt", receipt],
     ["reconciliation-task", reconciliation],
     ["provider-event", providerEvent],
+    ["after-sales-case", afterSalesCase],
+    ["after-sales-decision", afterSalesDecision],
   ] as const;
   const schemaResults = schemaValues.map(([name, value]) => validator.validate(name, value).valid);
   const checks = {

@@ -41,4 +41,38 @@ describe("controlled execution schemas", () => {
     };
     expect(validateInline(schema("provider-event"), value).valid).toBe(false);
   });
+
+  it("validates a Top-10 after-sales case and rejects an unknown status", () => {
+    const value = {
+      id: "ascase_1",
+      tenantId: "tenant_demo",
+      sourceCaseId: "case_refund",
+      scenarioCode: "refund_request",
+      orderId: "ord_small",
+      customerId: "cus_verified",
+      status: "pending_approval",
+      riskLevel: "high",
+      evidenceIds: ["ev_ord_small"],
+      policyVersion: "1.0.0",
+      idempotencyKey: "after-sales-schema-1",
+      createdAt: "2026-09-09T00:00:00.000Z",
+      updatedAt: "2026-09-09T00:00:00.000Z",
+    };
+    expect(validateInline(schema("after-sales-case"), value).valid).toBe(true);
+    expect(
+      validateInline(schema("after-sales-case"), { ...value, status: "executed" }).valid,
+    ).toBe(false);
+  });
+
+  it("validates an after-sales decision and rejects unknown fields", () => {
+    const value = {
+      outcome: "approval_required",
+      reasonCodes: ["OVER_THRESHOLD"],
+      requiredEvidence: ["order"],
+      missingEvidence: [],
+      operatorSummary: "Human approval is required for this amount.",
+    };
+    expect(validateInline(schema("after-sales-decision"), value).valid).toBe(true);
+    expect(validateInline(schema("after-sales-decision"), { ...value, unexpected: true }).valid).toBe(false);
+  });
 });

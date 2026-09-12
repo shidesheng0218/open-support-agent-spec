@@ -1,9 +1,11 @@
 import type { FastifyInstance } from "fastify";
 import { requireAdapterCapability, type SupportAdapter } from "@osas/adapter";
 import type { Approval } from "@osas/core";
+import { NonExecutableActionError } from "@osas/policy-engine";
 import { SchemaInvalidError } from "../plugins.js";
 import { audit, runExecution } from "../domain.js";
 import { ctxFor } from "./basic.js";
+import { syncAfterSalesCaseStatus } from "./after-sales.js";
 
 export async function approvalRoutes(app: FastifyInstance): Promise<void> {
   const adapter: SupportAdapter = app.adapter;
@@ -43,11 +45,20 @@ export async function approvalRoutes(app: FastifyInstance): Promise<void> {
     }, app.auditStore);
 
     const proposal = await adapter.getProposal(ctx, approval.proposalId);
-    let execution: unknown;
+    let execution: Awaited<ReturnType<typeof runExecution>> | undefined;
     if (body.decision === "approved" && app.executionMode.mode === "sandbox") {
       // §5: human approval -> approved -> execute through the engine.
       await adapter.updateProposalStatus(ctx, proposal.id, "approved");
       const approved = await adapter.getProposal(ctx, proposal.id);
+      // exchange_request is intentionally non-executable. Keep its vertical
+      // case in human_handoff while the execution engine fails closed; do not
+      // expose a transient `executing` state for a human-only fulfillment.
+      if (proposal.actionType !== "exchange_request") {
+        await syncAfterSalesCaseStatus(app, ctx.tenantId, proposal.id, "executing");
+      }
+      if (proposal.actionType === "exchange_request") {
+        throw new NonExecutableActionError(proposal.actionType);
+      }
       execution = await runExecution(adapter, ctx, app.executionStore, approved, {
         sink: app.auditStore,
         mode: app.executionMode.mode,
@@ -56,11 +67,22 @@ export async function approvalRoutes(app: FastifyInstance): Promise<void> {
         reconciliationStore: app.reconciliationStore,
         ...(app.pgPool ? { pgPool: app.pgPool } : {}),
       });
+      await syncAfterSalesCaseStatus(
+        app,
+        ctx.tenantId,
+        proposal.id,
+        execution.execution.status === "succeeded"
+          ? "resolved"
+          : execution.execution.status === "uncertain"
+            ? "reconciliation_required"
+            : "blocked",
+      );
     } else if (body.decision === "approved") {
       // Proposal-only and Shadow modes record the human decision but never invoke an executor.
       await adapter.updateProposalStatus(ctx, proposal.id, "approved");
     } else {
       await adapter.updateProposalStatus(ctx, proposal.id, "rejected");
+      await syncAfterSalesCaseStatus(app, ctx.tenantId, proposal.id, "blocked");
     }
     return { approval, execution };
   });

@@ -5,6 +5,7 @@ import type { Capability, ActionProposal, ProposalStatus } from "@osas/core";
 import { SPEC_VERSION, SchemaInvalidError, ConflictError } from "../plugins.js";
 import { audit, resolveActivePolicy, runEvaluation, runExecution, runReconcile } from "../domain.js";
 import { PROPOSAL_SCHEMA, ctxFor, validateSchema } from "./basic.js";
+import { syncAfterSalesCaseStatus } from "./after-sales.js";
 
 /** Capability required to propose a given actionType (v0.1.1). */
 const PROPOSE_CAPABILITY: Partial<Record<ActionProposal["actionType"], Capability>> = {
@@ -111,6 +112,7 @@ export async function proposalRoutes(app: FastifyInstance): Promise<void> {
           "written by human review (POST /v1/shadow-runs/:id/review), never by execution",
       );
     }
+    await syncAfterSalesCaseStatus(app, ctx.tenantId, proposal.id, "executing");
     const outcome = await runExecution(adapter, ctx, app.executionStore, proposal, {
       sink: app.auditStore,
       mode: app.executionMode.mode,
@@ -119,6 +121,16 @@ export async function proposalRoutes(app: FastifyInstance): Promise<void> {
       reconciliationStore: app.reconciliationStore,
       ...(app.pgPool ? { pgPool: app.pgPool } : {}),
     });
+    await syncAfterSalesCaseStatus(
+      app,
+      ctx.tenantId,
+      proposal.id,
+      outcome.execution.status === "succeeded"
+        ? "resolved"
+        : outcome.execution.status === "uncertain"
+          ? "reconciliation_required"
+          : "blocked",
+    );
     return {
       proposal: outcome.proposal,
       execution: outcome.execution,
@@ -137,7 +149,7 @@ export async function proposalRoutes(app: FastifyInstance): Promise<void> {
       throw new SchemaInvalidError([{ message: 'body must be { outcome: "succeeded" | "failed", note? }' }]);
     }
     const proposal = await adapter.getProposal(ctx, id);
-    return runReconcile(
+    const resolved = await runReconcile(
       adapter,
       ctx,
       proposal,
@@ -146,5 +158,7 @@ export async function proposalRoutes(app: FastifyInstance): Promise<void> {
       app.auditStore,
       app.reconciliationStore,
     );
+    await syncAfterSalesCaseStatus(app, ctx.tenantId, proposal.id, body.outcome === "succeeded" ? "resolved" : "blocked");
+    return resolved;
   });
 }

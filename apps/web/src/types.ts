@@ -214,6 +214,90 @@ export interface EvidenceRecord {
   source: { system: string; recordType: string; recordId: string; url?: string };
 }
 
+export type AfterSalesScenario =
+  | "wismo"
+  | "delivery_delay"
+  | "not_received"
+  | "damaged_item"
+  | "wrong_or_missing_item"
+  | "refund_request"
+  | "refund_pending"
+  | "return_request"
+  | "reshipment_request"
+  | "exchange_request";
+
+export type AfterSalesCaseStatus =
+  | "intake"
+  | "evidence_required"
+  | "evaluated"
+  | "pending_approval"
+  | "human_handoff"
+  | "executing"
+  | "resolved"
+  | "reconciliation_required"
+  | "blocked";
+
+export interface AfterSalesCase {
+  id: string;
+  tenantId: string;
+  sourceCaseId: string;
+  scenarioCode: AfterSalesScenario;
+  orderId?: string;
+  customerId?: string;
+  amount?: Money;
+  status: AfterSalesCaseStatus;
+  riskLevel: "low" | "medium" | "high" | "critical";
+  evidenceIds: string[];
+  policyVersion: string;
+  proposalId?: string;
+  handoffId?: string;
+  requestMessage?: string;
+  idempotencyKey?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface AfterSalesDecision {
+  outcome: "answer_only" | "proposal_created" | "approval_required" | "human_handoff" | "blocked" | "reconciliation_required";
+  reasonCodes: string[];
+  requiredEvidence: string[];
+  missingEvidence: string[];
+  customerMessage?: string;
+  operatorSummary?: string;
+}
+
+export interface AfterSalesCaseDetail {
+  case: AfterSalesCase;
+  sourceCase?: Record<string, unknown>;
+  customer?: Record<string, unknown>;
+  evidence: EvidenceRecord[];
+  proposal?: ActionProposal;
+  approvals: Approval[];
+  handoffs: HumanHandoff[];
+  audit: AuditEvent[];
+  executionAttempts: Record<string, unknown>[];
+  receipts: Record<string, unknown>[];
+  reconciliation: Record<string, unknown>[];
+  attempt?: Record<string, unknown>;
+  receipt?: Record<string, unknown>;
+  reconciliationTask?: Record<string, unknown>;
+}
+
+export interface AfterSalesMetrics {
+  totalCases: number;
+  autoAnswerRate: number;
+  proposalRate: number;
+  approvalRate: number;
+  humanHandoffRate: number;
+  blockedRate: number;
+  reconciliationRate: number;
+  duplicateExecutionCount: number;
+  fakeSuccessCount: number;
+  unknownResultAutoRetryCount: number;
+  evidenceCompletenessRate: number;
+  auditCompletenessRate: number;
+}
+
 /** GET /v1/shadow-runs item + POST shadow-run/review responses. */
 export interface ShadowRunEnvelope {
   shadowRun: ShadowRun;

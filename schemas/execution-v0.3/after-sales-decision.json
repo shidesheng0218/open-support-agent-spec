@@ -1,0 +1,17 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://open-support-agent.dev/schemas/execution-v0.3/after-sales-decision.json",
+  "title": "AfterSalesDecision",
+  "description": "Deterministic outcome of the Top-10 after-sales policy pipeline.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["outcome", "reasonCodes", "requiredEvidence", "missingEvidence"],
+  "properties": {
+    "outcome": { "enum": ["answer_only", "proposal_created", "approval_required", "human_handoff", "blocked", "reconciliation_required"] },
+    "reasonCodes": { "type": "array", "items": { "type": "string" }, "uniqueItems": true },
+    "requiredEvidence": { "type": "array", "items": { "type": "string" }, "uniqueItems": true },
+    "missingEvidence": { "type": "array", "items": { "type": "string" }, "uniqueItems": true },
+    "customerMessage": { "type": "string" },
+    "operatorSummary": { "type": "string" }
+  }
+}

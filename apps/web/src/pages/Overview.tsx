@@ -18,6 +18,12 @@ const PERSONAS = [
     desc: "Work the approval queue: review proposals with policy reasons, approve or reject, and claim handoffs.",
   },
   {
+    to: "/after-sales",
+    title: "After-sales Operations",
+    zh: "售后运营",
+    desc: "Operate the Top 10 after-sales scenarios with evidence, policy gates, approvals, sandbox receipts, audit and reconciliation.",
+  },
+  {
     to: "/platform",
     title: "Platform / Governance",
     zh: "平台治理",

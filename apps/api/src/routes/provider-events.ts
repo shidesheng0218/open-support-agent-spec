@@ -8,6 +8,7 @@ import { ConflictError, SchemaInvalidError } from "../plugins.js";
 import { ForbiddenError } from "../auth.js";
 import { audit, runReconcile } from "../domain.js";
 import { ctxFor } from "./basic.js";
+import { syncAfterSalesCaseStatus } from "./after-sales.js";
 
 export async function providerEventRoutes(app: FastifyInstance): Promise<void> {
   const executionValidator = createValidator(join(resolveSchemasDir(), "execution-v0.3"));
@@ -91,6 +92,12 @@ export async function providerEventRoutes(app: FastifyInstance): Promise<void> {
     const reconciliation = (await app.reconciliationStore.list(ctx.tenantId, "resolved"))
       .find((candidate) => candidate.id === task.id) ??
       await app.reconciliationStore.resolve(task, body.provider);
+    await syncAfterSalesCaseStatus(
+      app,
+      ctx.tenantId,
+      proposal.id,
+      status === "succeeded" ? "resolved" : "blocked",
+    );
     return { duplicate: false, event: stored.event, proposal: resolved, reconciliation };
   });
 }

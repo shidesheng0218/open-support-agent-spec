@@ -61,6 +61,7 @@ declare module "fastify" {
     /** Milestone 4: conformance mode (test-only reset/fixture/snapshot). */
     conformanceConfig: import("./config.js").ConformanceConfig;
     compatReportPath?: string;
+    afterSalesStore: import("./routes/after-sales.js").AfterSalesStore;
   }
 }
 

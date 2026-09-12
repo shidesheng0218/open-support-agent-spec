@@ -1,0 +1,36 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://open-support-agent.dev/schemas/execution-v0.3/after-sales-case.json",
+  "title": "AfterSalesCase",
+  "description": "Top-10 ecommerce after-sales vertical case envelope introduced by the v0.3 Draft controlled execution profile.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["id", "tenantId", "sourceCaseId", "scenarioCode", "status", "riskLevel", "evidenceIds", "policyVersion", "createdAt", "updatedAt"],
+  "properties": {
+    "id": { "type": "string", "minLength": 1 },
+    "tenantId": { "type": "string", "minLength": 1 },
+    "sourceCaseId": { "type": "string", "minLength": 1 },
+    "scenarioCode": { "enum": ["wismo", "delivery_delay", "not_received", "damaged_item", "wrong_or_missing_item", "refund_request", "refund_pending", "return_request", "reshipment_request", "exchange_request"] },
+    "orderId": { "type": "string", "minLength": 1 },
+    "customerId": { "type": "string", "minLength": 1 },
+    "amount": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["currency", "minorUnits"],
+      "properties": {
+        "currency": { "type": "string", "pattern": "^[A-Z]{3}$" },
+        "minorUnits": { "type": "integer", "minimum": 0 }
+      }
+    },
+    "status": { "enum": ["intake", "evidence_required", "evaluated", "pending_approval", "human_handoff", "executing", "resolved", "reconciliation_required", "blocked"] },
+    "riskLevel": { "enum": ["low", "medium", "high", "critical"] },
+    "evidenceIds": { "type": "array", "items": { "type": "string", "minLength": 1 }, "uniqueItems": true },
+    "policyVersion": { "type": "string", "minLength": 1 },
+    "proposalId": { "type": "string", "minLength": 1 },
+    "handoffId": { "type": "string", "minLength": 1 },
+    "requestMessage": { "type": "string" },
+    "idempotencyKey": { "type": "string", "minLength": 1 },
+    "createdAt": { "type": "string", "format": "date-time" },
+    "updatedAt": { "type": "string", "format": "date-time" }
+  }
+}
