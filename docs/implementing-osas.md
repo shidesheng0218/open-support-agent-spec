@@ -303,6 +303,31 @@ Per [GOVERNANCE.md](../GOVERNANCE.md#declaring-compatibility):
   checklist and the release gate (schemas, EN+ZH docs, reference
   implementation, and compat tests land in the same PR).
 
+## Lessons from the Python implementation
+
+The in-repository Python candidate (`implementations/python-reference/`)
+passes both black-box suites in CI (`python-compat` job). Practical notes from
+building it:
+
+- **Seed from the fixture JSON, not the prose.** Load
+  `conformance/fixtures/demo-tenant.json` and materialize the `now±N<unit>`
+  timestamp tokens at reset time; transcribing CONTRACTS.md §11 by hand is
+  how datasets drift.
+- **Implement `stable_stringify` early.** The audit hash chain compares
+  byte-for-byte canonical JSON (sorted keys, `JSON.stringify` escaping,
+  no whitespace — see "Reproducing the audit hash chain"). Write it once,
+  test tamper-evidence (flip one field → `event_hash_mismatch`), and reuse it
+  everywhere hashing is needed.
+- **Replay must return the stored result.** Idempotent re-execution returns
+  the original attempt/receipt identifiers with `replayed: true` — do not
+  rebuild the response.
+- **Register schemas by `$id`.** A `referencing`-style registry keyed by each
+  schema's `$id` lets relative `$ref`s (`./common.json#/$defs/…`) resolve
+  without rewriting; `schemas/manifest.json` is the inventory to iterate.
+- **Simulation is pure except for the lifecycle.** `simulate` produces no
+  proposal, approval, or execution — only the `draft → simulated` transition
+  and its audit event.
+
 ## Using the reference implementation as a known-good target
 
 Before testing your own service, run the runner against this repository's

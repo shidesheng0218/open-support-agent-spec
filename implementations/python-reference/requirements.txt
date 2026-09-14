@@ -1,0 +1,3 @@
+# Runtime dependency for JSON Schema (draft 2020-12) validation of
+# /v1/validate and policy-draft creation. `referencing` ships with jsonschema.
+jsonschema>=4.21

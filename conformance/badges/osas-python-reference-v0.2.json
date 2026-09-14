@@ -1,0 +1,20 @@
+{
+  "schemaVersion": "1",
+  "implementationId": "osas-python-reference-candidate",
+  "specVersion": "0.2",
+  "profile": "ecommerce",
+  "status": "draft-conformance",
+  "verifiedAt": "2026-09-14",
+  "independent": false,
+  "executionModes": ["proposal_only", "shadow", "sandbox"],
+  "live": false,
+  "evidence": {
+    "runner": "@osas/compat-runner (default v0.2 suites, read-only + stateful)",
+    "requiredEnvironment": [
+      "OSAS_EXECUTION_MODE=sandbox",
+      "OSAS_CONFORMANCE_MODE=true",
+      "OSAS_CONFORMANCE_KEY=<test-only-key>"
+    ],
+    "ci": "python-compat job"
+  }
+}

@@ -287,6 +287,26 @@ eventHash = 小写十六进制( SHA-256( UTF-8( stable_json(不含 `eventHash` �
   PR 检查清单与发布门禁（Schema、中英文档、参考实现、兼容性测试必须在
   同一 PR 中落地）。
 
+## 来自 Python 实现的经验
+
+仓库内的 Python 候选实现（`implementations/python-reference/`）已在 CI 的
+`python-compat` job 中通过两个黑盒套件。构建过程中的实践经验：
+
+- **从固件 JSON 播种，不要照抄散文。** 加载
+  `conformance/fixtures/demo-tenant.json`，在 reset 时把 `now±N<单位>`
+  时间戳令牌实例化；手工誊抄 CONTRACTS.md §11 正是数据集漂移的来源。
+- **尽早实现 `stable_stringify`。** 审计哈希链逐字节比较规范化 JSON
+  （键排序、`JSON.stringify` 转义、无空白——见"复现审计哈希链"一节）。
+  写一次，测试篡改可检性（改动一个字段 → `event_hash_mismatch`），然后在
+  所有需要哈希的地方复用。
+- **重放必须返回已存储的结果。** 幂等重放返回最初的 attempt/receipt
+  标识并携带 `replayed: true`——不要重新构造响应。
+- **按 `$id` 注册 Schema。** 以每个 Schema 的 `$id` 为键建立
+  referencing 风格的注册表，相对 `$ref`（`./common.json#/$defs/…`）即可
+  直接解析；要遍历的清单就是 `schemas/manifest.json`。
+- **模拟除生命周期外无副作用。** `simulate` 不产生提案、审批或执行——只有
+  `draft → simulated` 状态迁移及其审计事件。
+
 ## 把参考实现当作已知良好的对标
 
 在测试自己的服务之前，先对本仓库的参考实现运行 runner，端到端观察预期

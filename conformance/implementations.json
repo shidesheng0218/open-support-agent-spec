@@ -1,6 +1,6 @@
 {
   "schemaVersion": "1",
-  "updatedAt": "2026-09-09",
+  "updatedAt": "2026-09-14",
   "implementations": [
     {
       "implementationId": "osas-typescript-reference",
@@ -13,12 +13,12 @@
     },
     {
       "implementationId": "osas-python-reference-candidate",
-      "repository": null,
+      "repository": "https://github.com/shidesheng0218/open-support-agent-spec",
       "language": "python",
-      "status": "candidate",
+      "status": "conforming",
       "profiles": ["core", "ecommerce", "ecommerce-controlled-execution"],
       "independent": false,
-      "notes": "In-repository adoption sample; publish separately before counting toward v1.0."
+      "notes": "In-repository second implementation. Passes the black-box runner (v0.2 read-only + stateful suites and the v0.3 controlled-execution profile) in the CI python-compat job. Same organization, so it does not count toward the v1.0 independence gate; publish it as a separately maintained repository to count."
     }
   ]
 }
