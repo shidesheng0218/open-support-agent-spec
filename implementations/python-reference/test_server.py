@@ -2,6 +2,7 @@ import os
 import unittest
 
 os.environ.setdefault("OSAS_PROVIDER_EVENT_KEY", "py-provider-key")
+PROVIDER_EVENT_KEY = os.environ["OSAS_PROVIDER_EVENT_KEY"]
 
 from server import (  # noqa: E402
     GENESIS_HASH,
@@ -117,10 +118,10 @@ class PythonReferenceContractTest(unittest.TestCase):
             "idempotencyKey": "py-test-idem",
             "payload": {"status": "succeeded"},
         }
-        first = ingest_provider_event(event, "tenant_demo", "py-provider-key")
+        first = ingest_provider_event(event, "tenant_demo", PROVIDER_EVENT_KEY)
         self.assertFalse(first["duplicate"])
         self.assertEqual(first["reconciliation"]["status"], "resolved")
-        duplicate = ingest_provider_event(event, "tenant_demo", "py-provider-key")
+        duplicate = ingest_provider_event(event, "tenant_demo", PROVIDER_EVENT_KEY)
         self.assertTrue(duplicate["duplicate"])
 
     def test_audit_chain_intact_and_tamper_evident(self):
