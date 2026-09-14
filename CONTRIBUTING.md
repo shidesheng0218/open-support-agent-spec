@@ -7,6 +7,12 @@ contribution flow, development setup, pull-request requirements, and the release
 By contributing you agree to the [Code of Conduct](CODE_OF_CONDUCT.md) and license your
 work under [Apache-2.0](LICENSE).
 
+## Developer Certificate of Origin
+
+Every commit must carry a `Signed-off-by` line certifying the
+[Developer Certificate of Origin](DCO). Add it with `git commit -s`. PRs with
+commits missing the sign-off cannot be merged.
+
 ## Ways to contribute
 
 - **Spec text and schemas** — clarifications, new fields/objects, profile extensions.
@@ -57,6 +63,7 @@ Before opening a PR, confirm:
 - [ ] Breaking or new-semantics changes reference an accepted RFC (see below).
 - [ ] `CHANGELOG.md` has an entry under Unreleased (or the target version).
 - [ ] No real customer data, credentials, or secrets are added anywhere.
+- [ ] Every commit is signed off (`git commit -s`) per the [DCO](DCO).
 
 ## Release gate (normative)
 
@@ -82,7 +89,9 @@ Editorial fixes (typos, clarifications that do not change meaning) do not need a
 Process: copy [rfcs/0000-template.md](rfcs/0000-template.md) to
 `rfcs/NNNN-short-name.md`, open a PR with Status `Draft`, iterate with maintainer
 review, and the RFC is `Accepted` or `Rejected` by the founding maintainers. Only
-`Accepted` RFCs may be implemented. See [GOVERNANCE.md](GOVERNANCE.md).
+`Accepted` RFCs may be implemented. Once an `Accepted` RFC's schemas, reference
+implementation, tests, and bilingual docs have all merged, its status is marked
+`Implemented`. See [GOVERNANCE.md](GOVERNANCE.md).
 
 ## Versioning
 

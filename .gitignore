@@ -13,3 +13,4 @@ test-results/
 tests/compat/report/
 evals/report/
 packages/compat-runner/*-report.json
+.zcode/

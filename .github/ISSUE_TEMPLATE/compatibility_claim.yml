@@ -1,0 +1,56 @@
+name: Compatibility claim / registry entry
+description: Request registration of an implementation in conformance/implementations.json
+labels: [conformance]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Registration criteria and the verification flow are defined in
+        [conformance/README.md](../../../conformance/README.md). A claim is
+        verified by running the black-box compat runner against a live target
+        you operate, or against reproducible CI evidence you link.
+  - type: input
+    id: implementation
+    attributes:
+      label: Implementation name and repository
+      placeholder: "my-osas-impl — https://github.com/org/repo"
+    validations:
+      required: true
+  - type: dropdown
+    id: profiles
+    attributes:
+      label: Profiles claimed
+      multiple: true
+      options:
+        - core
+        - ecommerce
+        - saas
+        - ecommerce-controlled-execution (v0.3)
+    validations:
+      required: true
+  - type: input
+    id: target
+    attributes:
+      label: Live target URL or CI evidence link
+      description: A reachable endpoint the maintainers can run `osas:compat -- --target` against, or a link to CI logs containing the runner report.
+    validations:
+      required: true
+  - type: textarea
+    id: report
+    attributes:
+      label: Compat runner report
+      description: Paste the machine-readable report JSON (must show "ok": true including the stateful suite).
+      render: json
+    validations:
+      required: true
+  - type: checkboxes
+    id: independence
+    attributes:
+      label: Independence attestation
+      options:
+        - label: This implementation lives in its own repository, outside the OSAS reference repository
+          required: true
+        - label: This implementation is maintained by a different organization or individual than the OSAS founding maintainers
+          required: true
+        - label: My compatibility claim names the spec version tested (e.g. "OSAS 0.2 ecommerce-compatible")
+          required: true

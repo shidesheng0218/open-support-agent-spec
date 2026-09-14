@@ -1,0 +1,57 @@
+name: RFC proposal
+description: Propose a change that alters spec semantics (required before implementation)
+labels: [rfc]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        An RFC is required for breaking changes and new semantics. Process:
+        copy [rfcs/0000-template.md](../../rfcs/0000-template.md) to
+        `rfcs/NNNN-short-name.md`, open a PR with Status `Draft`, and iterate
+        with maintainer review. Only `Accepted` RFCs may be implemented.
+        See [CONTRIBUTING.md](../../CONTRIBUTING.md#rfc-process).
+  - type: input
+    id: title
+    attributes:
+      label: RFC title
+      placeholder: "e.g. External policy decision point"
+    validations:
+      required: true
+  - type: textarea
+    id: summary
+    attributes:
+      label: Summary
+      description: One-paragraph explanation of the change.
+    validations:
+      required: true
+  - type: textarea
+    id: motivation
+    attributes:
+      label: Motivation
+      description: Why is this needed? What use cases does it enable? What happens if we do nothing?
+    validations:
+      required: true
+  - type: dropdown
+    id: affects
+    attributes:
+      label: Normative surface affected
+      multiple: true
+      options:
+        - JSON Schemas
+        - state machines
+        - policy evaluation algorithm
+        - permission ladder
+        - MCP tool surface
+        - adapter interface
+        - governance / process only
+    validations:
+      required: true
+  - type: checkboxes
+    id: checklist
+    attributes:
+      label: Before submitting the RFC PR
+      options:
+        - label: I will open the RFC as Status `Draft` and will not implement it before acceptance
+          required: true
+        - label: I understand the release gate (schemas + EN/ZH docs + reference implementation + compat tests in the same PR) applies once the RFC is implemented
+          required: true

@@ -1,6 +1,6 @@
 # RFC 0003: Controlled Execution Profile
 
-- **Status:** Draft
+- **Status:** Implemented
 - **Authors:** OSAS founding maintainers
 - **Created:** 2026-09-09
 - **Target line:** OSAS v0.3 Draft

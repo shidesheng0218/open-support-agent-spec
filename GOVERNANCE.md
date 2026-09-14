@@ -47,18 +47,23 @@ version** and are released in lockstep.
 ## Declaring compatibility
 
 An implementation may declare **OSAS profile compatibility** (for `core`,
-`ecommerce`, or `saas`) only if the current compatibility suite
-(`@osas/compat-suite`) passes against that implementation and the machine-readable
-report (`tests/compat/report/latest.json` format) shows `ok: true` for the declared
-profile. Compatibility claims must name the spec version tested (e.g. "OSAS 0.2
-ecommerce-compatible").
+`ecommerce`, or `saas`) only if the black-box compatibility runner
+(`@osas/compat-runner`, invoked as `osas:compat -- --target <url>`) passes against
+that implementation over HTTP — including the stateful suite — and the
+machine-readable report shows `ok: true` for the declared profile. The in-repo
+compatibility suite (`@osas/compat-suite`) regression-tests the reference
+implementation itself; it shares the report semantics (`ok` / suites / per-check)
+but is not the gate for third-party declarations. Compatibility claims must name
+the spec version tested (e.g. "OSAS 0.2 ecommerce-compatible") and be registered
+as described in [conformance/README.md](conformance/README.md).
 
 ## Path to v1.0
 
 OSAS v0.2 is a Draft. The gates for declaring v1.0:
 
 1. **≥3 independent implementations** (beyond the reference implementation in this
-   repository) pass the compat suite for a given profile.
+   repository) pass the black-box compatibility runner for a given profile (see
+   [Declaring compatibility](#declaring-compatibility)).
 2. All normative documents exist in English and Chinese and are maintained in
    lockstep.
 3. No accepted-but-unimplemented RFCs block the core semantics.

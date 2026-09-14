@@ -59,9 +59,11 @@ const daysAhead = (now: Date, days: number): string => iso(new Date(now.getTime(
 /**
  * Fresh deep copies of the §11 demo fixtures on every call — no shared mutable
  * state between calls, so tests/adapters can mutate freely.
+ *
+ * `now` is injectable for deterministic comparisons (e.g. the drift-guard test
+ * against conformance/fixtures/demo-tenant.json); runtime callers omit it.
  */
-export function createDemoFixtures(): DemoFixtures {
-  const now = new Date();
+export function createDemoFixtures(now: Date = new Date()): DemoFixtures {
   const createdAt = daysAgo(now, 35);
 
   const customers: Customer[] = [

@@ -157,7 +157,10 @@ pnpm osas:compat -- --target http://localhost:8080 \
 注意 fixture 依赖：第 4、7 项检查使用 CONTRACTS.md §11 的演示数据集
 （`tenant_demo`、`case_refund`、`cus_verified`、`cus_unverified`、
 `ord_small`、`ev_ord_small`，演示策略的退款自动执行阈值为 $50）。你的
-`reset` 必须播种等价的确定性数据集——见下一节。
+`reset` 必须播种等价的确定性数据集——请以机器可读的权威文件
+[conformance/fixtures/demo-tenant.json](../conformance/fixtures/README.md)
+为准（时间戳采用相对的 `now±N<单位>` 令牌，数据集永不过期），而不是照抄
+散文描述。
 
 ### Runner 参数、报告与退出码
 
@@ -194,6 +197,41 @@ stateful 被跳过的运行做声明，证据力较弱）。该格式与
 内套件产出到 `tests/compat/report/latest.json` 的报告格式一致：同样的
 `ok` / `suites` / 逐项检查语义。
 
+## 复现审计哈希链
+
+Stateful 套件会检查 `GET /v1/audit/verify` → `intact: true`，因此你的实现
+必须与参考实现完全一致地计算事件哈希。审计链按租户隔离、只能追加，每个
+事件的 `eventHash` 为：
+
+```
+eventHash = 小写十六进制( SHA-256( UTF-8( stable_json(不含 `eventHash` 的 event) ) ) )
+```
+
+`stable_json` 是满足以下规则的规范化序列化（与 `@osas/policy-engine`
+中的 `stableStringify` 一致）：
+
+- **对象**：键按 UTF-16 码元字典序排序（即 JavaScript 默认字符串排序；
+  对 BMP 字符等价于 RFC 8785 排序），以 `"键":值` 形式用 `,` 连接并包裹
+  在 `{ }` 中。键按 `JSON.stringify` 的方式转义。
+- **数组**：元素保持顺序，以 `,` 连接并包裹在 `[ ]` 中。
+- **字符串**：转义规则与 `JSON.stringify` 完全一致——结构字符与控制
+  字符转义（`\"`、`\\`、`\n`、`\b`、`\f`、`\r`、`\t`，其余控制字符为
+  `\u00XX`）；非 ASCII 字符原样输出（字节流为 UTF-8）。
+- **数字**：采用 `JSON.stringify` 的最短可往返形式（整数不带小数点；
+  OSAS 的金额/整数绝不使用浮点）。
+- **无任何无关空白**。缺失的字段直接不序列化（可选字段不以 `null`
+  占位）。
+
+链规则：每个租户首个事件的 `sequence` 从 `1` 开始，严格递增 1；首个事件
+的 `previousHash` 为 64 个零字符（`0…0`），之后每个事件的 `previousHash`
+等于前一事件的 `eventHash`。`sequence` 与 `previousHash` 都参与哈希计算，
+因此篡改、删除、乱序均可被检出。验证按 `sequence` 升序遍历事件，报告首个
+错误：`missing_chain_fields`、`sequence_gap`、`previous_hash_mismatch`、
+`event_hash_mismatch`。
+
+仅提供篡改可检测性：能重写整条流的攻击者也可以重算整条链——真实部署中
+请配合 WORM 存储。
+
 ## 在自己的实现中落地 Conformance Mode
 
 要解锁 stateful 套件，需实现
@@ -208,7 +246,9 @@ stateful 被跳过的运行做声明，证据力较弱）。该格式与
   `X-OSAS-Conformance-Key: <key>` 头，并以常量时间比较（参考 API 对
   SHA-256 哈希值使用 `timingSafeEqual`）；key 错误或缺失 → 403。
 - **确定性重置。** `POST /v1/conformance/reset` 清空全部可变状态并重新
-  播种 CONTRACTS.md §11 的演示 fixtures；
+  播种 CONTRACTS.md §11 的演示 fixtures——以
+  [conformance/fixtures/demo-tenant.json](../conformance/fixtures/README.md)
+  为权威；
   `POST /v1/conformance/fixtures/load` 支持 `{ "name": "demo" | "empty" }`；
   `GET /v1/conformance/snapshot` 返回按租户计数与审计链校验结果。
 

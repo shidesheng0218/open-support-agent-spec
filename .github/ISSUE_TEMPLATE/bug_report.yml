@@ -1,0 +1,51 @@
+name: Bug report
+description: Report a defect in the spec, schemas, reference implementation, or compat tooling
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for filing a bug. If you believe you have found a **security
+        vulnerability**, do NOT file a public issue — follow
+        [SECURITY.md](../../SECURITY.md) instead.
+  - type: dropdown
+    id: area
+    attributes:
+      label: Affected area
+      options:
+        - spec text or JSON Schemas
+        - reference implementation (packages/ or apps/)
+        - compat runner / compat suite
+        - documentation (EN or ZH)
+        - CI / tooling
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+      description: What should happen? Cite the spec section or schema when relevant.
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual behavior
+      description: What happens instead? Include error output and the relevant reason codes.
+    validations:
+      required: true
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: Steps to reproduce
+      description: Commands, requests, or test cases. For API issues include the request/response pair.
+    validations:
+      required: true
+  - type: textarea
+    id: environment
+    attributes:
+      label: Environment
+      description: OS, Node/pnpm versions, OSAS version or commit.
+      placeholder: "macOS 15, Node 22, pnpm 11.7.0, OSAS 0.2.0 (commit …)"
+    validations:
+      required: false

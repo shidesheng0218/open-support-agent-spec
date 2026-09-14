@@ -166,7 +166,10 @@ Note the fixture dependency: checks 4 and 7 use the demo dataset from
 CONTRACTS.md §11 (`tenant_demo`, `case_refund`, `cus_verified`,
 `cus_unverified`, `ord_small`, `ev_ord_small`, demo policy with a $50 refund
 auto-execute threshold). Your `reset` must seed an equivalent deterministic
-dataset — see the next section.
+dataset — seed it from
+[conformance/fixtures/demo-tenant.json](../conformance/fixtures/README.md),
+the machine-readable authority (timestamps are relative `now±N<unit>` tokens
+so the dataset never goes stale), rather than transcribing the prose.
 
 ### Runner options, report, exit codes
 
@@ -205,6 +208,44 @@ report format produced by the in-repo suite at
 [GOVERNANCE.md](../GOVERNANCE.md#declaring-compatibility): same `ok` /
 `suites` / per-check semantics.
 
+## Reproducing the audit hash chain
+
+The stateful suite checks `GET /v1/audit/verify` → `intact: true`, so your
+implementation must compute event hashes exactly like the reference. The chain
+is per-tenant, append-only, and each event's `eventHash` is:
+
+```
+eventHash = lowercase_hex( SHA-256( UTF-8( stable_json(event without `eventHash`) ) ) )
+```
+
+`stable_json` is a canonical serialization with these rules (matching
+`stableStringify` in `@osas/policy-engine`):
+
+- **Objects**: keys sorted lexicographically by UTF-16 code unit (JavaScript's
+  default string sort; equivalent to RFC 8785 ordering for the BMP), serialized
+  as `"key":value` pairs joined by `,` inside `{ }`. Keys are JSON-escaped the
+  way `JSON.stringify` escapes them.
+- **Arrays**: elements in order, joined by `,` inside `[ ]`.
+- **Strings**: JSON escaping exactly as `JSON.stringify` — structural
+  characters and control characters escaped (`\"`, `\\`, `\n`, `\b`, `\f`,
+  `\r`, `\t`, other control characters as `\u00XX`); non-ASCII characters are
+  emitted literally (the byte stream is UTF-8).
+- **Numbers**: shortest round-trip form as produced by `JSON.stringify`
+  (integers have no decimal point; OSAS money/integers never use floats).
+- **No insignificant whitespace** anywhere. Fields that are absent are simply
+  not serialized (there is no `null` padding for optional fields).
+
+Chain rules: `sequence` starts at `1` for each tenant's first event and
+increments by exactly 1; `previousHash` of the first event is 64 zero
+characters (`0…0`), and of every later event is the previous event's
+`eventHash`. `sequence` and `previousHash` are part of the hashed content, so
+edits, deletions, and reordering are all detectable. Verification walks events
+in ascending `sequence` and reports the first of: `missing_chain_fields`,
+`sequence_gap`, `previous_hash_mismatch`, `event_hash_mismatch`.
+
+Tamper-evidence only: an attacker who can rewrite the whole stream can
+recompute the chain — pair with WORM storage in real deployments.
+
 ## Conformance Mode in your own implementation
 
 To unlock the stateful suite, implement the Conformance Mode contract from
@@ -219,7 +260,8 @@ behavior; aligning with the full contract is strongly recommended:
   `X-OSAS-Conformance-Key: <key>`, compared in constant time (the reference
   API uses `timingSafeEqual` over SHA-256 hashes); wrong/missing key → 403.
 - **Deterministic reset.** `POST /v1/conformance/reset` wipes all mutable
-  state and re-seeds the CONTRACTS.md §11 demo fixtures;
+  state and re-seeds the CONTRACTS.md §11 demo fixtures — authoritatively
+  [conformance/fixtures/demo-tenant.json](../conformance/fixtures/README.md);
   `POST /v1/conformance/fixtures/load` supports `{ "name": "demo" | "empty" }`;
   `GET /v1/conformance/snapshot` returns per-tenant counts plus the
   audit-chain verification result.

@@ -1,0 +1,37 @@
+name: Feature request
+description: Suggest an enhancement to the spec or the reference implementation
+labels: [enhancement]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Note: breaking changes and new semantics (schemas, state machines, the
+        policy algorithm, the permission ladder, the tool surface, the adapter
+        interface) require an **RFC** — use the RFC proposal template instead.
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem
+      description: What problem does this solve? What happens if we do nothing?
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed change
+      description: Describe the change and where it lives (spec, schemas, a package, docs).
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+    validations:
+      required: false
+  - type: checkboxes
+    id: semantics
+    attributes:
+      label: Does this change spec semantics?
+      options:
+        - label: This touches schemas, state machines, the policy algorithm, the permission ladder, the tool surface, or the adapter interface (I will file an RFC proposal)
+          required: false

@@ -6,6 +6,12 @@
 开发环境、Pull Request 要求与发布门禁。提交贡献即表示你同意
 [行为准则](CODE_OF_CONDUCT.md)，并以 [Apache-2.0](LICENSE) 许可你的成果。
 
+## 开发者原创声明（DCO）
+
+每个 commit 都必须带有 `Signed-off-by` 行，以确认
+[开发者原创声明](DCO)（Developer Certificate of Origin）。使用 `git commit -s`
+添加。存在缺失 sign-off 的 commit 的 PR 不能合并。
+
 ## 贡献方式
 
 - **规范文本与 Schema** —— 澄清、新增字段/对象、Profile 扩展。
@@ -53,6 +59,7 @@ pnpm docker:up      # docker compose up --build（控制台 :8080，API :3001）
 - [ ] 破坏性变更或新语义引用了已被接受的 RFC（见下）。
 - [ ] `CHANGELOG.md` 在 Unreleased（或目标版本）下有条目。
 - [ ] 未在任何位置引入真实客户数据、凭据或密钥。
+- [ ] 每个 commit 均已按 [DCO](DCO) 要求 sign off（`git commit -s`）。
 
 ## 发布门禁（规范性要求）
 
@@ -73,8 +80,9 @@ pnpm docker:up      # docker compose up --build（控制台 :8080，API :3001）
 
 流程：复制 [rfcs/0000-template.md](rfcs/0000-template.md) 为
 `rfcs/NNNN-简短名称.md`，以 `Draft` 状态提交 PR，在维护者评审中迭代，由创始维护者
-决定 `Accepted` 或 `Rejected`。只有 `Accepted` 的 RFC 可以进入实现。
-详见 [GOVERNANCE.md](GOVERNANCE.md)。
+决定 `Accepted` 或 `Rejected`。只有 `Accepted` 的 RFC 可以进入实现。当某个
+`Accepted` RFC 的 Schema、参考实现、测试与中英文文档全部合并后，其状态标记为
+`Implemented`。详见 [GOVERNANCE.md](GOVERNANCE.md)。
 
 ## 版本管理
 

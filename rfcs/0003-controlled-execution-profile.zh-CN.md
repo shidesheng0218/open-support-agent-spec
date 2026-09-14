@@ -1,6 +1,6 @@
 # RFC 0003：受控执行 Profile
 
-- **状态：** Draft
+- **状态：** Implemented
 - **作者：** OSAS founding maintainers
 - **创建日期：** 2026-09-09
 - **目标版本：** OSAS v0.3 Draft
