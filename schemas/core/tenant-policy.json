@@ -55,11 +55,44 @@
           "blockedRegions": {
             "type": "array",
             "items": { "$ref": "./common.json#/$defs/Region" }
+          },
+          "transforms": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["path", "op"],
+              "properties": {
+                "path": { "type": "string" },
+                "op": { "type": "string", "enum": ["redact"] },
+                "replacement": { "type": "string" }
+              }
+            }
           }
         }
       }
     },
     "defaultDecision": { "const": "block" },
+    "approval": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "timeoutSeconds": { "type": "integer", "minimum": 0 },
+        "onTimeout": { "type": "string", "enum": ["deny"] },
+        "approverGroups": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["id", "memberIds"],
+            "properties": {
+              "id": { "type": "string" },
+              "memberIds": { "type": "array", "items": { "type": "string" } }
+            }
+          }
+        }
+      }
+    },
     "createdAt": { "$ref": "./common.json#/$defs/DateTime" },
     "updatedAt": { "$ref": "./common.json#/$defs/DateTime" }
   }

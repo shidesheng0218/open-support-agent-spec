@@ -159,6 +159,12 @@ talks to adapters. Side effects (status transitions, approvals, handoffs,
 audit emission) are your embedding layer's job — or the OSAS API server's, if
 you run the full stack.
 
+When a matched rule carries `transforms` (deterministic param rewrites such as
+PII redaction) and the final decision is **not** `block`, the returned
+`PolicyDecision` includes a `transforms` array. `executeProposal` applies them
+to a deep clone of the params before the adapter sees them — a blocked action
+is never partially executed, so block decisions never carry transforms.
+
 ## Permission ladder
 
 `read < draft < request-approval < execute` — ordered in `PERMISSIONS`,
@@ -175,6 +181,29 @@ Enforcement is structural, not advisory: a proposal with
 `requestedPermission: "execute"` from `actorType: "model"` is blocked with
 `PERMISSION_OVERREACH` regardless of amounts, rules, or evidence.
 
+## Approval lifecycle
+
+Human approvals are **fail-safe** by design (modelled on the Microsoft Agent
+Governance Toolkit): an approval that is not decided before its deadline is
+treated as **denied** — never as approved.
+
+- `policy.approval.timeoutSeconds` sets the approval lifetime (recommended
+  default: **300s**). `resolveApprovalDeadline(approval, policy)` derives
+  `expiresAt = requestedAt + timeoutSeconds` when the approval record carries
+  no explicit deadline of its own.
+- `evaluateApprovalExpiry(approval, policy, now?)` reports a `pending`
+  approval whose deadline has passed as `status: "expired"` with reason
+  `APPROVAL_TIMED_OUT`. Decided approvals are never re-judged, and a pending
+  approval without a deadline stays pending.
+- `policy.approval.onTimeout` is `"deny"` today — the only supported value,
+  kept as an explicit extension point for a future escalation semantics.
+- `policy.approval.approverGroups` (`{ id, memberIds }`) names the groups
+  whose members may decide approvals; the `Approval` record carries optional
+  `approverGroupId` and `expiresAt` fields.
+
+These helpers are pure: persisting the `expired` transition, rejecting the
+proposal, and emitting audit events are your embedding/API layer's job.
+
 ## API surface
 
 Everything below is exported from the package root (`src/index.ts`).
@@ -183,6 +212,18 @@ Everything below is exported from the package root (`src/index.ts`).
 
 - `evaluateProposal(proposal, ctx) → PolicyDecision`
 - `EvaluationContext`, `POLICY_REASON_CODES`, `PolicyReasonCode`
+
+**Approval lifecycle**
+
+- `resolveApprovalDeadline(approval, policy, now?) → IsoDateTime | undefined`
+- `evaluateApprovalExpiry(approval, policy, now?) → { status, reason? }`,
+  `APPROVAL_TIMED_OUT`
+
+**Param transforms**
+
+- `applyParamTransforms(params, transforms) → { params, applied }` — pure
+  JSON-pointer-style rewrite (`op: "redact"`); `executeProposal` already
+  applies `decision.transforms` for you at the execution boundary
 
 **Execution orchestration**
 

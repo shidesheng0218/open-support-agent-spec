@@ -5,6 +5,7 @@ import {
   type ExecutionResult,
   type ProposalStatus,
 } from "@osas/core";
+import { applyParamTransforms } from "./param-transforms.js";
 
 /**
  * Minimal structural interface for the execution side of a SupportAdapter
@@ -111,6 +112,10 @@ export interface ExecuteOutcome {
  *   {@link ExecutionStatusError} (API maps to 409).
  * - Transitions: approved → executing → executed | failed |
  *   reconciliation_required. Uncertain outcomes are NEVER auto-retried.
+ * - §4 step 11: `proposal.policyDecision.transforms` (e.g. redaction) are
+ *   applied to a deep clone of params before the adapter call, so policy-
+ *   decided rewrites are enforced at the execution boundary for every
+ *   embedding, not just the OSAS API server.
  */
 export async function executeProposal(
   proposal: ActionProposal,
@@ -134,9 +139,17 @@ export async function executeProposal(
   }
 
   const executing = transitionProposal(proposal, "executing");
+  // §4 step 11: the decision's transforms (e.g. PII redaction) are applied by
+  // the engine itself, deterministically, so the adapter NEVER sees raw params
+  // when policy decided a rewrite. Redaction replaces the value at `path` with
+  // `replacement ?? "***"`; unmatched paths are a no-op (see param-transforms.ts).
+  const { params } = applyParamTransforms(
+    proposal.params,
+    proposal.policyDecision?.transforms,
+  );
   const result = await adapter.executeAction(
     { tenantId: proposal.tenantId },
-    executing,
+    { ...executing, params },
   );
 
   switch (result.status) {

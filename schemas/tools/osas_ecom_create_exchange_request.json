@@ -4,6 +4,12 @@
   "title": "osas_ecom_create_exchange_request input",
   "description": "Proposal shortcut: drafts an exchange_request ActionProposal server-side (status proposed, requestedPermission request-approval). The model NEVER executes an exchange; fulfillment is always human after approval. Clients MUST NOT supply requestedPermission/requestedBy.",
   "type": "object",
+  "annotations": {
+    "type": "object",
+    "additionalProperties": false,
+    "required": ["mutatingHint"],
+    "properties": { "mutatingHint": { "type": "boolean" } }
+  },
   "additionalProperties": false,
   "required": ["caseId", "orderId", "originalLineId", "replacementSku", "idempotencyKey"],
   "properties": {

@@ -148,10 +148,10 @@ describe("schemas dir resolution + manifest", () => {
     }
   });
 
-  it("manifest covers 14 core + 9 profile + 20 tool schemas", () => {
+  it("manifest covers 15 core + 6 ecommerce + 3 saas + 20 tool schemas", () => {
     const manifest = loadManifest();
     expect(manifest.specVersion).toBe(SPEC_VERSION);
-    expect(manifest.schemas).toHaveLength(43);
+    expect(manifest.schemas).toHaveLength(44);
     expect(listSchemas().map((s) => s.name)).toContain("core/capability-manifest");
     expect(listSchemas().map((s) => s.name)).toContain("core/shadow-run");
     expect(listSchemas().map((s) => s.name)).toContain("tools/osas_core_get_case");
@@ -171,6 +171,52 @@ describe("valid minimal fixtures pass", () => {
 
   it("audit events accept the v0.1.1 hash-chain fields and policy lifecycle event types", () => {
     const result = validator.validate("core/audit-event", chainedAuditEvent);
+    expect(result.errors).toEqual([]);
+    expect(result.valid).toBe(true);
+  });
+
+  it("approvals accept the expired status with expiresAt and approverGroupId", () => {
+    const result = validator.validate("core/approval", {
+      ...(validFixtures["core/approval"] as object),
+      status: "expired",
+      expiresAt: NOW,
+      approverGroupId: "grp_tier2",
+    });
+    expect(result.errors).toEqual([]);
+    expect(result.valid).toBe(true);
+  });
+
+  it("tenant policies accept approval timeout config and rule transforms", () => {
+    const result = validator.validate("core/tenant-policy", {
+      ...(validFixtures["core/tenant-policy"] as object),
+      approval: {
+        timeoutSeconds: 300,
+        onTimeout: "deny",
+        approverGroups: [{ id: "grp_tier2", memberIds: ["agent_1", "agent_2"] }],
+      },
+      rules: [
+        {
+          actionType: "refund",
+          decision: "auto_execute",
+          transforms: [{ path: "/customerEmail", op: "redact", replacement: "[redacted]" }],
+        },
+      ],
+    });
+    expect(result.errors).toEqual([]);
+    expect(result.valid).toBe(true);
+  });
+
+  it("decisions embedded in proposals accept transforms", () => {
+    const result = validator.validate("core/action-proposal", {
+      ...(validFixtures["core/action-proposal"] as object),
+      policyDecision: {
+        decision: "auto_execute",
+        reasons: [],
+        policyVersion: "1.0.0",
+        evaluatedAt: NOW,
+        transforms: [{ path: "/customerEmail", op: "redact" }],
+      },
+    });
     expect(result.errors).toEqual([]);
     expect(result.valid).toBe(true);
   });
@@ -235,6 +281,42 @@ describe("invalid data is rejected", () => {
     const result = validator.validate("core/action-proposal", {
       ...(validFixtures["core/action-proposal"] as object),
       amount: { currency: "USD" },
+    });
+    expect(result.valid).toBe(false);
+  });
+
+  it("transforms reject unknown ops and missing required fields", () => {
+    const baseProposal = validFixtures["core/action-proposal"] as Record<string, unknown>;
+    const decision = {
+      decision: "auto_execute",
+      reasons: [],
+      policyVersion: "1.0.0",
+      evaluatedAt: NOW,
+    };
+    expect(
+      validator.validate("core/action-proposal", {
+        ...baseProposal,
+        policyDecision: {
+          ...decision,
+          transforms: [{ path: "/customerEmail", op: "encrypt" }],
+        },
+      }).valid,
+    ).toBe(false);
+    expect(
+      validator.validate("core/action-proposal", {
+        ...baseProposal,
+        policyDecision: {
+          ...decision,
+          transforms: [{ path: "/customerEmail" }],
+        },
+      }).valid,
+    ).toBe(false);
+  });
+
+  it("tenant policies reject approval configs with unknown onTimeout values", () => {
+    const result = validator.validate("core/tenant-policy", {
+      ...(validFixtures["core/tenant-policy"] as object),
+      approval: { timeoutSeconds: 300, onTimeout: "escalate" },
     });
     expect(result.valid).toBe(false);
   });
@@ -349,6 +431,30 @@ describe("after-sales profile schemas (v0.2 Phase 4)", () => {
 });
 
 describe("tools input schemas", () => {
+  it("every tool schema declares MCP 2026-07 annotations (12 readOnly, 8 mutating)", () => {
+    const toolSchemas = listSchemas().filter((s) => s.profile === "tools");
+    expect(toolSchemas).toHaveLength(20);
+    for (const entry of toolSchemas) {
+      const schema = loadSchema(entry.name);
+      const annotations = schema.annotations as Record<string, unknown>;
+      expect(annotations).toBeDefined();
+      expect(annotations.type).toBe("object");
+      expect(annotations.additionalProperties).toBe(false);
+      const props = annotations.properties as Record<string, unknown>;
+      for (const hint of Object.values(props)) {
+        expect(hint).toMatchObject({ type: "boolean" });
+      }
+    }
+    const hintOf = (name: string) => {
+      const schema = loadSchema(name) as { annotations: { properties: Record<string, unknown> } };
+      return Object.keys(schema.annotations.properties);
+    };
+    const readOnly = toolSchemas.filter((s) => hintOf(s.name).includes("readOnlyHint"));
+    const mutating = toolSchemas.filter((s) => hintOf(s.name).includes("mutatingHint"));
+    expect(readOnly).toHaveLength(12);
+    expect(mutating).toHaveLength(8);
+  });
+
   it("osas_core_get_case accepts { id } and rejects extras", () => {
     expect(validator.validate("tools/osas_core_get_case", { id: "case_1" }).valid).toBe(true);
     expect(validator.validate("tools/osas_core_get_case", {}).valid).toBe(false);

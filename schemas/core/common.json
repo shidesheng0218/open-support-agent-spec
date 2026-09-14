@@ -55,7 +55,20 @@
           }
         },
         "policyVersion": { "type": "string" },
-        "evaluatedAt": { "$ref": "#/$defs/DateTime" }
+        "evaluatedAt": { "$ref": "#/$defs/DateTime" },
+        "transforms": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["path", "op"],
+            "properties": {
+              "path": { "type": "string" },
+              "op": { "type": "string", "enum": ["redact"] },
+              "replacement": { "type": "string" }
+            }
+          }
+        }
       }
     }
   }

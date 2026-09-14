@@ -3,6 +3,12 @@
   "$id": "https://open-support-agent.dev/schemas/tools/osas_core_create_case_note.json",
   "title": "osas_core_create_case_note input",
   "type": "object",
+  "annotations": {
+    "type": "object",
+    "additionalProperties": false,
+    "required": ["mutatingHint"],
+    "properties": { "mutatingHint": { "type": "boolean" } }
+  },
   "additionalProperties": false,
   "required": ["caseId", "body", "idempotencyKey"],
   "properties": {

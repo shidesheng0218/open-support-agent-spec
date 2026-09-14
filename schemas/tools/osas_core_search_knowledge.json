@@ -3,6 +3,12 @@
   "$id": "https://open-support-agent.dev/schemas/tools/osas_core_search_knowledge.json",
   "title": "osas_core_search_knowledge input",
   "type": "object",
+  "annotations": {
+    "type": "object",
+    "additionalProperties": false,
+    "required": ["readOnlyHint"],
+    "properties": { "readOnlyHint": { "type": "boolean" } }
+  },
   "additionalProperties": false,
   "required": ["q"],
   "properties": {

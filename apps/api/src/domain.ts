@@ -20,6 +20,7 @@ import type {
 import { detectInjection } from "@osas/core";
 import { evaluateProposal, executeProposal, reconcile } from "@osas/policy-engine";
 import type { ExecutionStore, PolicyStore } from "@osas/policy-engine";
+import { applyParamTransforms } from "@osas/policy-engine";
 import {
   PostgresAuditStore,
   PostgresExecutionStore,
@@ -289,9 +290,20 @@ export async function runExecution(
     );
   }
 
+  // §4 step 11: apply the decision's param transforms (e.g. PII redaction)
+  // BEFORE the attempt is created, so the request hash, receipt, and audit
+  // trail cover exactly what the adapter receives. executeProposal re-applies
+  // them defensively — redaction is idempotent.
+  const { params: transformedParams, applied } = applyParamTransforms(
+    proposal.params,
+    proposal.policyDecision?.transforms,
+  );
+  const effectiveProposal =
+    applied.length > 0 ? { ...proposal, params: transformedParams } : proposal;
+
   const attempt = opts.attemptStore
     ? await opts.attemptStore.create(
-        createExecutionAttempt(proposal, opts.mode ?? "shadow", { id: `attempt_${randomUUID()}` }),
+        createExecutionAttempt(effectiveProposal, opts.mode ?? "shadow", { id: `attempt_${randomUUID()}` }),
       )
     : undefined;
   if (attempt) {
@@ -312,7 +324,12 @@ export async function runExecution(
     eventType: "execution_started",
     actorType: "system",
     actorId: "osas-api",
-    detail: { idempotencyKey: proposal.idempotencyKey },
+    detail: {
+      idempotencyKey: proposal.idempotencyKey,
+      ...(applied.length > 0
+        ? { transformsApplied: applied.map((t) => ({ path: t.path, op: t.op })) }
+        : {}),
+    },
   }, opts.sink);
 
   // The engine passes only { tenantId } to the executor; wrap the adapter so
@@ -383,7 +400,7 @@ export async function runExecution(
 
   if (opts.pgPool) {
     const transactionResult = await withTransaction(opts.pgPool, async (client) => {
-      const out = await executeProposal(proposal, executor, new PostgresExecutionStore(client));
+      const out = await executeProposal(effectiveProposal, executor, new PostgresExecutionStore(client));
       const finished = await finish(out, {
         append: (event) => new PostgresAuditStore(client).append(event),
       });
@@ -407,7 +424,7 @@ export async function runExecution(
     };
   }
 
-  const outcome = await executeProposal(proposal, executor, store);
+  const outcome = await executeProposal(effectiveProposal, executor, store);
   const finished = await finish(outcome, opts.sink);
   return {
     proposal: finished.proposal,

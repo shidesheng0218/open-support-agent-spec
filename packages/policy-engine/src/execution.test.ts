@@ -33,6 +33,26 @@ describe("executeProposal — §5", () => {
     expect((await store.get("tenant_demo", "idem_1"))?.status).toBe("executed");
   });
 
+  it("applies decision transforms so the adapter never sees raw params (§4 step 11)", async () => {
+    const store = new InMemoryExecutionStore();
+    const adapter = executor({ status: "succeeded" });
+    const proposal = approvedProposal({
+      params: { orderId: "ord_1", customerEmail: "a@b.c" },
+      policyDecision: {
+        decision: "auto_execute",
+        reasons: [],
+        policyVersion: "1.0.0",
+        evaluatedAt: "2026-09-05T12:00:00.000Z",
+        transforms: [{ path: "/customerEmail", op: "redact" }],
+      },
+    });
+    await executeProposal(proposal, adapter, store);
+    const sent = adapter.executeAction.mock.calls[0]![1] as ActionProposal;
+    expect(sent.params).toEqual({ orderId: "ord_1", customerEmail: "***" });
+    // The caller's proposal is untouched — transforms operate on a deep clone.
+    expect(proposal.params.customerEmail).toBe("a@b.c");
+  });
+
   it("approved → failed on adapter failure, result stored", async () => {
     const store = new InMemoryExecutionStore();
     const adapter = executor({ status: "failed", detail: "card declined" });

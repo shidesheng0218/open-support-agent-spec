@@ -72,13 +72,40 @@ describe("TOOL_DEFINITIONS", () => {
     expect(def?.capabilityRequired).toBe("ecommerce.item_claim.propose");
   });
 
-  it("read tools require only read permission", () => {
+  it("read tools require only read permission and carry readOnlyHint", () => {
     const reads = TOOL_DEFINITIONS.filter((d) =>
       ["getCase", "searchCases", "getCustomer", "searchKnowledge", "getOrder", "listOrders", "getShipment", "getShipmentIncident", "getRefundStatus", "getSubscription", "listInvoices", "getCreditBalance"].includes(
         d.adapterMethod,
       ),
     );
     expect(reads).toHaveLength(12);
-    for (const d of reads) expect(d.permissionRequired).toBe("read");
+    for (const d of reads) {
+      expect(d.permissionRequired).toBe("read");
+      expect(d.annotations).toEqual({ readOnlyHint: true });
+    }
+  });
+
+  it("every tool carries exactly one annotation: 12 readOnlyHint, 8 mutatingHint", () => {
+    const readOnly = TOOL_DEFINITIONS.filter((d) => "readOnlyHint" in d.annotations);
+    const mutating = TOOL_DEFINITIONS.filter((d) => "mutatingHint" in d.annotations);
+    expect(readOnly).toHaveLength(12);
+    expect(mutating).toHaveLength(8);
+    for (const d of TOOL_DEFINITIONS) {
+      expect(Object.keys(d.annotations)).toHaveLength(1);
+    }
+    expect(
+      mutating.map((d) => d.name).sort(),
+    ).toEqual(
+      [
+        "osas_core_create_action_proposal",
+        "osas_core_create_case_note",
+        "osas_core_create_escalation",
+        "osas_ecom_create_exchange_request",
+        "osas_ecom_create_item_claim_request",
+        "osas_saas_create_cancellation_request",
+        "osas_saas_create_credit_request",
+        "osas_saas_create_plan_change_request",
+      ].sort(),
+    );
   });
 });

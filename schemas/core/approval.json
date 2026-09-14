@@ -20,12 +20,14 @@
     "specVersion": { "$ref": "./common.json#/$defs/SpecVersion" },
     "tenantId": { "$ref": "./common.json#/$defs/Id" },
     "proposalId": { "$ref": "./common.json#/$defs/Id" },
-    "status": { "type": "string", "enum": ["pending", "approved", "rejected"] },
+    "status": { "type": "string", "enum": ["pending", "approved", "rejected", "expired"] },
     "approverId": { "type": "string" },
     "comment": { "type": "string" },
     "policyVersion": { "type": "string" },
     "requestedAt": { "$ref": "./common.json#/$defs/DateTime" },
     "decidedAt": { "$ref": "./common.json#/$defs/DateTime" },
+    "expiresAt": { "$ref": "./common.json#/$defs/DateTime" },
+    "approverGroupId": { "type": "string" },
     "createdAt": { "$ref": "./common.json#/$defs/DateTime" },
     "updatedAt": { "$ref": "./common.json#/$defs/DateTime" }
   }

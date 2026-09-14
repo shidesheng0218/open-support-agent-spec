@@ -74,6 +74,29 @@ Non-goals: a general-purpose agent protocol; a channel/inbox product;
 governance semantics for domains outside customer support (a future RFC may
 consider generalization once ≥3 independent support implementations exist).
 
+## Alignment with the MCP 2026-07 revision
+
+The MCP revision dated 2026-07-28 (multi-round-trip interactions replacing
+elicitation/sampling, stateless servers, extended tool annotations) aligns
+with OSAS by construction rather than by new specification:
+
+1. **MRTR.** OSAS's request-approval flow is structurally isomorphic to
+   multi-round-trip: an approval wait is an `input_required` result plus
+   `inputRequests`, answered by a human client re-entering the same proposal
+   through the policy engine.
+2. **Stateless servers.** The MCP server holds no session state; pending
+   approvals and all resumable state live in the proposal store
+   (`@osas/store-postgres`) behind the adapter boundary, so the server
+   satisfies the revision's statelessness requirement natively.
+3. **Tool annotations.** All 20 tool schemas declare `readOnlyHint` or
+   `mutatingHint` annotations, surfaced on the MCP tool definitions; the
+   mapping rules and the caveat that enforcement stays in the governance
+   layer are normative in `schemas/tools/README.md`.
+
+OSAS also commits to a 12-month dual-revision support window during which
+`@osas/mcp-server` retains its pre-2026-07 transport adaptation. Full detail:
+`docs/mcp-2026-07-alignment.md` (+ `.zh-CN.md`), Status: Draft.
+
 ## Compatibility
 
 RFC 0002 itself adds no new runtime actions: it introduces no schema,

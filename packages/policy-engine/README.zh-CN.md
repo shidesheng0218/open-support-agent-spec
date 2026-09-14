@@ -132,6 +132,8 @@ node examples/embed-policy-engine/dist/main.js
 
 引擎是**纯函数式的**：它不修改 proposal、不写审计事件、不调用适配器。副作用（状态迁移、审批、转人工、审计落盘）由你的嵌入层负责——如果你跑 OSAS 全栈，则由 OSAS API Server 负责。
 
+当命中规则带有 `transforms`（如 PII 脱敏等确定性参数改写）且最终决策**不是** `block` 时，返回的 `PolicyDecision` 会携带 `transforms` 数组。`executeProposal` 会在适配器拿到参数之前，把它们应用到参数的深拷贝上——被阻止的动作不允许部分执行，因此 block 决策绝不携带 transforms。
+
 ## 权限阶梯
 
 `read < draft < request-approval < execute`——顺序定义在 `PERMISSIONS` 中，可用 `permissionAtLeast(a, b)` 比较：
@@ -145,6 +147,17 @@ node examples/embed-policy-engine/dist/main.js
 
 执行是结构性强制的，不是劝告式的：只要 `requestedPermission: "execute"` 且 `actorType: "model"`，无论金额、规则、证据如何，一律以 `PERMISSION_OVERREACH` 拒绝。
 
+## 审批生命周期
+
+人工审批在设计上就是**失效安全**（fail-safe，对标 Microsoft Agent Governance Toolkit）：超过期限仍未被决断的审批一律视为**拒绝**——绝不会视为同意。
+
+- `policy.approval.timeoutSeconds` 设置审批生命周期（推荐默认值：**300s**）。当审批记录自身没有显式期限时，`resolveApprovalDeadline(approval, policy)` 推导 `expiresAt = requestedAt + timeoutSeconds`。
+- `evaluateApprovalExpiry(approval, policy, now?)` 将超过期限的 `pending` 审批报告为 `status: "expired"`，理由为 `APPROVAL_TIMED_OUT`。已决断的审批不会被重新评判；没有期限的 pending 审批保持 pending。
+- `policy.approval.onTimeout` 当前仅支持 `"deny"`——显式保留该字段，为未来的升级（escalate）语义留扩展位。
+- `policy.approval.approverGroups`（`{ id, memberIds }`）声明可决断审批的审批组成员；`Approval` 记录携带可选的 `approverGroupId` 与 `expiresAt` 字段。
+
+这些辅助函数均为纯函数：把 `expired` 迁移落库、拒绝对应 proposal、发出审计事件，由你的嵌入层/API 层负责。
+
 ## API 面
 
 以下符号均从包根导出（`src/index.ts`）。
@@ -153,6 +166,16 @@ node examples/embed-policy-engine/dist/main.js
 
 - `evaluateProposal(proposal, ctx) → PolicyDecision`
 - `EvaluationContext`、`POLICY_REASON_CODES`、`PolicyReasonCode`
+
+**审批生命周期**
+
+- `resolveApprovalDeadline(approval, policy, now?) → IsoDateTime | undefined`
+- `evaluateApprovalExpiry(approval, policy, now?) → { status, reason? }`、
+  `APPROVAL_TIMED_OUT`
+
+**参数改写（transforms）**
+
+- `applyParamTransforms(params, transforms) → { params, applied }`——纯函数式 JSON-pointer 风格改写（`op: "redact"`）；`executeProposal` 已在执行边界自动应用 `decision.transforms`
 
 **执行编排**
 

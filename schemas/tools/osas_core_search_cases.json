@@ -3,6 +3,12 @@
   "$id": "https://open-support-agent.dev/schemas/tools/osas_core_search_cases.json",
   "title": "osas_core_search_cases input",
   "type": "object",
+  "annotations": {
+    "type": "object",
+    "additionalProperties": false,
+    "required": ["readOnlyHint"],
+    "properties": { "readOnlyHint": { "type": "boolean" } }
+  },
   "additionalProperties": false,
   "properties": {
     "customerId": { "$ref": "../core/common.json#/$defs/Id" },

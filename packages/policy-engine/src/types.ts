@@ -14,6 +14,7 @@ export type {
   ExecutionStatus,
   IdentityVerification,
   Money,
+  ParamTransform,
   Permission,
   PolicyDecision,
   PolicyDecisionReason,

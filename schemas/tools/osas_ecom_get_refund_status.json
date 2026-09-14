@@ -3,6 +3,12 @@
   "$id": "https://open-support-agent.dev/schemas/tools/osas_ecom_get_refund_status.json",
   "title": "osas_ecom_get_refund_status input",
   "type": "object",
+  "annotations": {
+    "type": "object",
+    "additionalProperties": false,
+    "required": ["readOnlyHint"],
+    "properties": { "readOnlyHint": { "type": "boolean" } }
+  },
   "additionalProperties": false,
   "required": ["orderId"],
   "properties": {

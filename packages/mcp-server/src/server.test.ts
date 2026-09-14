@@ -44,6 +44,21 @@ describe("buildMcpServer", () => {
     await server.close();
   });
 
+  it("surfaces MCP 2026-07 annotations on the wire", async () => {
+    const { client, server } = await connectedClient();
+    const { tools } = await client.listTools();
+    // Read-only tools carry the native SDK-supported readOnlyHint annotation.
+    const getCase = tools.find((t) => t.name === "osas_core_get_case");
+    expect(getCase?.annotations).toMatchObject({ readOnlyHint: true });
+    // Mutating tools carry mutatingHint via _meta until the SDK's
+    // ToolAnnotations schema ships the 2026-07 field (zod $strip drops it).
+    const note = tools.find((t) => t.name === "osas_core_create_case_note");
+    expect(note?.annotations?.readOnlyHint).toBeFalsy();
+    const meta = note?._meta as Record<string, unknown> | undefined;
+    expect(meta?.["osas/annotations"]).toEqual({ mutatingHint: true });
+    await server.close();
+  });
+
   it("invokes osas_core_get_case and returns case data", async () => {
     const { client, server } = await connectedClient();
     const result = await client.callTool({

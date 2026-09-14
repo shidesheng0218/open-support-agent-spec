@@ -3,6 +3,12 @@
   "$id": "https://open-support-agent.dev/schemas/tools/osas_core_get_case.json",
   "title": "osas_core_get_case input",
   "type": "object",
+  "annotations": {
+    "type": "object",
+    "additionalProperties": false,
+    "required": ["readOnlyHint"],
+    "properties": { "readOnlyHint": { "type": "boolean" } }
+  },
   "additionalProperties": false,
   "required": ["id"],
   "properties": {

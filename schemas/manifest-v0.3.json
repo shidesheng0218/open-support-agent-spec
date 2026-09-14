@@ -6,6 +6,7 @@
     { "name": "execution-v0.3/execution-receipt", "path": "execution-v0.3/execution-receipt.json" },
     { "name": "execution-v0.3/reconciliation-task", "path": "execution-v0.3/reconciliation-task.json" },
     { "name": "execution-v0.3/provider-event", "path": "execution-v0.3/provider-event.json" },
-    { "name": "execution-v0.3/execution-capability", "path": "execution-v0.3/execution-capability.json" }
+    { "name": "execution-v0.3/execution-capability", "path": "execution-v0.3/execution-capability.json" },
+    { "name": "core/shadow-metrics", "path": "core/shadow-metrics.json" }
   ]
 }

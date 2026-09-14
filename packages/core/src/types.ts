@@ -145,6 +145,18 @@ export interface RequestedBy {
 
 export type PolicyDecisionValue = "auto_execute" | "require_approval" | "block";
 
+/**
+ * Deterministic parameter rewrite emitted by the policy engine and applied by
+ * the execution layer before params reach the adapter (e.g. PII redaction).
+ * `path` is a JSON-pointer-style path (see packages/policy-engine/src/param-transforms.ts
+ * for the supported subset).
+ */
+export interface ParamTransform {
+  path: string;
+  op: "redact";
+  replacement?: string;
+}
+
 export interface PolicyDecisionReason {
   code: string;
   message: string;
@@ -155,6 +167,12 @@ export interface PolicyDecision {
   reasons: PolicyDecisionReason[];
   policyVersion: string;
   evaluatedAt: IsoDateTime;
+  /**
+   * Deterministic parameter rewrites the execution layer must apply before
+   * the adapter sees the params (CONTRACTS.md §4 step 11). Only ever present
+   * on non-block decisions; a blocked action never carries transforms.
+   */
+  transforms?: ParamTransform[];
 }
 
 export interface ActionProposal {
@@ -185,7 +203,7 @@ export type NewActionProposal = Omit<
 
 /* ---------------- Approval ---------------- */
 
-export type ApprovalStatus = "pending" | "approved" | "rejected";
+export type ApprovalStatus = "pending" | "approved" | "rejected" | "expired";
 
 export interface Approval {
   id: string;
@@ -198,6 +216,10 @@ export interface Approval {
   policyVersion: string;
   requestedAt: IsoDateTime;
   decidedAt?: IsoDateTime;
+  /** Deadline computed from policy.approval.timeoutSeconds (fail-safe deny). */
+  expiresAt?: IsoDateTime;
+  /** Policy approval group whose members may decide this approval. */
+  approverGroupId?: string;
   createdAt: IsoDateTime;
   updatedAt: IsoDateTime;
 }
@@ -213,10 +235,25 @@ export interface PolicyRule {
   identityMaxAgeSeconds?: number;
   allowedRegions?: string[];
   blockedRegions?: string[];
+  /** Deterministic param rewrites copied into the decision on rule match (§4). */
+  transforms?: ParamTransform[];
 }
 
 export interface TenantPolicyBudget {
   dailyUsdCap?: number;
+}
+
+export interface TenantPolicyApprovalGroup {
+  id: string;
+  memberIds: string[];
+}
+
+export interface TenantPolicyApproval {
+  /** Approval lifetime in seconds; 0 means immediate expiry. Default: 300. */
+  timeoutSeconds?: number;
+  /** Fail-safe on expiry: only "deny" today; reserved for future "escalate". */
+  onTimeout?: "deny";
+  approverGroups?: TenantPolicyApprovalGroup[];
 }
 
 export interface TenantPolicy {
@@ -229,6 +266,7 @@ export interface TenantPolicy {
   duplicateWindowSeconds: number;
   maxEvidenceAgeSeconds: number;
   budget?: TenantPolicyBudget;
+  approval?: TenantPolicyApproval;
   rules: PolicyRule[];
   defaultDecision: "block";
   createdAt: IsoDateTime;

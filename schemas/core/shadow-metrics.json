@@ -1,0 +1,64 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://open-support-agent.dev/schemas/core/shadow-metrics.json",
+  "title": "ShadowMetrics",
+  "description": "Shadow Mode operational metrics report: aggregated per-tenant counts and rates over a reporting period, derived from ShadowRun records. Rates are fractions in [0, 1]; autoExecuteRate + approvalRate + blockRate SHOULD sum to 1 over the same population.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "id",
+    "specVersion",
+    "tenantId",
+    "periodStart",
+    "periodEnd",
+    "totals",
+    "byActionType",
+    "rates",
+    "createdAt"
+  ],
+  "properties": {
+    "id": { "$ref": "./common.json#/$defs/Id" },
+    "specVersion": { "$ref": "./common.json#/$defs/SpecVersion" },
+    "tenantId": { "$ref": "./common.json#/$defs/Id" },
+    "periodStart": { "$ref": "./common.json#/$defs/DateTime" },
+    "periodEnd": { "$ref": "./common.json#/$defs/DateTime" },
+    "totals": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["autoExecuted", "approvalRequested", "blocked", "shadowRuns"],
+      "properties": {
+        "autoExecuted": { "type": "integer", "minimum": 0 },
+        "approvalRequested": { "type": "integer", "minimum": 0 },
+        "blocked": { "type": "integer", "minimum": 0 },
+        "shadowRuns": { "type": "integer", "minimum": 0 }
+      }
+    },
+    "byActionType": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["actionType", "autoExecuted", "approvalRequested", "blocked"],
+        "properties": {
+          "actionType": { "$ref": "./common.json#/$defs/ActionType" },
+          "autoExecuted": { "type": "integer", "minimum": 0 },
+          "approvalRequested": { "type": "integer", "minimum": 0 },
+          "blocked": { "type": "integer", "minimum": 0 }
+        }
+      }
+    },
+    "rates": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["autoExecuteRate", "approvalRate", "blockRate", "shadowCoveragePct"],
+      "properties": {
+        "autoExecuteRate": { "type": "number", "minimum": 0, "maximum": 1 },
+        "approvalRate": { "type": "number", "minimum": 0, "maximum": 1 },
+        "blockRate": { "type": "number", "minimum": 0, "maximum": 1 },
+        "shadowCoveragePct": { "type": "number", "minimum": 0, "maximum": 1 }
+      }
+    },
+    "createdAt": { "$ref": "./common.json#/$defs/DateTime" },
+    "updatedAt": { "$ref": "./common.json#/$defs/DateTime" }
+  }
+}

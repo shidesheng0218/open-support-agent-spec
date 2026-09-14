@@ -18,6 +18,10 @@ import { TOOL_DEFINITIONS, type ToolDefinition } from "./tool-definitions.js";
 
 type Args = Record<string, unknown>;
 
+/** Key under Tool._meta carrying OSAS annotations the installed MCP SDK
+ * version does not yet know (see toMcpTool). */
+const OSAS_ANNOTATIONS_META = "osas/annotations" as const;
+
 type ProposalInput = Omit<ActionProposal, "id" | "specVersion" | "status" | "createdAt" | "updatedAt">;
 
 const asString = (value: unknown, field: string): string => {
@@ -191,6 +195,27 @@ async function invoke(
 }
 
 /**
+ * Project a ToolDefinition onto the MCP `Tool` shape, carrying the OSAS
+ * annotations (MCP 2026-07 revision, see schemas/tools/README.md):
+ * - `readOnlyHint` maps natively onto Tool.annotations (supported by the
+ *   installed SDK).
+ * - `mutatingHint` is part of the 2026-07 annotation set but NOT of the
+ *   installed SDK's ToolAnnotations (zod `$strip` would drop it on the wire),
+ *   so it rides in Tool._meta until the SDK ships it natively.
+ */
+function toMcpTool(d: ToolDefinition) {
+  const base = {
+    name: d.name,
+    description: d.description,
+    inputSchema: d.inputSchema as { type: "object" },
+  };
+  if ("readOnlyHint" in d.annotations) {
+    return { ...base, annotations: { readOnlyHint: true } };
+  }
+  return { ...base, _meta: { [OSAS_ANNOTATIONS_META]: d.annotations } };
+}
+
+/**
  * Build an MCP server exposing the 20 OSAS tools (CONTRACTS.md §7) backed by
  * the given SupportAdapter. `executeAction` is deliberately NEVER registered
  * as a tool — execution belongs to the policy engine/API only.
@@ -206,11 +231,7 @@ export function buildMcpServer(adapter: SupportAdapter, principal: Principal): M
   const low = server.server;
 
   low.setRequestHandler(ListToolsRequestSchema, async () => ({
-    tools: TOOL_DEFINITIONS.map((d) => ({
-      name: d.name,
-      description: d.description,
-      inputSchema: d.inputSchema as { type: "object" },
-    })),
+    tools: TOOL_DEFINITIONS.map((d) => toMcpTool(d)),
   }));
 
   low.setRequestHandler(CallToolRequestSchema, async (request) => {

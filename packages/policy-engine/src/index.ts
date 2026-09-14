@@ -5,6 +5,8 @@ export * from "./evaluate.js";
 export * from "./execution.js";
 export * from "./audit-chain.js";
 export * from "./policy-store.js";
+export * from "./approval-lifecycle.js";
+export * from "./param-transforms.js";
 
 // Re-export the §2 proposal state machine for API-layer consumers.
 export {

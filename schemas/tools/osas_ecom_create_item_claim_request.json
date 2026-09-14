@@ -4,6 +4,12 @@
   "title": "osas_ecom_create_item_claim_request input",
   "description": "Proposal shortcut: records an ItemClaim (status submitted) for human review. Never executes anything and never auto-resolves the claim. Clients MUST NOT supply requestedPermission/requestedBy.",
   "type": "object",
+  "annotations": {
+    "type": "object",
+    "additionalProperties": false,
+    "required": ["mutatingHint"],
+    "properties": { "mutatingHint": { "type": "boolean" } }
+  },
   "additionalProperties": false,
   "required": ["caseId", "orderId", "lineId", "claimType", "quantity", "idempotencyKey"],
   "properties": {

@@ -68,11 +68,11 @@ ProposalStatus = `proposed | policy_rejected | pending_approval | approved | rej
 Transitions: `proposed→{policy_rejected,pending_approval,approved}`; `pending_approval→{approved,rejected}`; `approved→{executing}`; `executing→{executed,failed,reconciliation_required}`; `reconciliation_required→{executed,failed}`; `policy_rejected|rejected|executed|failed→{}` (terminal; no blind retry — a new attempt = new proposal with new idempotencyKey). `canTransitionProposal/transitionProposal` in core.
 
 ### Approval
-`tenantId, proposalId, status: "pending"|"approved"|"rejected", approverId?, comment?, policyVersion: string, requestedAt: date-time, decidedAt?`
+`tenantId, proposalId, status: "pending"|"approved"|"rejected"|"expired", approverId?, comment?, policyVersion: string, requestedAt: date-time, decidedAt?, expiresAt?: date-time, approverGroupId?: string`
 
 ### TenantPolicy
-`tenantId, version: string (semver), effectiveFrom: date-time, duplicateWindowSeconds: integer, maxEvidenceAgeSeconds: integer, budget?: { dailyUsdCap?: number }, rules: PolicyRule[], defaultDecision: "block" (const)`
-PolicyRule = `{ actionType: ActionType, reasonCodes?: string[], decision: "auto_execute"|"require_approval"|"block", maxAmount?: Money, requireVerifiedIdentity?: boolean, identityMaxAgeSeconds?: integer, allowedRegions?: string[], blockedRegions?: string[] }`
+`tenantId, version: string (semver), effectiveFrom: date-time, duplicateWindowSeconds: integer, maxEvidenceAgeSeconds: integer, budget?: { dailyUsdCap?: number }, approval?: { timeoutSeconds?: integer, onTimeout?: "deny", approverGroups?: { id: string, memberIds: string[] }[] }, rules: PolicyRule[], defaultDecision: "block" (const)`
+PolicyRule = `{ actionType: ActionType, reasonCodes?: string[], decision: "auto_execute"|"require_approval"|"block", maxAmount?: Money, requireVerifiedIdentity?: boolean, identityMaxAgeSeconds?: integer, allowedRegions?: string[], blockedRegions?: string[], transforms?: { path: string, op: "redact", replacement?: string }[] }`
 
 ### AuditEvent
 `tenantId, caseId?, proposalId?, approvalId?, eventType: AuditEventType, actorType: "model"|"policy_engine"|"human"|"system"|"adapter", actorId, policyVersion?, modelInfo?: { provider, model, tier, inputTokens, outputTokens, latencyMs, costUsd }, detail: object`
@@ -101,7 +101,7 @@ HandoffReason = `identity_unverified | insufficient_evidence | duplicate_request
 ## 4. Policy evaluation algorithm (deterministic, in @osas/policy-engine)
 
 `evaluateProposal(proposal, ctx: { customer, evidence: Evidence[], policy: TenantPolicy, recentProposals: ActionProposal[], injectionSuspected: boolean }) → PolicyDecision`
-`PolicyDecision = { decision: "auto_execute"|"require_approval"|"block", reasons: [{ code: string, message: string }], policyVersion: string, evaluatedAt }`
+`PolicyDecision = { decision: "auto_execute"|"require_approval"|"block", reasons: [{ code: string, message: string }], policyVersion: string, evaluatedAt, transforms?: [{ path: string, op: "redact", replacement?: string }] }`
 Order (collect ALL applicable reasons; final decision = worst of block > require_approval > auto_execute):
 1. `PERMISSION_OVERREACH` (§3) → block.
 2. `PROMPT_INJECTION_SUSPECTED` if ctx.injectionSuspected → block + handoff(prompt_injection_suspected) + event.
@@ -113,9 +113,9 @@ Order (collect ALL applicable reasons; final decision = worst of block > require
 8. `IDENTITY_REQUIRED`/`IDENTITY_UNVERIFIED`: rule.requireVerifiedIdentity and customer.identityVerification.status !== "verified" or older than identityMaxAgeSeconds → block + handoff(identity_unverified).
 9. `REGION_BLOCKED`: customer.region ∈ rule.blockedRegions → block + handoff(region_blocked). `REGION_UNLISTED`: allowedRegions present and region ∉ → require_approval.
 10. `INSUFFICIENT_EVIDENCE`: financial actionType with no evidenceIds → block + handoff(insufficient_evidence). `EVIDENCE_STALE`: any referenced evidence expired (expiresAt < now) or retrievedAt older than policy.maxEvidenceAgeSeconds → require_approval.
-11. Else rule.decision (auto_execute | require_approval).
+11. Else rule.decision (auto_execute | require_approval). If the matched rule carries `transforms`, they are copied into the returned decision — but only when the final decision is NOT `block` (a blocked action is never partially executed). The execution layer applies them to a deep clone of `proposal.params` before the adapter sees them: `op: "redact"` replaces the value at the JSON-pointer-style `path` with `replacement ?? "***"`; unmatched paths are a no-op.
 
-Side effects (engine or API layer): block → proposal `policy_rejected` (+handoff where listed); require_approval → `pending_approval` + Approval(status pending, policyVersion) + `approval_requested` event; auto_execute → `approved` then eligible for execute. Every evaluation emits `policy_evaluated` with policyVersion.
+Side effects (engine or API layer): block → proposal `policy_rejected` (+handoff where listed); require_approval → `pending_approval` + Approval(status pending, policyVersion) + `approval_requested` event; auto_execute → `approved` then eligible for execute. Every evaluation emits `policy_evaluated` with policyVersion. Approval expiry is fail-safe: a `pending` approval whose deadline (`expiresAt`, derived as `requestedAt + approval.timeoutSeconds` when absent) has passed is treated as `expired` with reason `APPROVAL_TIMED_OUT` and denied (`onTimeout` currently supports only `"deny"`, reserved for future escalation semantics); a deadline exactly at `now` has not lapsed.
 
 ## 5. Execution, idempotency, reconciliation (@osas/policy-engine + api)
 

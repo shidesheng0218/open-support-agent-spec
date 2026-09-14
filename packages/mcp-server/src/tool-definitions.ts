@@ -15,6 +15,13 @@ export interface ToolDefinition {
   profile: "core" | "ecommerce" | "saas";
   description: string;
   inputSchema: Record<string, unknown>;
+  /**
+   * MCP 2026-07 tool annotations (schemas/tools/<name>.json top-level
+   * `annotations`, mirrored 1:1). Exactly one of readOnlyHint/mutatingHint is
+   * set. These are declarative hints for clients; enforcement stays in the
+   * governance layer (permission ladder + policy engine).
+   */
+  annotations: { readOnlyHint: true } | { mutatingHint: true };
   adapterMethod: keyof SupportAdapter;
   permissionRequired: Permission;
   /** Capability (v0.1.1) the implementation must declare for this tool. */
@@ -50,6 +57,7 @@ export const TOOL_DEFINITIONS: ToolDefinition[] = [
       required: ["id"],
     },
     adapterMethod: "getCase",
+    annotations: { readOnlyHint: true },
     permissionRequired: "read",
     capabilityRequired: "case.read",
   },
@@ -70,6 +78,7 @@ export const TOOL_DEFINITIONS: ToolDefinition[] = [
       },
     },
     adapterMethod: "searchCases",
+    annotations: { readOnlyHint: true },
     permissionRequired: "read",
     capabilityRequired: "case.read",
   },
@@ -84,6 +93,7 @@ export const TOOL_DEFINITIONS: ToolDefinition[] = [
       required: ["id"],
     },
     adapterMethod: "getCustomer",
+    annotations: { readOnlyHint: true },
     permissionRequired: "read",
     capabilityRequired: "customer.read",
   },
@@ -102,6 +112,7 @@ export const TOOL_DEFINITIONS: ToolDefinition[] = [
       required: ["q"],
     },
     adapterMethod: "searchKnowledge",
+    annotations: { readOnlyHint: true },
     permissionRequired: "read",
     capabilityRequired: "knowledge.read",
   },
@@ -121,6 +132,7 @@ export const TOOL_DEFINITIONS: ToolDefinition[] = [
       required: ["caseId", "body", "idempotencyKey"],
     },
     adapterMethod: "createCaseNote",
+    annotations: { mutatingHint: true },
     permissionRequired: "draft",
     capabilityRequired: "note.write",
   },
@@ -139,6 +151,7 @@ export const TOOL_DEFINITIONS: ToolDefinition[] = [
       required: ["caseId", "reason", "idempotencyKey"],
     },
     adapterMethod: "createEscalation",
+    annotations: { mutatingHint: true },
     permissionRequired: "draft",
     capabilityRequired: "escalation.write",
   },
@@ -176,6 +189,7 @@ export const TOOL_DEFINITIONS: ToolDefinition[] = [
       required: ["caseId", "profile", "actionType", "reasonCode", "params", "idempotencyKey"],
     },
     adapterMethod: "createActionProposal",
+    annotations: { mutatingHint: true },
     permissionRequired: "request-approval",
     capabilityRequired: "proposal.write",
   },
@@ -191,6 +205,7 @@ export const TOOL_DEFINITIONS: ToolDefinition[] = [
       required: ["id"],
     },
     adapterMethod: "getOrder",
+    annotations: { readOnlyHint: true },
     permissionRequired: "read",
     capabilityRequired: "ecommerce.order.read",
   },
@@ -205,6 +220,7 @@ export const TOOL_DEFINITIONS: ToolDefinition[] = [
       required: ["customerId"],
     },
     adapterMethod: "listOrders",
+    annotations: { readOnlyHint: true },
     permissionRequired: "read",
     capabilityRequired: "ecommerce.order.read",
   },
@@ -219,6 +235,7 @@ export const TOOL_DEFINITIONS: ToolDefinition[] = [
       required: ["id"],
     },
     adapterMethod: "getShipment",
+    annotations: { readOnlyHint: true },
     permissionRequired: "read",
     capabilityRequired: "ecommerce.shipment.read",
   },
@@ -233,6 +250,7 @@ export const TOOL_DEFINITIONS: ToolDefinition[] = [
       required: ["id"],
     },
     adapterMethod: "getShipmentIncident",
+    annotations: { readOnlyHint: true },
     permissionRequired: "read",
     capabilityRequired: "ecommerce.shipment_incident.read",
   },
@@ -248,6 +266,7 @@ export const TOOL_DEFINITIONS: ToolDefinition[] = [
       required: ["orderId"],
     },
     adapterMethod: "getRefundStatus",
+    annotations: { readOnlyHint: true },
     permissionRequired: "read",
     capabilityRequired: "ecommerce.refund_status.read",
   },
@@ -275,6 +294,7 @@ export const TOOL_DEFINITIONS: ToolDefinition[] = [
       required: ["caseId", "orderId", "lineId", "claimType", "quantity", "idempotencyKey"],
     },
     adapterMethod: "proposeItemClaim",
+    annotations: { mutatingHint: true },
     permissionRequired: "draft",
     capabilityRequired: "ecommerce.item_claim.propose",
   },
@@ -299,6 +319,7 @@ export const TOOL_DEFINITIONS: ToolDefinition[] = [
       required: ["caseId", "orderId", "originalLineId", "replacementSku", "idempotencyKey"],
     },
     adapterMethod: "createActionProposal",
+    annotations: { mutatingHint: true },
     permissionRequired: "request-approval",
     capabilityRequired: "ecommerce.exchange.propose",
   },
@@ -314,6 +335,7 @@ export const TOOL_DEFINITIONS: ToolDefinition[] = [
       required: ["id"],
     },
     adapterMethod: "getSubscription",
+    annotations: { readOnlyHint: true },
     permissionRequired: "read",
     capabilityRequired: "saas.subscription.read",
   },
@@ -328,6 +350,7 @@ export const TOOL_DEFINITIONS: ToolDefinition[] = [
       required: ["customerId"],
     },
     adapterMethod: "listInvoices",
+    annotations: { readOnlyHint: true },
     permissionRequired: "read",
     capabilityRequired: "saas.subscription.read",
   },
@@ -342,6 +365,7 @@ export const TOOL_DEFINITIONS: ToolDefinition[] = [
       required: ["customerId"],
     },
     adapterMethod: "getCreditBalance",
+    annotations: { readOnlyHint: true },
     permissionRequired: "read",
     capabilityRequired: "saas.subscription.read",
   },
@@ -364,6 +388,7 @@ export const TOOL_DEFINITIONS: ToolDefinition[] = [
       required: ["caseId", "customerId", "amount", "reasonCode", "idempotencyKey"],
     },
     adapterMethod: "createActionProposal",
+    annotations: { mutatingHint: true },
     permissionRequired: "request-approval",
     capabilityRequired: "saas.credit.propose",
   },
@@ -384,6 +409,7 @@ export const TOOL_DEFINITIONS: ToolDefinition[] = [
       required: ["caseId", "subscriptionId", "idempotencyKey"],
     },
     adapterMethod: "createActionProposal",
+    annotations: { mutatingHint: true },
     permissionRequired: "request-approval",
     capabilityRequired: "proposal.write",
   },
@@ -405,6 +431,7 @@ export const TOOL_DEFINITIONS: ToolDefinition[] = [
       required: ["caseId", "subscriptionId", "newPlan", "idempotencyKey"],
     },
     adapterMethod: "createActionProposal",
+    annotations: { mutatingHint: true },
     permissionRequired: "request-approval",
     capabilityRequired: "proposal.write",
   },

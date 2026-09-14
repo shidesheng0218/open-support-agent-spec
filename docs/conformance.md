@@ -12,6 +12,10 @@ stateful contract behavior — policy lifecycle transitions, idempotent
 execution, permission and tenant isolation, audit-chain integrity — against a
 deterministic base state.
 
+See also: the [competitive landscape](competitive-landscape.md) positions OSAS
+against other agent-governance stacks, and the
+[conformance matrix](../conformance/matrix.md) tracks per-case pass status.
+
 ## Enabling (test environments only)
 
 ```bash

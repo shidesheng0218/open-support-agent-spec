@@ -3,6 +3,12 @@
   "$id": "https://open-support-agent.dev/schemas/tools/osas_saas_list_invoices.json",
   "title": "osas_saas_list_invoices input",
   "type": "object",
+  "annotations": {
+    "type": "object",
+    "additionalProperties": false,
+    "required": ["readOnlyHint"],
+    "properties": { "readOnlyHint": { "type": "boolean" } }
+  },
   "additionalProperties": false,
   "required": ["customerId"],
   "properties": {

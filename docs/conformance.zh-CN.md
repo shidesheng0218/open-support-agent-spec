@@ -10,6 +10,10 @@ Conformance Mode 存在的唯一目的，是让黑盒 compat runner
 确定性的基准状态上校验有状态的契约行为——策略版本生命周期、幂等执行、
 权限与租户隔离、审计链完整性。
 
+另见：[竞品格局](competitive-landscape.zh-CN.md) 阐述 OSAS 与其他 agent 治理
+栈的对位关系，[conformance 矩阵](../conformance/matrix.md) 记录逐 case 的通过
+状态。
+
 ## 启用方式（仅限测试环境）
 
 ```bash

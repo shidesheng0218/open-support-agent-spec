@@ -9,6 +9,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **Approval fail-safe lifecycle** (modelled on the Microsoft Agent
+  Governance Toolkit): `TenantPolicy.approval` gains optional
+  `timeoutSeconds` (recommended default 300s), `onTimeout` (`"deny"` only —
+  an extension point for future escalation), and `approverGroups`;
+  `Approval` gains the `expired` status plus optional `expiresAt` and
+  `approverGroupId`. New pure helpers in `@osas/policy-engine`
+  (`resolveApprovalDeadline`, `evaluateApprovalExpiry`) report a pending
+  approval past its deadline as `expired` with reason `APPROVAL_TIMED_OUT`;
+  an undecided approval is denied, never approved.
+- **Deterministic param transforms**: policy rules may carry `transforms`
+  (`{ path, op: "redact", replacement? }`, JSON-pointer-style paths). A
+  matched rule's transforms are copied into the `PolicyDecision` unless the
+  final decision is `block`, and `executeProposal` applies them to a deep
+  clone of the params before the adapter sees them (unmatched paths are a
+  no-op); the OSAS API records the applied transforms on the
+  `execution_started` audit event.
 - **Controlled Execution Profile (v0.3 Draft)**: deterministic `sandbox` mode,
   execution attempts and receipts, provider-event deduplication, reconciliation
   tasks, execution capability contracts, and PostgreSQL persistence for the new

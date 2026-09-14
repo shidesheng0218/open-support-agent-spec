@@ -4,6 +4,12 @@
   "title": "osas_core_create_action_proposal input",
   "description": "Draft an ActionProposal (status proposed). tenantId, requestedPermission (request-approval) and requestedBy are set server-side from ToolContext — clients MUST NOT supply them.",
   "type": "object",
+  "annotations": {
+    "type": "object",
+    "additionalProperties": false,
+    "required": ["mutatingHint"],
+    "properties": { "mutatingHint": { "type": "boolean" } }
+  },
   "additionalProperties": false,
   "required": ["caseId", "profile", "actionType", "reasonCode", "params", "idempotencyKey"],
   "properties": {

@@ -245,10 +245,22 @@ export function evaluateProposal(
     );
   }
 
+  const finalDecision = GRADE_BY_SEVERITY[worst] ?? "block";
+
+  // CONTRACTS.md §4 (step 11): the matched rule's deterministic param
+  // rewrites ride along on the decision so the execution layer can apply
+  // them before the adapter sees the params. A blocked action is never
+  // partially executed, so block decisions NEVER carry transforms.
+  const transforms =
+    rule && finalDecision !== "block" && rule.transforms
+      ? [...rule.transforms]
+      : undefined;
+
   return {
-    decision: GRADE_BY_SEVERITY[worst] ?? "block",
+    decision: finalDecision,
     reasons,
     policyVersion: ctx.policy.version,
     evaluatedAt: now.toISOString(),
+    ...(transforms ? { transforms } : {}),
   };
 }

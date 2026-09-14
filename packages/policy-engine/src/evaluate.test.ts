@@ -346,3 +346,57 @@ describe("stableStringify", () => {
     );
   });
 });
+
+describe("evaluateProposal — rule transforms (§4 step 11)", () => {
+  const policyWithTransforms = () => {
+    const policy = makePolicy();
+    policy.rules[0] = {
+      ...policy.rules[0]!,
+      transforms: [{ path: "/customerEmail", op: "redact" }],
+    };
+    return policy;
+  };
+
+  it("copies rule.transforms into an auto_execute decision", () => {
+    const d = evaluateProposal(makeProposal(), baseCtx({ policy: policyWithTransforms() }));
+    expect(d.decision).toBe("auto_execute");
+    expect(d.transforms).toEqual([{ path: "/customerEmail", op: "redact" }]);
+  });
+
+  it("carries transforms on a require_approval decision", () => {
+    const d = evaluateProposal(
+      makeProposal({ amount: { currency: "USD", minorUnits: 9000 } }),
+      baseCtx({ policy: policyWithTransforms() }),
+    );
+    expect(d.decision).toBe("require_approval");
+    expect(d.transforms).toEqual([{ path: "/customerEmail", op: "redact" }]);
+  });
+
+  it("never carries transforms on a block decision", () => {
+    const customer = makeCustomer({ identityVerification: { status: "unverified" } });
+    const d = evaluateProposal(
+      makeProposal(),
+      baseCtx({ customer, policy: policyWithTransforms() }),
+    );
+    expect(d.decision).toBe("block");
+    expect(d.transforms).toBeUndefined();
+  });
+
+  it("never carries transforms when the rule itself decides block", () => {
+    const policy = policyWithTransforms();
+    policy.rules[0] = {
+      ...policy.rules[0]!,
+      decision: "block",
+      transforms: [{ path: "/customerEmail", op: "redact" }],
+    };
+    const d = evaluateProposal(makeProposal(), baseCtx({ policy }));
+    expect(d.decision).toBe("block");
+    expect(d.transforms).toBeUndefined();
+  });
+
+  it("leaves transforms undefined when the rule has none", () => {
+    const d = evaluateProposal(makeProposal(), baseCtx());
+    expect(d.decision).toBe("auto_execute");
+    expect(d.transforms).toBeUndefined();
+  });
+});
