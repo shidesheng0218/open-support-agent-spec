@@ -435,13 +435,31 @@ Controlled Execution is developed as a separate Draft profile. The path to v1.0:
 
 - [ ] v0.2.1 maintenance release has no documentation/schema/version drift.
 - [ ] v0.3 Controlled Execution Draft passes the Sandbox conformance suite.
-- [ ] A Python implementation passes Core + Ecommerce conformance; at least
-      three independent implementations pass before v1.0.
+- [x] A Python implementation passes the black-box runner (v0.2 read-only +
+      stateful, v0.3 controlled-execution) — the in-repo candidate in
+      [implementations/python-reference](implementations/python-reference/),
+      gated by the CI `python-compat` job. It is same-organization, so it does
+      not count toward the independence gate below.
 - [ ] At least **3 independent implementations** (beyond this reference) pass the
-      compat suite for a given profile.
+      compat suite for a given profile — registration criteria:
+      [conformance/README.md](conformance/README.md).
 - [ ] All normative documents available in English and Chinese, kept in lockstep.
 - [ ] No unresolved RFCs blocking core semantics; governance broadened to multi-party
-      (see [GOVERNANCE.md](GOVERNANCE.md)).
+      (see [GOVERNANCE.md](GOVERNANCE.md) and the
+      [RFC 0004](rfcs/0004-multi-party-governance.md) draft).
+
+Ecosystem and hardening items on the same path:
+
+- [ ] [RFC 0006](rfcs/0006-external-policy-decision-point.md) (external policy
+      decision point, tightening-only) accepted, with an OPA-backed example.
+- [ ] AG-UI approval-UX integration guide validated against a live frontend:
+      [docs/ag-ui-integration.md](docs/ag-ui-integration.md).
+- [ ] Threat model maintained alongside the security requirements:
+      [docs/threat-model.md](docs/threat-model.md).
+- [ ] RFC 0007 (live execution) drafted — blocked on provider authentication,
+      explicit tenant opt-in, rollback/compensation, operational monitoring,
+      and an independent Live Conformance Suite (see
+      [RFC 0003](rfcs/0003-controlled-execution-profile.md)).
 
 Until then, expect breaking changes between minor versions; see
 [CHANGELOG.md](CHANGELOG.md) and [semver policy](GOVERNANCE.md#versioning).

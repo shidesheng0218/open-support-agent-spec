@@ -9,6 +9,34 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **Governance and process maturity**: DCO 1.1 with a `git commit -s`
+  sign-off requirement; issue templates (bug / feature / RFC / compatibility
+  claim) and a PR template mirroring the release gate; the RFC lifecycle gains
+  the `Implemented` state; conformance registry rules
+  (`conformance/README.md`) defining independence criteria, the verification
+  flow, and badge semantics; [RFC 0004](rfcs/0004-multi-party-governance.md)
+  (multi-party governance, Draft, EN+ZH) and
+  [RFC 0006](rfcs/0006-external-policy-decision-point.md) (external policy
+  decision point — optional, tightening-only, Draft, EN+ZH).
+- **Machine-readable demo fixtures**: `conformance/fixtures/demo-tenant.json`
+  is the authoritative form of the CONTRACTS.md §11 dataset, with relative
+  `now±N<unit>` timestamp tokens so the dataset never goes stale; generated
+  from `createDemoFixtures()` (`pnpm --filter @osas/mock-backend
+  fixtures:emit`) and drift-guarded by a new test in `@osas/mock-backend`.
+- **Python reference implementation**
+  ([implementations/python-reference](implementations/python-reference/)):
+  passes the black-box compat runner's full v0.2 suite (read-only + stateful)
+  and the v0.3 controlled-execution profile — real JSON Schema validation
+  (`jsonschema`), the spec §5 evaluation algorithm, the policy version
+  lifecycle with supersession, RBAC/tenant isolation, per-tenant audit hash
+  chains, and Conformance Mode. CI job `python-compat` runs both suites;
+  registered as `conforming` (same organization, so it does not count toward
+  the v1.0 independence gate).
+- **Ecosystem docs**: [docs/threat-model.md](docs/threat-model.md) (EN+ZH)
+  mapping each threat to its normative defense and test; AG-UI approval-UX
+  integration guide ([docs/ag-ui-integration.md](docs/ag-ui-integration.md),
+  EN+ZH); [ADOPTERS.md](ADOPTERS.md); README roadmap gains ecosystem items and
+  the live-execution prerequisites.
 - **Approval fail-safe lifecycle** (modelled on the Microsoft Agent
   Governance Toolkit): `TenantPolicy.approval` gains optional
   `timeoutSeconds` (recommended default 300s), `onTimeout` (`"deny"` only —
@@ -39,6 +67,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- RFC 0003 is marked `Implemented`; GOVERNANCE names the black-box compat
+  runner as the gate for third-party compatibility claims (the in-repo
+  `@osas/compat-suite` regression-tests the reference implementation);
+  CONTRACTS.md §11 and the implementer guide (EN+ZH) point to the
+  machine-readable fixture JSON, and the guide documents the audit hash-chain
+  canonicalization and lessons from the Python implementation.
 - Capability manifests can publish per-action `executionContracts`; the mock
   sandbox declares synthetic support without advertising `live`.
 - PostgreSQL migrations persist execution attempts, receipts, reconciliation

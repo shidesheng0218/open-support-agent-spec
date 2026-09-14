@@ -421,11 +421,29 @@ OSAS v0.2 仍是**草案（Draft）**，并在 v0.3 受控执行 Draft 开发期
 
 - [ ] v0.2.1 维护版本不存在文档、Schema、版本号漂移。
 - [ ] v0.3 受控执行 Draft 通过 Sandbox Conformance。
-- [ ] Python 实现通过 Core + Ecommerce Conformance；v1.0 前至少有 3 个独立实现。
-- [ ] 至少 **3 个独立实现**（本参考实现之外）通过某一 Profile 的兼容性套件。
+- [x] Python 实现通过黑盒 runner（v0.2 只读 + 有状态套件、v0.3 受控执行
+      Profile）——仓内候选实现见
+      [implementations/python-reference](implementations/python-reference/)，
+      由 CI 的 `python-compat` job 把关。它与本仓同属一个组织，因此不计入
+      下面的独立性门槛。
+- [ ] 至少 **3 个独立实现**（本参考实现之外）通过某一 Profile 的兼容性套件——
+      注册标准见 [conformance/README.md](conformance/README.md)。
 - [ ] 全部规范性文档中英双语齐备，且保持同步更新。
 - [ ] 无阻塞核心语义的未决 RFC；治理结构扩展为多方共治
-      （见 [GOVERNANCE.md](GOVERNANCE.md)）。
+      （见 [GOVERNANCE.md](GOVERNANCE.md) 与
+      [RFC 0004](rfcs/0004-multi-party-governance.zh-CN.md) 草案）。
+
+同一路径上的生态与加固事项：
+
+- [ ] [RFC 0006](rfcs/0006-external-policy-decision-point.zh-CN.md)（外部策略
+      决策点，只允许从严）被接受，并提供 OPA 示例。
+- [ ] AG-UI 审批 UX 集成指南在真实前端中验证：
+      [docs/ag-ui-integration.zh-CN.md](docs/ag-ui-integration.zh-CN.md)。
+- [ ] 威胁模型与安全需求同步维护：
+      [docs/threat-model.zh-CN.md](docs/threat-model.zh-CN.md)。
+- [ ] 起草 RFC 0007（live 执行）——前置条件：Provider 认证、租户显式开启、
+      回滚/补偿、运维监控、独立的 Live 合规套件（见
+      [RFC 0003](rfcs/0003-controlled-execution-profile.zh-CN.md)）。
 
 在此之前，次版本之间可能出现不兼容变更；详见 [CHANGELOG.md](CHANGELOG.md) 与
 [语义化版本策略](GOVERNANCE.md#versioning)。
