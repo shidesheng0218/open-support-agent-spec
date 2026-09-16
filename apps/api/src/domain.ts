@@ -18,7 +18,7 @@ import type {
   TenantPolicy,
 } from "@osas/core";
 import { detectInjection } from "@osas/core";
-import { evaluateProposal, executeProposal, reconcile } from "@osas/policy-engine";
+import { evaluateProposal, executeProposal, reconcile, resolveApprovalDeadline } from "@osas/policy-engine";
 import type { ExecutionStore, PolicyStore } from "@osas/policy-engine";
 import { applyParamTransforms } from "@osas/policy-engine";
 import {
@@ -212,13 +212,19 @@ export async function runEvaluation(
     const updated = await adapter.updateProposalStatus(ctx, proposal.id, "pending_approval", {
       policyDecision: decision,
     });
+    // Fail-safe lifecycle: stamp the deadline derived from the policy's
+    // approval.timeoutSeconds so read paths can report `expired` and decide
+    // paths can refuse after the deadline (an undecided approval is denied).
+    const requestedAt = new Date().toISOString();
+    const expiresAt = resolveApprovalDeadline({ requestedAt }, policy);
     const approval = await adapter.createApproval(ctx, {
       tenantId: ctx.tenantId,
       proposalId: proposal.id,
       status: "pending",
       policyVersion: decision.policyVersion,
-      requestedAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
+      requestedAt,
+      ...(expiresAt !== undefined ? { expiresAt } : {}),
+      updatedAt: requestedAt,
     });
     await audit(adapter, ctx, {
       caseId: proposal.caseId,

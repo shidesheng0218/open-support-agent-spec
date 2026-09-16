@@ -195,13 +195,13 @@ async function invoke(
 }
 
 /**
- * Project a ToolDefinition onto the MCP `Tool` shape, carrying the OSAS
- * annotations (MCP 2026-07 revision, see schemas/tools/README.md):
- * - `readOnlyHint` maps natively onto Tool.annotations (supported by the
- *   installed SDK).
- * - `mutatingHint` is part of the 2026-07 annotation set but NOT of the
- *   installed SDK's ToolAnnotations (zod `$strip` would drop it on the wire),
- *   so it rides in Tool._meta until the SDK ships it natively.
+ * Project a ToolDefinition onto the MCP `Tool` shape, carrying the tool
+ * annotations (see schemas/tools/README.md):
+ * - `readOnlyHint` is a standard MCP hint and maps natively onto
+ *   Tool.annotations (supported by the installed SDK).
+ * - `mutatingHint` is an OSAS-defined extension, not part of MCP's standard
+ *   annotation set (zod `$strip` would drop unknown keys anyway), so it rides
+ *   in the implementation-owned Tool._meta["osas/annotations"] key.
  */
 function toMcpTool(d: ToolDefinition) {
   const base = {

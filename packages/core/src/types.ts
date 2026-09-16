@@ -722,6 +722,49 @@ export interface ShadowRun {
   reviewedAt?: IsoDateTime;
 }
 
+/* ---------------- ShadowMetrics (schemas/core/shadow-metrics.json) ---------------- */
+
+export interface ShadowMetricsTotals {
+  autoExecuted: number;
+  approvalRequested: number;
+  blocked: number;
+  shadowRuns: number;
+}
+
+export interface ShadowMetricsByActionType {
+  actionType: ActionType;
+  autoExecuted: number;
+  approvalRequested: number;
+  blocked: number;
+}
+
+export interface ShadowMetricsRates {
+  autoExecuteRate: number;
+  approvalRate: number;
+  blockRate: number;
+  /** Share of the tenant's proposals covered by at least one ShadowRun. */
+  shadowCoveragePct: number;
+}
+
+/**
+ * ShadowMetrics — aggregated Shadow Mode operational report over a reporting
+ * period, derived from ShadowRun records. Rates are fractions in [0, 1];
+ * autoExecuteRate + approvalRate + blockRate sum to 1 over the counted
+ * population.
+ */
+export interface ShadowMetrics {
+  id: string;
+  specVersion: SpecVersion;
+  tenantId: string;
+  periodStart: IsoDateTime;
+  periodEnd: IsoDateTime;
+  totals: ShadowMetricsTotals;
+  byActionType: ShadowMetricsByActionType[];
+  rates: ShadowMetricsRates;
+  createdAt: IsoDateTime;
+  updatedAt?: IsoDateTime;
+}
+
 /* ---------------- Execution (CONTRACTS.md §5) ---------------- */
 
 export type ExecutionStatus = "succeeded" | "failed" | "uncertain";

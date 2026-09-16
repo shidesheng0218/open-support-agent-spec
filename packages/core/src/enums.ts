@@ -85,7 +85,12 @@ export const PROPOSAL_STATUSES: readonly ProposalStatus[] = [
   "reconciliation_required",
 ];
 
-export const APPROVAL_STATUSES: readonly ApprovalStatus[] = ["pending", "approved", "rejected"];
+export const APPROVAL_STATUSES: readonly ApprovalStatus[] = [
+  "pending",
+  "approved",
+  "rejected",
+  "expired",
+];
 
 export const POLICY_DECISIONS: readonly PolicyDecisionValue[] = [
   "auto_execute",

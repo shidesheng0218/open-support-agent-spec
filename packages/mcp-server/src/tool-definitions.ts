@@ -16,10 +16,13 @@ export interface ToolDefinition {
   description: string;
   inputSchema: Record<string, unknown>;
   /**
-   * MCP 2026-07 tool annotations (schemas/tools/<name>.json top-level
-   * `annotations`, mirrored 1:1). Exactly one of readOnlyHint/mutatingHint is
-   * set. These are declarative hints for clients; enforcement stays in the
-   * governance layer (permission ladder + policy engine).
+   * Tool annotations (schemas/tools/<name>.json top-level `annotations`,
+   * mirrored 1:1). Exactly one of readOnlyHint/mutatingHint is set.
+   * `readOnlyHint` is a standard MCP hint; `mutatingHint` is an OSAS-defined
+   * extension (the MCP set has no mutating flag), carried under
+   * `Tool._meta["osas/annotations"]`. These are declarative hints for clients;
+   * enforcement stays in the governance layer (permission ladder + policy
+   * engine).
    */
   annotations: { readOnlyHint: true } | { mutatingHint: true };
   adapterMethod: keyof SupportAdapter;

@@ -1,7 +1,12 @@
 import { randomUUID } from "node:crypto";
 import type { FastifyInstance } from "fastify";
 import type { SupportAdapter } from "@osas/adapter";
-import type { Evidence, ShadowRunOutcome } from "@osas/core";
+import type {
+  Evidence,
+  ShadowMetrics,
+  ShadowMetricsByActionType,
+  ShadowRunOutcome,
+} from "@osas/core";
 import { detectInjection } from "@osas/core";
 import { evaluateProposal } from "@osas/policy-engine";
 import {
@@ -102,6 +107,66 @@ export async function shadowRoutes(app: FastifyInstance): Promise<void> {
         return { shadowRun, proposal, evidence };
       }),
     );
+  });
+
+  // Aggregated Shadow Metrics (schemas/core/shadow-metrics.json): derived from
+  // the tenant's ShadowRun records over the requested period. Buckets count
+  // runs whose proposal is still resolvable; rates share that population so
+  // autoExecuteRate + approvalRate + blockRate sum to 1 (0 when empty).
+  app.get("/v1/shadow-runs/metrics", async (req) => {
+    const ctx = ctxFor(req);
+    const q = req.query as { periodStart?: string; periodEnd?: string };
+    const runs = await app.shadowRunStore.list(ctx.tenantId, {});
+    const inPeriod = runs.filter(
+      (run) =>
+        (q.periodStart === undefined || run.createdAt >= q.periodStart) &&
+        (q.periodEnd === undefined || run.createdAt <= q.periodEnd),
+    );
+    const counts = { autoExecuted: 0, approvalRequested: 0, blocked: 0 };
+    const byAction = new Map<string, { autoExecuted: number; approvalRequested: number; blocked: number }>();
+    for (const run of inPeriod) {
+      const proposal = await embed(req, run.proposalId);
+      if (!proposal) continue;
+      const bucket =
+        run.policyDecision.decision === "auto_execute"
+          ? "autoExecuted"
+          : run.policyDecision.decision === "require_approval"
+            ? "approvalRequested"
+            : "blocked";
+      counts[bucket] += 1;
+      const entry = byAction.get(proposal.actionType) ?? {
+        autoExecuted: 0,
+        approvalRequested: 0,
+        blocked: 0,
+      };
+      entry[bucket] += 1;
+      byAction.set(proposal.actionType, entry);
+    }
+    const counted = counts.autoExecuted + counts.approvalRequested + counts.blocked;
+    const rate = (n: number): number => (counted > 0 ? n / counted : 0);
+    const proposals = await adapter.listProposals(ctx, {});
+    const covered = new Set(inPeriod.map((run) => run.proposalId));
+    const nowIso = new Date().toISOString();
+    const metrics: ShadowMetrics = {
+      id: `shadowmetrics_${randomUUID()}`,
+      specVersion: "0.2",
+      tenantId: ctx.tenantId,
+      periodStart: q.periodStart ?? inPeriod.at(0)?.createdAt ?? nowIso,
+      periodEnd: q.periodEnd ?? nowIso,
+      totals: { ...counts, shadowRuns: inPeriod.length },
+      byActionType: [...byAction.entries()].map(([actionType, c]) => ({
+        actionType: actionType as ShadowMetricsByActionType["actionType"],
+        ...c,
+      })),
+      rates: {
+        autoExecuteRate: rate(counts.autoExecuted),
+        approvalRate: rate(counts.approvalRequested),
+        blockRate: rate(counts.blocked),
+        shadowCoveragePct: proposals.length > 0 ? covered.size / proposals.length : 0,
+      },
+      createdAt: nowIso,
+    };
+    return metrics;
   });
 
   app.get("/v1/shadow-runs/:id", async (req) => {

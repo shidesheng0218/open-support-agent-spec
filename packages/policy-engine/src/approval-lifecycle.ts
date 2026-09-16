@@ -18,13 +18,23 @@ export interface ApprovalExpiryResult {
 }
 
 /**
+ * The minimum an approval must carry to resolve a deadline. Structurally
+ * satisfied by a full `Approval`, and also usable at creation time (before an
+ * id/status exist) so the deadline can be stamped onto the record.
+ */
+export interface ApprovalDeadlineInput {
+  requestedAt: IsoDateTime;
+  expiresAt?: IsoDateTime;
+}
+
+/**
  * Effective deadline of an approval: the explicit `expiresAt` when present,
  * otherwise `requestedAt + policy.approval.timeoutSeconds` when the policy
  * configures a timeout. Returns undefined when no deadline applies.
  */
 export function resolveApprovalDeadline(
-  approval: Approval,
-  policy: TenantPolicy,
+  approval: ApprovalDeadlineInput,
+  policy: Pick<TenantPolicy, "approval">,
   _now: Date = new Date(),
 ): IsoDateTime | undefined {
   if (approval.expiresAt) return approval.expiresAt;
@@ -43,7 +53,7 @@ export function resolveApprovalDeadline(
  */
 export function evaluateApprovalExpiry(
   approval: Approval,
-  policy: TenantPolicy,
+  policy: Pick<TenantPolicy, "approval">,
   now: Date = new Date(),
 ): ApprovalExpiryResult {
   if (approval.status !== "pending") return { status: approval.status };

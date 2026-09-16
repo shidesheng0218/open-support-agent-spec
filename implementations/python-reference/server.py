@@ -971,8 +971,8 @@ class Handler(BaseHTTPRequestHandler):
                     audit(proposal["tenantId"], "reconciliation_resolved", "human", self.actor_id,
                           {"proposalId": proposal_id, "outcome": outcome, "note": body.get("note")},
                           proposalId=proposal_id)
-                    return self.send_json(200, {"proposal": copy.deepcopy(proposal),
-                                                "reconciliation": copy.deepcopy(task)})
+                    # CONTRACTS.md §9/§20: reconcile returns the updated proposal.
+                    return self.send_json(200, copy.deepcopy(proposal))
                 raise HttpError(404, "NOT_FOUND", path)
 
             if path.startswith("/v1/policies/"):
