@@ -16,14 +16,14 @@ where the risks are.
 
 ### 1. Protocol layer — how agents talk, not how they are governed
 
-- **MCP (Model Context Protocol)** — donated to the Linux Foundation's Agentic
-  AI Foundation (AAIF); the 2026-07-28 revision added tool annotations and MRTR
-  (Model-Requested Tool Restrictions). MCP standardizes *capability discovery
-  and tool invocation* between a model and tools. It deliberately does **not**
-  define an execution-decision layer: nothing in MCP decides whether a refund
-  may be auto-executed, requires approval, or must be blocked. OSAS is
-  complementary — it can ride on top of MCP as a governance profile (see
-  [RFC 0002](../rfcs/0002-osas-as-mcp-governance-profile.md)).
+- **MCP (Model Context Protocol)** — donated to the Linux Foundation; the
+  2026-07-28 revision introduces MRTR (Multi-Round-Trip Requests, replacing
+  elicitation/sampling) and explicit server statelessness. MCP standardizes
+  *capability discovery and tool invocation* between a model and tools. It
+  deliberately does **not** define an execution-decision layer: nothing in MCP
+  decides whether a refund may be auto-executed, requires approval, or must be
+  blocked. OSAS is complementary — it can ride on top of MCP as a governance
+  profile (see [RFC 0002](../rfcs/0002-osas-as-mcp-governance-profile.md)).
 - **A2A (Agent2Agent) v1.0** — governs *agent ↔ agent* messaging and task
   delegation. Adjacent to OSAS: A2A agents that touch customer data still need
   a governance and audit layer underneath.

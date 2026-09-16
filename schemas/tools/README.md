@@ -29,15 +29,22 @@ exactly one hint is declared per tool:
 | `readOnlyHint: true` | Read-only lookup; no side effects | `osas_core_get_case`, `osas_core_search_cases`, `osas_core_get_customer`, `osas_core_search_knowledge`, `osas_ecom_get_order`, `osas_ecom_list_orders`, `osas_ecom_get_shipment`, `osas_ecom_get_shipment_incident`, `osas_ecom_get_refund_status`, `osas_saas_get_subscription`, `osas_saas_list_invoices`, `osas_saas_get_credit_balance` |
 | `mutatingHint: true` | Creates or mutates records (notes, escalations, proposals, claims, requests) | `osas_core_create_case_note`, `osas_core_create_escalation`, `osas_core_create_action_proposal`, `osas_ecom_create_item_claim_request`, `osas_ecom_create_exchange_request`, `osas_saas_create_credit_request`, `osas_saas_create_cancellation_request`, `osas_saas_create_plan_change_request` |
 
-Mapping to the MCP tool annotations of the **2026-07 revision** (spec dated
-2026-07-28):
+Mapping to the MCP tool annotations (spec dated 2026-07-28):
 
-- `readOnlyHint` corresponds 1:1 to the MCP `readOnlyHint` tool annotation.
-- `mutatingHint` corresponds 1:1 to the MCP `mutatingHint` tool annotation
-  introduced by the 2026-07 revision. (The installed
-  `@modelcontextprotocol/sdk` still types the older annotation set, so
-  `packages/mcp-server` carries it in `Tool._meta["osas/annotations"]` until
-  SDK support lands; `readOnlyHint` is passed natively via `Tool.annotations`.)
+- `readOnlyHint` corresponds 1:1 to the MCP `readOnlyHint` tool annotation
+  (part of MCP's standard hint set — `readOnlyHint`, `destructiveHint`,
+  `idempotentHint`, `openWorldHint` — and passed natively via
+  `Tool.annotations`).
+- **`mutatingHint` is an OSAS-defined annotation, not an MCP one.** MCP's
+  standard set has no "mutating" flag; `destructiveHint` is the closest
+  standard hint, but it describes potentially destructive updates, whereas
+  OSAS needs a marker for every record-creating tool — including
+  proposal-only shortcuts that create a record but perform no business write.
+  OSAS therefore declares `mutatingHint` in its own tool schemas and surfaces
+  it under the implementation-owned `Tool._meta["osas/annotations"]` key,
+  where it cannot collide with future standard hints. If MCP later
+  standardizes an equivalent hint, OSAS will map onto it and revisit this
+  extension.
 
 **Annotations are enforced by the governance layer, not by hints.** A
 `mutatingHint` annotation is declarative metadata for clients and model routers;

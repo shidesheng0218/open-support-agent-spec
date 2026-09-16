@@ -42,7 +42,7 @@ default path.
 
 ## At a glance
 
-| 20 MCP tools | 3 profiles | 120 policy + 100 after-sales cases | 307 compatibility checks |
+| 20 MCP tools | 3 profiles | 120 policy + 100 after-sales cases | 311 compat + 51 black-box checks |
 |---|---|---|---|
 | Core, ecommerce, SaaS | Schema-driven contracts | Offline safety evals | HTTP black-box conformance |
 
@@ -434,7 +434,11 @@ OSAS v0.2 remains a **Draft** and is kept backward-compatible while v0.3
 Controlled Execution is developed as a separate Draft profile. The path to v1.0:
 
 - [ ] v0.2.1 maintenance release has no documentation/schema/version drift.
-- [ ] v0.3 Controlled Execution Draft passes the Sandbox conformance suite.
+- [x] v0.3 Controlled Execution Draft passes the Sandbox conformance suite —
+      the reference implementation is green on the 29-check
+      `controlled-execution` runner profile
+      ([badge](conformance/badges/osas-reference-v0.3.json)), and the Python
+      candidate passes it too.
 - [x] A Python implementation passes the black-box runner (v0.2 read-only +
       stateful, v0.3 controlled-execution) — the in-repo candidate in
       [implementations/python-reference](implementations/python-reference/),
@@ -452,6 +456,9 @@ Ecosystem and hardening items on the same path:
 
 - [ ] [RFC 0006](rfcs/0006-external-policy-decision-point.md) (external policy
       decision point, tightening-only) accepted, with an OPA-backed example.
+- [ ] [RFC 0005](rfcs/0005-information-flow-control.md) (information flow
+      control) promoted from design note, with a first implementation of the
+      flow rules generalizing the existing param transforms.
 - [ ] AG-UI approval-UX integration guide validated against a live frontend:
       [docs/ag-ui-integration.md](docs/ag-ui-integration.md).
 - [ ] Threat model maintained alongside the security requirements:

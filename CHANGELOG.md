@@ -64,6 +64,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - RFC 0003 and bilingual controlled-execution documentation.
 - The synthetic after-sales evaluation set now contains 100 cases (10 per Top-10
   scenario), while the existing 120-case policy evaluation remains unchanged.
+- **After-sales lifecycle API and console**: `POST /v1/after-sales/intake`,
+  `POST /v1/after-sales/cases/:id/evaluate`, `GET /v1/after-sales/cases[/:id]`,
+  `GET /v1/after-sales/metrics`, `GET /v1/after-sales/contracts`, and the
+  console `/after-sales` page operating the Top-10 scenarios end to end
+  (CONTRACTS.md §19).
+- **Approval fail-safe lifecycle wired into the reference API**: approvals are
+  stamped with `expiresAt` at creation (`resolveApprovalDeadline`),
+  `GET /v1/approvals` reports the effective `expired` status, and a decision
+  attempt on an expired approval is refused with 409 `APPROVAL_TIMED_OUT` and
+  audited (`approval_decided` with `detail.decision: "expired"`) — an
+  undecided approval is denied, never approved.
+- **`GET /v1/shadow-runs/metrics`** — the ShadowMetrics producer
+  (`schemas/core/shadow-metrics.json`, now with matching `@osas/core` types):
+  aggregates ShadowRun records per tenant/period into totals, per-action
+  buckets, and rates (coverage = proposals with at least one shadow run).
+- RFC 0005 (information flow control) is listed in this changelog and in the
+  README roadmap (it landed as a design note without a changelog entry).
 
 ### Changed
 
@@ -73,10 +90,39 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   CONTRACTS.md §11 and the implementer guide (EN+ZH) point to the
   machine-readable fixture JSON, and the guide documents the audit hash-chain
   canonicalization and lessons from the Python implementation.
+- RFC 0001 and RFC 0002 are marked `Implemented` (their deliverables shipped
+  in 0.1.0 / are realized in the shipped posture); `APPROVAL_STATUSES` in
+  `@osas/core` now includes `"expired"`; `resolveApprovalDeadline` /
+  `evaluateApprovalExpiry` accept a structural minimum so the deadline can be
+  resolved at approval-creation time.
+- The Python reference implementation's `POST /v1/proposals/:id/reconcile`
+  returns the updated proposal (CONTRACTS.md §9/§20), matching the TypeScript
+  reference.
+- CONTRACTS.md §9 gains the missing v0.3 endpoint table (§20) and the
+  after-sales table (§19); the `tools/*.json` layout note no longer implies
+  four extra tools (the after-sales tools are four of the twenty).
+- `conformance/matrix.md` regenerated from real 2026-09-14 runs (311 white-box
+  cases; 22/22 + 29/29 black-box checks for both implementations); the README
+  "at a glance" counts corrected; badge `status` vocabulary
+  (`draft-conformance` | `conformance`) documented in conformance/README.md.
 - Capability manifests can publish per-action `executionContracts`; the mock
   sandbox declares synthetic support without advertising `live`.
 - PostgreSQL migrations persist execution attempts, receipts, reconciliation
   tasks, and provider events with tenant-scoped uniqueness constraints.
+
+### Fixed
+
+- **MCP documentation facts**: `mutatingHint` is documented as an
+  OSAS-defined annotation carried under `Tool._meta["osas/annotations"]` —
+  not an MCP standard hint (the MCP set is `readOnlyHint`/`destructiveHint`/
+  `idempotentHint`/`openWorldHint`) — and MRTR is expanded correctly as
+  Multi-Round-Trip Requests, across `docs/mcp-2026-07-alignment.md` (EN+ZH),
+  `schemas/tools/README.md`, the competitive-landscape doc (EN+ZH), and the
+  mcp-server code comments.
+- **`core/audit-event` schema drift**: the `eventType` enum now includes
+  `execution_attempt_created` and `provider_event_received`, which the
+  reference implementation has been emitting — previously valid events would
+  have failed their own published schema.
 
 ## [0.2.0] - 2026-09-07
 

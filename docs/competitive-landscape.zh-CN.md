@@ -13,8 +13,9 @@ OSAS（Open Support Agent Spec）是面向客服 agent 的**治理优先开放�
 
 ### 1. 协议层——解决 agent 如何通信，而非如何被治理
 
-- **MCP（Model Context Protocol）**——已捐赠给 Linux 基金会的 Agentic AI
-  Foundation（AAIF）；2026-07-28 修订加入了工具注解与 MRTR（模型请求工具限制）。
+- **MCP（Model Context Protocol）**——已捐赠给 Linux 基金会；2026-07-28 修订
+  引入了 MRTR（Multi-Round-Trip Requests，取代 elicitation/sampling）与显式的
+  server 无状态化要求。
   MCP 标准化的是模型与工具之间的*能力发现与工具调用*，刻意**不**包含执行决策层：
   MCP 中没有任何机制决定一笔退款可以自动执行、需要审批还是必须阻断。OSAS 与之
   互补——可以作为 MCP 之上的治理 profile 存在（见

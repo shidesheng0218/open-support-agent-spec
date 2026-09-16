@@ -24,7 +24,7 @@ schemas/                     # authoritative JSON Schemas (draft 2020-12)
   core/*.json                # 8 core objects + common.json
   profiles/ecommerce/*.json  # order.json, shipment.json
   profiles/saas/*.json       # subscription.json, invoice.json, credit-balance.json
-  tools/*.json               # one input schema per MCP tool (20 tools, §7; +4 after-sales tools in spec-v0.2 §15)
+  tools/*.json               # one input schema per MCP tool (20 tools total, §7; 4 of them are the after-sales tools from spec-v0.2 §15.5)
 packages/
   core/            @osas/core             types, enums, state machines, detectInjection, id helpers
   schema-validator/@osas/schema-validator Ajv loader/validator over schemas/
@@ -220,8 +220,8 @@ CORS enabled. `x-tenant-id` header optional (default `tenant_demo`). All errors 
 | POST | /v1/proposals/:id/evaluate | → `{ proposal, decision }` (§4 side effects: approval/handoff/events) |
 | POST | /v1/proposals/:id/execute | → `{ proposal, execution, replayed }` (§5; 409 if not `approved`) |
 | POST | /v1/proposals/:id/reconcile | `{ outcome: "succeeded"\|"failed", note? }` → proposal |
-| GET | /v1/approvals?status | → Approval[] (with embedded proposal) |
-| POST | /v1/approvals/:id/decide | `{ decision, approverId, comment? }` → `{ approval, execution? }` (approved → auto-execute through §5) |
+| GET | /v1/approvals?status | → Approval[] (embedded proposal); **effective status**: a pending approval past its deadline (policy `approval.timeoutSeconds`, or an explicit `expiresAt`) is reported as `expired` |
+| POST | /v1/approvals/:id/decide | `{ decision, approverId, comment? }` → `{ approval, execution? }` (approved → auto-execute through §5); an expired approval → 409 `APPROVAL_TIMED_OUT` (fail-safe denial, audited as `approval_decided` with `detail.decision: "expired"`) |
 | GET | /v1/handoffs?status | → HumanHandoff[] |
 | POST | /v1/handoffs/:id/claim | `{ assignee }`; POST /v1/handoffs/:id/resolve `{ notes? }` |
 | GET | /v1/audit?caseId&proposalId | → AuditEvent[] |
@@ -316,3 +316,30 @@ README.md + README.zh-CN.md (Draft 开放规范 v0.2 positioning, quickstart: pn
 - **Evals (`evals/`, `@osas/evals`)**: 120 synthetic PII-free cases (`evals/cases/*.json`: 30 refund, 20 return, 15 reshipment, 15 cancel_order, 20 general, 20 security) each with `input` (message, customer identity/region, evidence state, amount, reasonCode, duplicate/injection/executionOutcome flags) and `expected` (action | null, policyDecision | "none", reasonCodes, handoffReason, evidenceRequired). `pnpm eval:policy` is fully offline (fixed clock, eval policy mirroring §11): constructs the expected proposal per case, validates it against `core/action-proposal`, runs `evaluateProposal`, and probes uncertain executions via `executeProposal` (must park in `reconciliation_required`). Gates (CI, exit 1 on failure): 100% schema valid, 100% policy consistency, 0 overreach (block/none expected but auto_execute), 0 duplicate executions, 0 security-boundary bypass. Reports per-category accuracy, schema-valid rate, policy consistency, overreach/duplicate/bypass counts, cost ($0 offline) and latency to `evals/report/policy-latest.json` (git-ignored). `pnpm eval:model` runs only with `OSAS_LLM_PROVIDER=openai-compatible` + base URL/models set (never in CI); every model proposal is still capped at `request-approval` and re-evaluated by the policy engine, and semantic accuracy is reported separately — automation gates never depend on the model "sounding human".
 - **CI**: `build-test` runs `pnpm eval:policy`; the `docker` job sets `OSAS_CONFORMANCE_MODE=true` / `OSAS_CONFORMANCE_KEY` (compose passthrough defaults off) and runs the black-box runner against the Docker API, uploading its JSON report.
 - **Fix**: `GET /v1/policies/:tenantId` strips lifecycle metadata so the response validates against `core/tenant-policy` (additionalProperties: false); records keep lifecycle fields on `/versions`.
+
+## 19. v0.2 after-sales lifecycle API (additive to §9)
+
+Implemented in `apps/api/src/routes/after-sales.ts`; console page `/after-sales` (§10). Operates the Top-10 after-sales scenarios (spec-v0.2 §15) end to end: intake → evidence → policy gate → approval / sandbox receipt → audit / reconciliation. Records live in `AfterSalesStore` (in-memory or Postgres, tenant-scoped).
+
+| Method | Path | Body → Response |
+|---|---|---|
+| POST | /v1/after-sales/intake | `{ scenarioCode, idempotencyKey, caseId, orderId?, amount?, message?, evidenceIds? }` → 201 `{ case, replayed }` (idempotent by `idempotencyKey`; 422 on unknown scenarioCode or malformed amount) |
+| POST | /v1/after-sales/cases/:id/evaluate | → `{ case, decision, proposal?, approval?, handoff?, execution?, ... }` — evaluates the case's proposal through §4; idempotent once a proposal exists (returns its current decision instead of creating a second proposal) |
+| GET | /v1/after-sales/cases?scenarioCode&status&riskLevel | → AfterSalesCase[] |
+| GET | /v1/after-sales/cases/:id | → `{ case, sourceCase, customer?, evidence, proposal?, approvals, handoffs, audit, executionAttempts, receipts, reconciliation, attempt?/receipt?/reconciliationTask? }` — the operator detail view |
+| GET | /v1/after-sales/metrics | → `{ totalCases, autoAnswerRate, proposalRate, approvalRate, humanHandoffRate, blockedRate, reconciliationRate, duplicateExecutionCount: 0, fakeSuccessCount: 0, unknownResultAutoRetryCount: 0, evidenceCompletenessRate, auditCompletenessRate }` |
+| GET | /v1/after-sales/contracts | → per-scenario execution contracts (`AFTER_SALES_SCENARIO_CONTRACTS`, incl. `riskLevel`) |
+
+`syncAfterSalesCaseStatus` keeps the vertical case status aligned when proposals execute, fail, or park in reconciliation (`routes/proposals.ts`, `routes/provider-events.ts`).
+
+## 20. v0.3 controlled-execution endpoints (RFC 0003, additive to §9)
+
+Backing stores: `ExecutionAttemptStore` / `ExecutionReceiptStore` / `ReconciliationStore` / `ProviderEventStore` (in-memory or Postgres). `live` remains fail-closed.
+
+| Method | Path | Body → Response |
+|---|---|---|
+| POST | /v1/proposals/:id/execute | (extended) → `{ proposal, execution, replayed, attempt?, receipt?, reconciliation? }` — `attempt`/`receipt` for sandbox executions; uncertain → `reconciliation_required` + one open task, never auto-retried |
+| POST | /v1/proposals/:id/reconcile | `{ outcome: "succeeded" \| "failed", note? }` → ActionProposal (updated to `executed` \| `failed`; also resolves the open reconciliation task and audits `reconciliation_resolved`) |
+| GET | /v1/executions/:id | → `{ attempt, receipt? }` |
+| GET | /v1/reconciliation?status=open\|resolved | → ReconciliationTask[] |
+| POST | /v1/provider-events | requires `x-osas-provider-key` (server-side `OSAS_PROVIDER_EVENT_KEY`); dedup by `(tenantId, provider, providerEventId)` → `{ duplicate, event, proposal?, reconciliation? }` |

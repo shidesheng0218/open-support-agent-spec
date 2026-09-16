@@ -41,7 +41,7 @@
 
 ## 一眼看懂
 
-| 20 个 MCP 工具 | 3 个 Profile | 120 条策略 + 100 条售后案例 | 307 项兼容检查 |
+| 20 个 MCP 工具 | 3 个 Profile | 120 条策略 + 100 条售后案例 | 311 项兼容 + 51 项黑盒检查 |
 |---|---|---|---|
 | Core、电商、SaaS | Schema 驱动契约 | 离线安全评测 | HTTP 黑盒一致性 |
 
@@ -420,7 +420,10 @@ OSAS v0.2 仍是**草案（Draft）**，并在 v0.3 受控执行 Draft 开发期
 通往 v1.0 的路径：
 
 - [ ] v0.2.1 维护版本不存在文档、Schema、版本号漂移。
-- [ ] v0.3 受控执行 Draft 通过 Sandbox Conformance。
+- [x] v0.3 受控执行 Draft 通过 Sandbox Conformance——参考实现在 29 项
+      `controlled-execution` runner Profile 上全绿
+      （[徽章](conformance/badges/osas-reference-v0.3.json)），Python 候选
+      实现同样通过。
 - [x] Python 实现通过黑盒 runner（v0.2 只读 + 有状态套件、v0.3 受控执行
       Profile）——仓内候选实现见
       [implementations/python-reference](implementations/python-reference/)，
@@ -437,6 +440,9 @@ OSAS v0.2 仍是**草案（Draft）**，并在 v0.3 受控执行 Draft 开发期
 
 - [ ] [RFC 0006](rfcs/0006-external-policy-decision-point.zh-CN.md)（外部策略
       决策点，只允许从严）被接受，并提供 OPA 示例。
+- [ ] [RFC 0005](rfcs/0005-information-flow-control.zh-CN.md)（信息流控制）
+      从设计注记升级为正式提案，并出现把现有参数脱敏推广为通用流转规则的
+      首个实现。
 - [ ] AG-UI 审批 UX 集成指南在真实前端中验证：
       [docs/ag-ui-integration.zh-CN.md](docs/ag-ui-integration.zh-CN.md)。
 - [ ] 威胁模型与安全需求同步维护：

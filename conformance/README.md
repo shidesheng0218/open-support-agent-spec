@@ -60,6 +60,14 @@ not satisfy the v1.0 independence gate.
 
 ## Badge records
 
+Badge `status` uses its own two-value vocabulary — distinct from the registry
+statuses above — keyed to the stability of the spec line being verified:
+
+| Badge status | Meaning |
+|---|---|
+| `draft-conformance` | Verified against a **Draft** spec line (all v0.x lines today). Claims are re-verified when the line changes. |
+| `conformance` | Verified against a stable spec line (reserved for v1.0+). |
+
 Files under `badges/` are machine-readable JSON:
 
 ```jsonc

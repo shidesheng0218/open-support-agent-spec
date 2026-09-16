@@ -1,8 +1,12 @@
 # RFC 0002: OSAS as a governance profile for the MCP/A2A ecosystem
 
-- **Status:** Draft
+- **Status:** Implemented
 - **Authors:** OSAS founding maintainers
 - **Created:** 2026-09-07
+- **Note:** Positioning RFC — its posture is realized in shipped artifacts
+  (MCP as the only tool transport, the 20-tool surface, the embeddable
+  `@osas/policy-engine`, the black-box conformance story, and the AG-UI
+  integration guide); it has no schemas or tests of its own.
 
 ## Summary
 

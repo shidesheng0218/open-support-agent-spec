@@ -7,10 +7,11 @@
 - **Status:** Draft
 - **Related:** [RFC 0002](../rfcs/0002-osas-as-mcp-governance-profile.md), [schemas/tools/README.md](../schemas/tools/README.md) (Annotations mapping rules)
 
-The MCP 2026-07 revision introduces three changes that matter to OSAS:
-multi-round-trip (MRTR) interactions replacing elicitation/sampling, stateless
-servers, and an extended tool-annotation vocabulary. This document records how
-the OSAS governance profile maps onto each change. It is an alignment
+The MCP 2026-07 revision introduces two changes that matter to OSAS:
+multi-round-trip (MRTR) interactions replacing elicitation/sampling, and
+stateless servers. A third area — how OSAS's own tool-annotation extension
+relates to MCP's standard hint set — is covered in §3. This document records
+how the OSAS governance profile maps onto each change. It is an alignment
 statement, not a normative spec change.
 
 ## 1. MRTR alignment
@@ -69,13 +70,19 @@ restarted, scaled horizontally, or served by multiple replicas without any
 loss of in-flight approval state; a resumed MRTR round 2 is answered entirely
 from the store.
 
-## 3. Tool annotations
+## 3. Tool annotations (OSAS extension)
 
-The revision extends tool annotations with behavioral hints, notably
-`readOnlyHint` and `mutatingHint`. All 20 OSAS tool schemas declare their
-class via a top-level `annotations` object, and `@osas/mcp-server` surfaces
-them on the MCP tool definitions (with `mutatingHint` carried in `_meta` until
-the installed SDK types the 2026-07 set). The full mapping table and the
+MCP's standard annotation set — `readOnlyHint`, `destructiveHint`,
+`idempotentHint`, `openWorldHint` — predates the 2026-07 revision (it landed
+in 2025-03) and is unchanged by it. All 20 OSAS tool schemas declare their
+behavioral class via a top-level `annotations` object: `readOnlyHint` maps 1:1
+onto the standard MCP hint, while **`mutatingHint` is an OSAS-defined
+extension** — the standard set has no mutating flag, and `destructiveHint` is
+the wrong shape for OSAS (proposal-shortcut tools create records without
+performing a business write, and are certainly not destructive).
+`@osas/mcp-server` passes `readOnlyHint` natively via `Tool.annotations` and
+carries the OSAS extension under the implementation-owned
+`Tool._meta["osas/annotations"]` key. The full mapping table and the
 governance caveat — annotations are declarative metadata; enforcement stays in
 the permission ladder and the policy engine — are normative in
 [schemas/tools/README.md](../schemas/tools/README.md).

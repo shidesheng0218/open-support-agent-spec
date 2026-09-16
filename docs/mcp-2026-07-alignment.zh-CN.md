@@ -7,10 +7,11 @@
 - **状态：** Draft（草案）
 - **相关文档：** [RFC 0002](../rfcs/0002-osas-as-mcp-governance-profile.md)、[schemas/tools/README.md](../schemas/tools/README.md)（Annotations 映射规则）
 
-MCP 2026-07 修订引入了三项与 OSAS 密切相关的变化：用 multi-round-trip
-（MRTR）取代 elicitation/sampling、server 无状态化、以及扩展的工具注解
-词汇表。本文档记录 OSAS 治理 Profile 如何对应这三项变化。本文档是对齐
-说明，不产生规范层面的变更。
+MCP 2026-07 修订引入了两项与 OSAS 密切相关的变化：用 multi-round-trip
+（MRTR）取代 elicitation/sampling、以及 server 无状态化。第三个方面——
+OSAS 自有的工具注解扩展与 MCP 标准提示集的关系——见 §3。本文档记录
+OSAS 治理 Profile 如何对应这些变化。本文档是对齐说明，不产生规范层面的
+变更。
 
 ## 1. MRTR 对齐
 
@@ -60,14 +61,18 @@ ActionProposal、审批记录、作出判定的策略版本——都存放在 ad
 可以重启、水平扩缩容或由多副本提供服务，进行中的审批状态分毫不丢；
 恢复的 MRTR 第 2 轮全部依据 store 作答。
 
-## 3. 工具注解
+## 3. 工具注解（OSAS 扩展）
 
-2026-07 修订扩展了工具注解，新增行为提示词汇表，其中包括
-`readOnlyHint` 与 `mutatingHint`。全部 20 个 OSAS 工具 schema 通过顶层 `annotations` 对象
-声明其类别，`@osas/mcp-server` 将这些注解透传到 MCP 工具定义上（在
-所安装的 SDK 类型化 2026-07 注解集之前，`mutatingHint` 暂经 `_meta`
-携带）。完整映射表与治理层警示——注解只是声明式元数据，强制力仍来自
-权限阶梯与策略引擎——以
+MCP 的标准注解集——`readOnlyHint`、`destructiveHint`、`idempotentHint`、
+`openWorldHint`——早于 2026-07 修订（2025-03 即已引入），且本次修订并未
+改动它。全部 20 个 OSAS 工具 schema 通过顶层 `annotations` 对象声明其
+类别：`readOnlyHint` 与 MCP 标准提示 1:1 对应，而 **`mutatingHint` 是
+OSAS 自定义的扩展**——标准集中没有 mutating 标志，`destructiveHint` 的
+语义也不贴合 OSAS（proposal 快捷工具会创建记录但本身不执行业务写入，
+更谈不上 destructive）。`@osas/mcp-server` 将 `readOnlyHint` 原生透
+过 `Tool.annotations` 传出，OSAS 扩展则经由实现自有的
+`Tool._meta["osas/annotations"]` 键携带。完整映射表与治理层警示——注解
+只是声明式元数据，强制力仍来自权限阶梯与策略引擎——以
 [schemas/tools/README.md](../schemas/tools/README.md) 为准。
 
 ## 4. 迁移策略
