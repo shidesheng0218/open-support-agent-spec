@@ -90,11 +90,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   CONTRACTS.md §11 and the implementer guide (EN+ZH) point to the
   machine-readable fixture JSON, and the guide documents the audit hash-chain
   canonicalization and lessons from the Python implementation.
-- RFC 0001 and RFC 0002 are marked `Implemented` (their deliverables shipped
-  in 0.1.0 / are realized in the shipped posture); `APPROVAL_STATUSES` in
-  `@osas/core` now includes `"expired"`; `resolveApprovalDeadline` /
-  `evaluateApprovalExpiry` accept a structural minimum so the deadline can be
-  resolved at approval-creation time.
+- RFC 0001 and RFC 0002 are marked `Implemented`: RFC 0001 was first shipped
+  in v0.1.0 (historical, superseded by the v0.2 line) and RFC 0002's posture
+  is realized in the shipped artifacts; `APPROVAL_STATUSES` in `@osas/core`
+  now includes `"expired"`; `resolveApprovalDeadline` / `evaluateApprovalExpiry`
+  accept a structural minimum so the deadline can be resolved at
+  approval-creation time.
 - The Python reference implementation's `POST /v1/proposals/:id/reconcile`
   returns the updated proposal (CONTRACTS.md §9/§20), matching the TypeScript
   reference.
