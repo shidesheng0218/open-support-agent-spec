@@ -7,6 +7,18 @@ on:
     branches: [main]
 
 jobs:
+  dco:
+    # Developer Certificate of Origin: every non-merge commit in the PR must
+    # carry a Signed-off-by trailer matching its author/committer (see DCO and
+    # CONTRIBUTING.md). PR-only; pushes to main are already covered at review.
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - run: node scripts/check-dco.mjs "${{ github.event.pull_request.base.sha }}..${{ github.event.pull_request.head.sha }}"
+
   build-test:
     runs-on: ubuntu-latest
     steps:

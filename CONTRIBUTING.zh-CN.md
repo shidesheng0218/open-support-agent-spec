@@ -10,7 +10,9 @@
 
 每个 commit 都必须带有 `Signed-off-by` 行，以确认
 [开发者原创声明](DCO)（Developer Certificate of Origin）。使用 `git commit -s`
-添加。存在缺失 sign-off 的 commit 的 PR 不能合并。
+添加，且 sign-off 的邮箱必须与 commit 的作者或提交者一致。这一要求由每个 PR
+上的 `dco` CI job 强制执行（`node scripts/check-dco.mjs <base>..<head>`，本地可
+运行 `pnpm check:dco`）；未通过检查的 PR 不能合并。
 
 ## 贡献方式
 

@@ -10,8 +10,10 @@ work under [Apache-2.0](LICENSE).
 ## Developer Certificate of Origin
 
 Every commit must carry a `Signed-off-by` line certifying the
-[Developer Certificate of Origin](DCO). Add it with `git commit -s`. PRs with
-commits missing the sign-off cannot be merged.
+[Developer Certificate of Origin](DCO). Add it with `git commit -s`. The
+sign-off email must match the commit's author or committer. This is enforced
+by the `dco` CI job on every PR (`node scripts/check-dco.mjs <base>..<head>`,
+or `pnpm check:dco` locally); PRs failing it cannot be merged.
 
 ## Ways to contribute
 

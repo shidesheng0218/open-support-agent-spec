@@ -12,6 +12,7 @@
     "build": "pnpm -r run build",
     "typecheck": "pnpm -r run typecheck",
     "check:versions": "node scripts/check-version-consistency.mjs",
+    "check:dco": "node scripts/check-dco.mjs",
     "test": "node scripts/check-ci-workflow.mjs && node scripts/check-version-consistency.mjs && pnpm run build && pnpm -r run test",
     "test:compat": "pnpm --filter @osas/compat-suite run test",
     "test:e2e": "pnpm --filter @osas/e2e run test",
