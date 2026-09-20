@@ -214,6 +214,44 @@ export interface EvidenceRecord {
   source: { system: string; recordType: string; recordId: string; url?: string };
 }
 
+/** GET /v1/cases row (only the fields the console uses). */
+export interface Case {
+  id: string;
+  customerId: string;
+  subject: string;
+  status: string;
+  profile: Profile;
+}
+
+/** GET /v1/shadow-runs/metrics (schemas/core/shadow-metrics.json). */
+export interface ShadowMetrics {
+  id: string;
+  specVersion: string;
+  tenantId: string;
+  periodStart: string;
+  periodEnd: string;
+  totals: {
+    autoExecuted: number;
+    approvalRequested: number;
+    blocked: number;
+    shadowRuns: number;
+  };
+  byActionType: {
+    actionType: string;
+    autoExecuted: number;
+    approvalRequested: number;
+    blocked: number;
+  }[];
+  rates: {
+    autoExecuteRate: number;
+    approvalRate: number;
+    blockRate: number;
+    shadowCoveragePct: number;
+  };
+  createdAt: string;
+  updatedAt?: string;
+}
+
 export type AfterSalesScenario =
   | "wismo"
   | "delivery_delay"

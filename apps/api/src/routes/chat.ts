@@ -353,7 +353,9 @@ export async function chatRoutes(app: FastifyInstance): Promise<void> {
       reply: composeReply(evaluation.decision.decision, Boolean(execution?.replayed)),
       proposal: execution?.proposal ?? evaluation.proposal,
       decision: evaluation.decision,
-      execution,
+      // The chat response carries the inner ExecutionResult (status/
+      // externalRef/detail) — the console reads exactly those fields.
+      execution: execution?.execution,
       handoff: evaluation.handoffs[0],
     };
   });

@@ -5,10 +5,12 @@ v0.3 Controlled Execution Sandbox profile. It passes the black-box
 compatibility runner's full v0.2 suite (read-only + stateful) and the v0.3
 `controlled-execution` profile — see "Verifying" below.
 
-Scope note: it does **not** implement the approvals / handoffs / shadow-run
-endpoints (its capability manifest declares only what it serves); the black-box
-suites do not exercise those surfaces, so its `conforming` registration covers
-the surfaces it does implement.
+Scope note: it does **not** implement the approvals or shadow-run endpoints
+(its capability manifest declares only what it serves); the black-box suites
+do not exercise those surfaces, so its `conforming` registration covers the
+surfaces it does implement. Handoffs are record-only: `POST /v1/chat` creates
+them for prompt-injection and policy-blocked conversations, and
+`GET /v1/handoffs` lists them — there is no claim/resolve workflow.
 
 It is intentionally small and safe:
 
@@ -38,6 +40,10 @@ It is intentionally small and safe:
   `/v1/audit/verify`.
 - Conformance Mode (`reset` / `fixtures/load` / `snapshot`), seeded from the
   machine-readable [conformance/fixtures/demo-tenant.json](../../conformance/fixtures/README.md).
+- `POST /v1/chat` — the demo driver (message → proposal → policy decision →
+  sandbox execution or handoff), mirroring the reference API's mock-provider
+  flow: deterministic keyword scenario detection, `$amount` and id parsing,
+  evidence anchoring, and prompt-injection interception.
 
 ## Running
 

@@ -231,7 +231,8 @@ describe("policy + execution flows (§4/§5)", () => {
     const decided = decideRes.json();
     expect(decided.approval.status).toBe("approved");
     expect(decided.execution).toBeDefined();
-    expect(decided.execution.proposal.status).toBe("executed");
+    // The decide response carries the inner ExecutionResult (status/…).
+    expect(decided.execution.status).toBe("succeeded");
   });
 
   it("execute replay with the same idempotencyKey returns replayed:true with side effects once", async () => {
@@ -325,7 +326,9 @@ describe("chat + injection (§8/§9)", () => {
     expect(body.proposal.actionType).toBe("refund");
     expect(body.decision.decision).toBe("auto_execute");
     expect(body.execution).toBeDefined();
-    expect(body.execution.replayed).toBe(false);
+    // The chat response carries the inner ExecutionResult (status/externalRef)
+    // — the shape the console reads.
+    expect(body.execution.status).toBe("succeeded");
     expect(body.proposal.status).toBe("executed");
   });
 

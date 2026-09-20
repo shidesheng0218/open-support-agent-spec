@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
-import { api } from "../api";
+import { ApiError, api } from "../api";
 import { ErrorBox, money, RawToggle, Section, StatusBadge } from "../components";
 import type { ApprovalWithProposal, DecideResponse, HumanHandoff } from "../types";
 
@@ -8,6 +8,10 @@ function ApprovalCard({ approval, onDecided }: { approval: ApprovalWithProposal;
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<unknown>(null);
   const [result, setResult] = useState<DecideResponse | null>(null);
+  // A 409 from decide is the fail-safe denial path (expired approval): the API
+  // message explains it; the buttons are withdrawn so the operator cannot
+  // keep re-submitting. The queue still refreshes manually.
+  const refused = error instanceof ApiError && error.status === 409;
   const p = approval.proposal;
 
   const decide = async (decision: "approved" | "rejected") => {
@@ -85,7 +89,7 @@ function ApprovalCard({ approval, onDecided }: { approval: ApprovalWithProposal;
             Refresh queue
           </button>
         </div>
-      ) : (
+      ) : refused ? null : (
         <div style={{ marginTop: 8 }}>
           <div className="field">
             <input

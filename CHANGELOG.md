@@ -26,6 +26,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `res.body`, and `*.body` join the redact paths in the API logger, pinned by
   a behaviour test (`apps/api/src/log-redaction.test.ts`) that drives real
   pino output.
+- **Console completeness**: the Shadow page now renders the aggregated
+  shadow-metrics (totals, rates, coverage, per-action table from
+  `GET /v1/shadow-runs/metrics`); the after-sales console gains an idempotent
+  intake form (`POST /v1/after-sales/intake`); the demo page gains a free-form
+  custom-message card driving `POST /v1/chat`; the Agent queue renders the
+  `expired` fail-safe status in the bad tone and withdraws the decide buttons
+  after a 409 refusal.
+- **Python reference gains the demo driver**: `POST /v1/chat` (deterministic
+  mock-provider mirror: keyword scenario detection, `$amount`/id parsing,
+  evidence anchoring, prompt-injection interception) plus a record-only
+  `GET /v1/handoffs` — the console's three guided scenarios now run unchanged
+  against the Python implementation.
 - **Machine-readable demo fixtures**: `conformance/fixtures/demo-tenant.json`
   is the authoritative form of the CONTRACTS.md §11 dataset, with relative
   `now±N<unit>` timestamp tokens so the dataset never goes stale; generated
@@ -144,6 +156,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **Chat/decide response shape**: `/v1/chat` and `POST /v1/approvals/:id/decide`
+  now carry the inner `ExecutionResult` (`status`/`externalRef`/`detail`) in
+  their `execution` field instead of the whole `ExecutionOutcome` — matching
+  the console's `ChatResponse`/`DecideResponse` contracts (the mismatch was
+  invisible in default shadow mode; in sandbox mode the console rendered an
+  undefined execution status).
+- **Proposal creation is now idempotent** on `idempotencyKey` (CONTRACTS §9):
+  an identical re-submission returns 200 with the stored proposal and
+  `replayed: true` — no second proposal row, no duplicate `proposal_created`
+  audit — and the same key with different content is rejected 409. Both the
+  TypeScript and Python reference implementations implement this, with tests.
 - **Approval fail-safe follow-ups**: the expiry denial now closes the proposal
   as `rejected`, so an identical new request is no longer blocked by
   `DUPLICATE_REQUEST` (the previous wiring left a dead end for up to

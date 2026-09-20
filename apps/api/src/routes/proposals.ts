@@ -2,6 +2,7 @@ import { randomUUID } from "node:crypto";
 import type { FastifyInstance } from "fastify";
 import { requireAdapterCapability, type SupportAdapter } from "@osas/adapter";
 import type { Capability, ActionProposal, ProposalStatus } from "@osas/core";
+import { deepEqual } from "@osas/policy-engine";
 import { SPEC_VERSION, SchemaInvalidError, ConflictError } from "../plugins.js";
 import { audit, resolveActivePolicy, runEvaluation, runExecution, runReconcile } from "../domain.js";
 import { PROPOSAL_SCHEMA, ctxFor, validateSchema } from "./basic.js";
@@ -66,6 +67,44 @@ export async function proposalRoutes(app: FastifyInstance): Promise<void> {
       idempotencyKey: candidate.idempotencyKey,
       policyDecision: candidate.policyDecision,
     } as Omit<ActionProposal, "id" | "specVersion" | "status" | "createdAt" | "updatedAt">;
+
+    // Idempotent creation: the idempotencyKey is the replay boundary for the
+    // whole request, not just for execution (CONTRACTS.md §9). A replay with
+    // identical content returns the stored proposal and performs no side
+    // effects (no second audit event). The lookup is a scan here; real
+    // adapters SHOULD push it down to the store.
+    const existing = (await adapter.listProposals(ctx, {})).find(
+      (p) => p.idempotencyKey === input.idempotencyKey,
+    );
+    if (existing) {
+      const sameContent = deepEqual(
+        {
+          caseId: existing.caseId,
+          profile: existing.profile,
+          actionType: existing.actionType,
+          reasonCode: existing.reasonCode,
+          params: existing.params,
+          amount: existing.amount ?? null,
+          evidenceIds: existing.evidenceIds,
+        },
+        {
+          caseId: input.caseId,
+          profile: input.profile,
+          actionType: input.actionType,
+          reasonCode: input.reasonCode,
+          params: input.params,
+          amount: input.amount ?? null,
+          evidenceIds: input.evidenceIds,
+        },
+      );
+      if (!sameContent) {
+        throw new ConflictError(
+          `idempotencyKey '${input.idempotencyKey}' was already used with different proposal content`,
+        );
+      }
+      return reply.code(200).send({ ...existing, replayed: true });
+    }
+
     const proposal = await adapter.createActionProposal(ctx, input);
     await audit(adapter, ctx, {
       caseId: proposal.caseId,

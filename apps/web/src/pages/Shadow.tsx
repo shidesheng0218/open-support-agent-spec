@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { api } from "../api";
-import { ErrorBox, RawToggle, Section, StatusBadge, money } from "../components";
-import type { AuditChainVerification, ShadowRunEnvelope, ShadowRunOutcome } from "../types";
+import { ErrorBox, MetricCard, RawToggle, Section, StatusBadge, money } from "../components";
+import type { AuditChainVerification, ShadowMetrics, ShadowRunEnvelope, ShadowRunOutcome } from "../types";
 
 /**
  * Shadow Mode console (v0.1.1 Milestone 3). Shows simulated policy decisions
@@ -200,6 +200,7 @@ function AuditChainStatus() {
 
 export default function Shadow() {
   const [items, setItems] = useState<ShadowRunEnvelope[] | null>(null);
+  const [metrics, setMetrics] = useState<ShadowMetrics | null>(null);
   const [error, setError] = useState<unknown>(null);
 
   const load = useCallback(() => {
@@ -217,6 +218,7 @@ export default function Shadow() {
         ),
       )
       .catch(setError);
+    api.get<ShadowMetrics>("/v1/shadow-runs/metrics").then(setMetrics).catch(() => setMetrics(null));
   }, []);
 
   useEffect(load, [load]);
@@ -231,6 +233,41 @@ export default function Shadow() {
         would have auto-executed. Humans review and write the final outcome — nothing is executed
         automatically, and there is no live-execute UI here.
       </p>
+      <Section title="Shadow metrics" zh="影子指标">
+        {metrics ? (
+          <>
+            <div className="metric-grid" data-testid="shadow-metrics">
+              <MetricCard label="Shadow runs / 影子运行" value={metrics.totals.shadowRuns} />
+              <MetricCard label="Would auto-execute / 将自动执行率" value={metrics.rates.autoExecuteRate} percent />
+              <MetricCard label="Need approval / 需审批率" value={metrics.rates.approvalRate} percent />
+              <MetricCard label="Blocked / 拦截率" value={metrics.rates.blockRate} percent />
+              <MetricCard label="Coverage / 覆盖率" value={metrics.rates.shadowCoveragePct} percent />
+            </div>
+            {metrics.byActionType.length > 0 ? (
+              <table className="table" data-testid="shadow-metrics-by-action" style={{ marginTop: 8 }}>
+                <thead>
+                  <tr><th>Action</th><th>auto-execute</th><th>approval</th><th>blocked</th></tr>
+                </thead>
+                <tbody>
+                  {metrics.byActionType.map((row) => (
+                    <tr key={row.actionType}>
+                      <td className="mono">{row.actionType}</td>
+                      <td>{row.autoExecuted}</td>
+                      <td>{row.approvalRequested}</td>
+                      <td>{row.blocked}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            ) : null}
+            <p className="muted" style={{ fontSize: 12, marginBottom: 0 }}>
+              Derived from ShadowRun records · period {metrics.periodStart} → {metrics.periodEnd}
+            </p>
+          </>
+        ) : (
+          <p className="muted">Metrics unavailable (GET /v1/shadow-runs/metrics).</p>
+        )}
+      </Section>
       <Section title="Shadow runs" zh="待人工审核">
         <div className="btn-row" style={{ marginBottom: 8 }}>
           <button className="btn secondary" onClick={load} data-testid="refresh-shadow-runs">

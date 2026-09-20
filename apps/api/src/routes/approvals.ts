@@ -141,6 +141,8 @@ export async function approvalRoutes(app: FastifyInstance): Promise<void> {
       await adapter.updateProposalStatus(ctx, proposal.id, "rejected");
       await syncAfterSalesCaseStatus(app, ctx.tenantId, proposal.id, "blocked");
     }
-    return { approval, execution };
+    // The decide response carries the inner ExecutionResult (status/
+    // externalRef/detail), matching the console's DecideResponse contract.
+    return { approval, execution: execution?.execution };
   });
 }

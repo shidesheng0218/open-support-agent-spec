@@ -216,7 +216,7 @@ CORS enabled. `x-tenant-id` header optional (default `tenant_demo`). All errors 
 | GET | /v1/meta/tools | → TOOL_DEFINITIONS |
 | GET | /v1/proposals?caseId&status | → ActionProposal[] |
 | GET | /v1/proposals/:id | → ActionProposal |
-| POST | /v1/proposals | proposal minus id/specVersion/status/timestamps → 201 ActionProposal (`proposed`) + `proposal_created` event |
+| POST | /v1/proposals | proposal minus id/specVersion/status/timestamps → 201 ActionProposal (`proposed`) + `proposal_created` event; **idempotent by `idempotencyKey`**: identical re-submission → 200 `{...existing, replayed: true}` with no side effects; same key with different content → 409 |
 | POST | /v1/proposals/:id/evaluate | → `{ proposal, decision }` (§4 side effects: approval/handoff/events) |
 | POST | /v1/proposals/:id/execute | → `{ proposal, execution, replayed }` (§5; 409 if not `approved`) |
 | POST | /v1/proposals/:id/reconcile | `{ outcome: "succeeded"\|"failed", note? }` → proposal |

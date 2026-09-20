@@ -30,18 +30,37 @@ export function ErrorBox({ error }: { error: unknown }) {
   );
 }
 
+const TONE_OK = new Set(["executed", "ok", "succeeded", "approved", "auto_execute", "resolved"]);
+const TONE_WARN = new Set([
+  "pending_approval",
+  "require_approval",
+  "pending",
+  "claimed",
+  "reconciliation_required",
+  "uncertain",
+  "executing",
+  "proposed",
+]);
+const TONE_BAD = new Set([
+  "policy_rejected",
+  "rejected",
+  "failed",
+  "block",
+  "down",
+  // The approval fail-safe: an undecided approval past its deadline is denied.
+  "expired",
+]);
+
+export function badgeTone(status: string): "ok" | "warn" | "bad" | "neutral" {
+  if (TONE_OK.has(status)) return "ok";
+  if (TONE_WARN.has(status)) return "warn";
+  if (TONE_BAD.has(status)) return "bad";
+  return "neutral";
+}
+
 export function StatusBadge({ status }: { status: string }) {
-  const tone =
-    status === "executed" || status === "ok" || status === "succeeded" || status === "approved" || status === "auto_execute" || status === "resolved"
-      ? "ok"
-      : status === "pending_approval" || status === "require_approval" || status === "pending" || status === "claimed" ||
-          status === "reconciliation_required" || status === "uncertain" || status === "executing" || status === "proposed"
-        ? "warn"
-        : status === "policy_rejected" || status === "rejected" || status === "failed" || status === "block" || status === "down"
-          ? "bad"
-          : "neutral";
   return (
-    <span className={`badge ${tone}`} data-testid={`status-${status}`}>
+    <span className={`badge ${badgeTone(status)}`} data-testid={`status-${status}`}>
       {status}
     </span>
   );
@@ -50,6 +69,23 @@ export function StatusBadge({ status }: { status: string }) {
 export function money(m?: Money): string {
   if (!m) return "—";
   return `${(m.minorUnits / 100).toFixed(2)} ${m.currency}`;
+}
+
+export function MetricCard({
+  label,
+  value,
+  percent = false,
+}: {
+  label: string;
+  value: number;
+  percent?: boolean;
+}) {
+  return (
+    <div className="metric-card">
+      <span className="muted">{label}</span>
+      <strong>{percent ? `${Math.round(value * 100)}%` : value}</strong>
+    </div>
+  );
 }
 
 export function Section({ title, zh, children }: { title: string; zh?: string; children: ReactNode }) {

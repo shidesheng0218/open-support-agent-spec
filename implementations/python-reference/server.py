@@ -392,6 +392,7 @@ def reset_state(seed: bool = True) -> None:
         "receipts": {},
         "reconciliations": {},
         "provider_events": {},
+        "handoffs": [],  # chat-driven human handoffs (prompt injection / policy blocks)
         "policies": {},  # tenant -> {version -> record}
         "audit": {},     # tenant -> [events]
         "fixtures": None,
@@ -700,6 +701,22 @@ def create_proposal(body: dict[str, Any], tenant: str, actor_id: str) -> dict[st
     if missing or body.get("actionType") not in ACTION_TYPE_PROFILE:
         raise HttpError(422, "SCHEMA_INVALID",
                         f"proposal is missing/invalid fields: {', '.join(missing) or 'actionType'}")
+    # Idempotent creation (CONTRACTS.md §9): replay by idempotencyKey.
+    existing = next((p for p in STATE["proposals"].values()
+                     if p.get("idempotencyKey") == body["idempotencyKey"]), None)
+    if existing is not None:
+        same = _deep_equal(
+            {k: existing.get(k) for k in ("caseId", "profile", "actionType", "reasonCode",
+                                          "params", "evidenceIds")}
+            | {"amount": existing.get("amount")},
+            {k: body.get(k) for k in ("caseId", "profile", "actionType", "reasonCode")}
+            | {"params": body.get("params", {}), "evidenceIds": body.get("evidenceIds", []),
+               "amount": body.get("amount")},
+        )
+        if not same:
+            raise HttpError(409, "CONFLICT",
+                            f"idempotencyKey '{body['idempotencyKey']}' was already used with different proposal content")
+        return {**copy.deepcopy(existing), "replayed": True}
     proposal = {
         "id": _id("prop"),
         "specVersion": "0.2",
@@ -756,6 +773,156 @@ def ingest_provider_event(body: dict[str, Any], tenant: str, given_key: str) -> 
         STATE["proposals"][proposal["id"]] = copy.deepcopy(proposal)
         result["proposal"] = copy.deepcopy(proposal)
         result["reconciliation"] = copy.deepcopy(task)
+    return result
+
+
+# ---------------------------------------------------------------------------
+# Chat driver (demo) — mirrors apps/api/src/routes/chat.ts + the mock model
+# provider. Deterministic, network-free; the demo console's three scenarios
+# and free-form messages run unchanged against this implementation.
+# ---------------------------------------------------------------------------
+
+_INJECTION_PATTERNS = [
+    re.compile(r"ignore\s+(all|previous|above)(\s+\w+)*\s+instructions", re.IGNORECASE),
+    re.compile(r"system\s+prompt", re.IGNORECASE),
+    re.compile(r"you\s+are\s+now", re.IGNORECASE),
+    re.compile(r"do\s+anything\s+now", re.IGNORECASE),
+    re.compile(r"无视\s*(之前|以上|所有)\s*指令"),
+    re.compile(r"立即执行退款"),
+]
+
+
+def detect_injection(text: str) -> bool:
+    return any(p.search(text) for p in _INJECTION_PATTERNS)
+
+
+def _detect_scenario(text: str) -> str | None:
+    if re.search(r"refund|退款", text, re.IGNORECASE):
+        return "refund"
+    # "cancel" before "credit": cancellations often reference credit case ids.
+    if re.search(r"cancel|取消", text, re.IGNORECASE):
+        return "subscription_cancel"
+    if re.search(r"credit|额度", text, re.IGNORECASE):
+        return "credit_apply"
+    return None
+
+
+def _parse_amount(text: str) -> dict[str, Any]:
+    m = re.search(r"\$(\d+(?:\.\d+)?)", text)
+    if not m:
+        return {"currency": "USD", "minorUnits": 2500}
+    return {"currency": "USD", "minorUnits": round(float(m.group(1)) * 100)}
+
+
+def _first_id(pattern: str, text: str) -> str | None:
+    m = re.search(pattern, text)
+    return m.group(0) if m else None
+
+
+def handle_chat(body: dict[str, Any], tenant: str, actor_id: str) -> dict[str, Any]:
+    message = body.get("message")
+    if not isinstance(message, str) or not message.strip():
+        raise HttpError(422, "SCHEMA_INVALID", "body.message must be a non-empty string")
+    case_id = body.get("caseId") if isinstance(body.get("caseId"), str) else None
+
+    if detect_injection(message):
+        handoff = {
+            "id": _id("handoff"),
+            "specVersion": "0.2",
+            "tenantId": tenant,
+            "caseId": case_id or "case_unknown",
+            "reason": "prompt_injection_suspected",
+            "status": "open",
+            "createdAt": now_iso(),
+            "updatedAt": now_iso(),
+        }
+        STATE["handoffs"].append(copy.deepcopy(handoff))
+        audit(tenant, "prompt_injection_blocked", "system", "python-reference",
+              {"caseId": handoff["caseId"]},
+              **({"caseId": handoff["caseId"]} if case_id else {}))
+        return {
+            "reply": "I can't act on that message — it looks like a prompt-injection attempt. "
+                     "I've handed this conversation to a human agent.",
+            "handoff": handoff,
+        }
+
+    scenario = _detect_scenario(message)
+    if scenario is None:
+        return {"reply": "Thanks for reaching out — a support agent will follow up shortly."}
+
+    case = next((c for c in fixtures()["cases"] if c["id"] == case_id), None)
+    proposal_idem = f"idem_mock_{hashlib.sha256(f'{case_id}|{scenario}|{message}'.encode()).hexdigest()[:12]}"
+    if scenario == "refund":
+        params = {"orderId": _first_id(r"ord_\w+", message) or "ord_unknown",
+                  "reason": "customer_request"}
+        profile, reason_code = "ecommerce", "other"
+    elif scenario == "credit_apply":
+        params = {"customerId": _first_id(r"cus_\w+", message) or "cus_unknown",
+                  "reason": "customer_request"}
+        profile, reason_code = "saas", "goodwill"
+    else:  # subscription_cancel
+        params = {"subscriptionId": _first_id(r"sub_\w+", message) or "sub_unknown"}
+        profile, reason_code = "saas", "other"
+
+    # Evidence anchoring: attach the case's non-expired evidence records.
+    now_ms = datetime.now(timezone.utc).timestamp() * 1000
+    evidence_ids = [
+        e["id"] for e in fixtures()["evidence"]
+        if case and e.get("caseId") == case["id"]
+        and (not e.get("expiresAt") or _parse_ms(e["expiresAt"]) > now_ms)
+    ]
+    proposal_body: dict[str, Any] = {
+        "caseId": case_id or "case_unknown",
+        "profile": profile,
+        "actionType": scenario,
+        "reasonCode": reason_code,
+        "params": params,
+        "requestedPermission": "request-approval",
+        "requestedBy": {"actorType": "model", "actorId": "mock-local"},
+        "evidenceIds": evidence_ids,
+        "idempotencyKey": proposal_idem,
+    }
+    if scenario != "subscription_cancel":
+        proposal_body["amount"] = _parse_amount(message)
+
+    created = create_proposal(proposal_body, tenant, actor_id)
+    proposal = STATE["proposals"][created["id"]]
+    evaluated = evaluate_stored(proposal, actor_id)
+    proposal = evaluated["proposal"]
+    decision = evaluated["decision"]
+    result: dict[str, Any] = {"reply": "", "proposal": proposal, "decision": decision}
+
+    if decision["decision"] == "block":
+        handoff = {
+            "id": _id("handoff"),
+            "specVersion": "0.2",
+            "tenantId": tenant,
+            "caseId": proposal["caseId"],
+            "proposalId": proposal["id"],
+            "reason": "policy_conflict",
+            "status": "open",
+            "createdAt": now_iso(),
+            "updatedAt": now_iso(),
+        }
+        STATE["handoffs"].append(copy.deepcopy(handoff))
+        audit(tenant, "handoff_created", "system", "python-reference",
+              {"proposalId": proposal["id"], "reason": "policy_conflict"},
+              proposalId=proposal["id"], caseId=proposal["caseId"])
+        result["reply"] = ("I can't complete that request under the current policy. "
+                           "I've handed this conversation to a human agent.")
+        result["handoff"] = handoff
+        return result
+
+    if decision["decision"] == "auto_execute" and os.environ.get("OSAS_EXECUTION_MODE") == "sandbox":
+        result["execution"] = execute_stored(proposal, actor_id)["execution"]
+        result["reply"] = "Done — I processed your request automatically."
+    elif decision["decision"] == "require_approval":
+        # No approvals surface in this implementation (documented scope); the
+        # proposal waits in pending_approval.
+        result["reply"] = ("I've prepared this action, but it needs human approval. "
+                           "An agent will review it shortly.")
+    else:
+        result["reply"] = "Done — I processed your request automatically."
     return result
 
 
@@ -878,6 +1045,11 @@ class Handler(BaseHTTPRequestHandler):
                     raise HttpError(404, "NOT_FOUND", path)
                 receipt = next((r for r in STATE["receipts"].values() if r["attemptId"] == attempt["id"]), None)
                 return self.send_json(200, {"attempt": copy.deepcopy(attempt), "receipt": copy.deepcopy(receipt)})
+            if path == "/v1/handoffs":
+                status = query.get("status", [None])[0]
+                items = [h for h in STATE["handoffs"]
+                         if h.get("tenantId") == self.tenant and (status is None or h["status"] == status)]
+                return self.send_json(200, copy.deepcopy(items))
             if path == "/v1/reconciliation":
                 status = query.get("status", [None])[0]
                 tasks = [r for r in STATE["reconciliations"].values() if status is None or r["status"] == status]
@@ -913,6 +1085,9 @@ class Handler(BaseHTTPRequestHandler):
         path = parsed.path
         body = self.read_json()
         try:
+            if path == "/v1/chat":
+                return self.send_json(200, handle_chat(body, self.tenant, self.actor_id))
+
             if path == "/v1/validate":
                 schema_name = body.get("schemaName")
                 if not isinstance(schema_name, str):
@@ -940,7 +1115,8 @@ class Handler(BaseHTTPRequestHandler):
                 return self.send_json(200, {"loaded": name, "snapshot": snapshot(self.tenant)})
 
             if path == "/v1/proposals":
-                return self.send_json(201, create_proposal(body, self.tenant, self.actor_id))
+                proposal = create_proposal(body, self.tenant, self.actor_id)
+                return self.send_json(200 if proposal.get("replayed") else 201, proposal)
 
             if path.startswith("/v1/proposals/"):
                 parts = path.split("/")

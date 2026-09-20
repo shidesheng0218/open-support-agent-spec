@@ -237,6 +237,90 @@ function ScenarioCard({ def }: { def: ScenarioDef }) {
   );
 }
 
+/**
+ * Free-form message driver — POST /v1/chat with operator-chosen text. The mock
+ * provider detects refund/credit/cancel scenarios by keyword and parses
+ * `$amount` plus `ord_/case_/cus_/sub_` ids from the text.
+ */
+function CustomChatCard() {
+  const [message, setMessage] = useState("");
+  const [caseId, setCaseId] = useState("case_refund");
+  const [profile, setProfile] = useState("ecommerce");
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<unknown>(null);
+  const [response, setResponse] = useState<ChatResponse | null>(null);
+
+  const run = async () => {
+    if (!message.trim()) return;
+    setBusy(true);
+    setError(null);
+    try {
+      setResponse(await api.post<ChatResponse>("/v1/chat", { caseId, message, profile }));
+    } catch (e) {
+      setError(e);
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const steps = response ? buildSteps(response) : [];
+
+  return (
+    <section className="panel" data-testid="custom-chat">
+      <h2 style={{ marginTop: 0 }}>
+        Custom message <span className="zh-sub">自由输入</span>
+      </h2>
+      <p className="muted" style={{ margin: "0 0 8px", fontSize: 12 }}>
+        Try any customer message — the deterministic mock provider recognizes refund / credit /
+        cancel keywords and parses $amounts and ord_/case_/cus_/sub_ ids. Unrecognized messages get
+        a plain reply with no proposal.
+      </p>
+      <div className="field">
+        <textarea
+          className="input"
+          rows={3}
+          placeholder='e.g. "Customer requests a refund of $42 for order ord_small, item arrived damaged"'
+          value={message}
+          onChange={(e) => setMessage(e.target.value)}
+          data-testid="custom-chat-message"
+        />
+      </div>
+      <div className="filter-row" style={{ marginTop: 8 }}>
+        <select className="select" value={caseId} onChange={(e) => setCaseId(e.target.value)} data-testid="custom-chat-case">
+          <option value="case_refund">case_refund</option>
+          <option value="case_credit">case_credit</option>
+          <option value="case_unverified">case_unverified</option>
+          <option value="case_dup">case_dup</option>
+        </select>
+        <select className="select" value={profile} onChange={(e) => setProfile(e.target.value)}>
+          <option value="ecommerce">ecommerce</option>
+          <option value="saas">saas</option>
+          <option value="core">core</option>
+        </select>
+        <button className="btn" onClick={() => void run()} disabled={busy || !message.trim()} data-testid="custom-chat-run">
+          {busy ? "Running…" : "Run"}
+        </button>
+      </div>
+      <ErrorBox error={error} />
+      {response ? (
+        <>
+          <ul className="timeline" data-testid="custom-chat-timeline">
+            {steps.map((s, i) => (
+              <li key={i}>
+                <span className={`dot ${s.tone}`} />
+                <div className="step-title">{s.title}</div>
+                {s.body ? <div className="step-body">{s.body}</div> : null}
+                {s.raw !== undefined ? <RawToggle value={s.raw} /> : null}
+              </li>
+            ))}
+          </ul>
+          <RawToggle value={response} label="Full /v1/chat response JSON" />
+        </>
+      ) : null}
+    </section>
+  );
+}
+
 export default function Demo() {
   return (
     <div>
@@ -250,6 +334,7 @@ export default function Demo() {
       {SCENARIOS.map((s) => (
         <ScenarioCard key={s.id} def={s} />
       ))}
+      <CustomChatCard />
     </div>
   );
 }

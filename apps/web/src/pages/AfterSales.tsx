@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { api } from "../api";
-import { ErrorBox, JsonBlock, Section, StatusBadge, money } from "../components";
+import { ErrorBox, JsonBlock, MetricCard, Section, StatusBadge, money } from "../components";
 import type {
   AfterSalesCase,
   AfterSalesCaseDetail,
@@ -8,6 +8,7 @@ import type {
   AfterSalesMetrics,
   AfterSalesScenario,
   ApprovalWithProposal,
+  Case,
   HumanHandoff,
   ActionProposal,
 } from "../types";
@@ -60,14 +61,6 @@ function CaseRow({ item, selected, onSelect }: { item: AfterSalesCase; selected:
   );
 }
 
-function MetricCard({ label, value, percent = false }: { label: string; value: number; percent?: boolean }) {
-  return (
-    <div className="metric-card">
-      <span className="muted">{label}</span>
-      <strong>{percent ? `${Math.round(value * 100)}%` : value}</strong>
-    </div>
-  );
-}
 
 function DetailPanel({ detail, onChanged }: { detail: AfterSalesCaseDetail; onChanged: () => void }) {
   const [busy, setBusy] = useState(false);
@@ -198,6 +191,112 @@ function DetailPanel({ detail, onChanged }: { detail: AfterSalesCaseDetail; onCh
   );
 }
 
+/**
+ * Operator intake form — POST /v1/after-sales/intake (idempotent by
+ * idempotencyKey; the key is reused across retries of one submission and
+ * rotated after success).
+ */
+function IntakeSection({ onIntaked }: { onIntaked: (id: string) => void }) {
+  const [open, setOpen] = useState(false);
+  const [cases, setCases] = useState<Case[] | null>(null);
+  const [scenario, setScenario] = useState<AfterSalesScenario>("refund_request");
+  const [caseId, setCaseId] = useState("case_refund");
+  const [orderId, setOrderId] = useState("");
+  const [amountUsd, setAmountUsd] = useState("");
+  const [message, setMessage] = useState("");
+  const [evidence, setEvidence] = useState("");
+  const [idem, setIdem] = useState(() => `idem_intake_${crypto.randomUUID()}`);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<unknown>(null);
+  const [done, setDone] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    api
+      .get<Case[]>("/v1/cases")
+      .then((rows) => {
+        setCases(rows);
+        if (rows.length > 0 && !rows.some((c) => c.id === caseId)) setCaseId(rows[0]!.id);
+      })
+      .catch(setError);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open]);
+
+  const submit = async () => {
+    setBusy(true);
+    setError(null);
+    setDone(null);
+    try {
+      const body: Record<string, unknown> = { scenarioCode: scenario, caseId, idempotencyKey: idem };
+      if (orderId.trim()) body.orderId = orderId.trim();
+      if (amountUsd.trim()) {
+        const usd = Number.parseFloat(amountUsd);
+        if (!Number.isFinite(usd) || usd < 0) throw new Error("Amount must be a non-negative number (USD)");
+        body.amount = { currency: "USD", minorUnits: Math.round(usd * 100) };
+      }
+      if (message.trim()) body.message = message.trim();
+      const evidenceIds = evidence.split(",").map((s) => s.trim()).filter(Boolean);
+      if (evidenceIds.length > 0) body.evidenceIds = evidenceIds;
+      const res = await api.post<{ case: AfterSalesCase; replayed?: boolean }>("/v1/after-sales/intake", body);
+      setDone(res.replayed ? `Replayed existing case ${res.case.id}` : `Created case ${res.case.id}`);
+      setIdem(`idem_intake_${crypto.randomUUID()}`);
+      onIntaked(res.case.id);
+    } catch (e) {
+      setError(e);
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <Section title="Intake" zh="立案">
+      {!open ? (
+        <button className="btn" onClick={() => setOpen(true)} data-testid="intake-open">
+          Intake a customer request / 录入客户请求
+        </button>
+      ) : (
+        <div data-testid="intake-form">
+          <div className="filter-row">
+            <select className="select" value={scenario} onChange={(e) => setScenario(e.target.value as AfterSalesScenario)} data-testid="intake-scenario">
+              {AFTER_SALES_SCENARIOS.map((code) => (
+                <option key={code} value={code}>{SCENARIO_LABELS[code]}</option>
+              ))}
+            </select>
+            {cases && cases.length > 0 ? (
+              <select className="select" value={caseId} onChange={(e) => setCaseId(e.target.value)} data-testid="intake-case">
+                {cases.map((c) => (
+                  <option key={c.id} value={c.id}>{c.id} · {c.subject}</option>
+                ))}
+              </select>
+            ) : (
+              <input className="input" placeholder="Case id (e.g. case_refund)" value={caseId} onChange={(e) => setCaseId(e.target.value)} data-testid="intake-case" />
+            )}
+            <input className="input" placeholder="Order id (optional)" value={orderId} onChange={(e) => setOrderId(e.target.value)} />
+            <input className="input" placeholder="Amount USD (optional)" value={amountUsd} onChange={(e) => setAmountUsd(e.target.value)} />
+          </div>
+          <div className="field" style={{ marginTop: 8 }}>
+            <input className="input" placeholder="Customer message (optional)" value={message} onChange={(e) => setMessage(e.target.value)} />
+          </div>
+          <div className="field" style={{ marginTop: 8 }}>
+            <input className="input" placeholder="Evidence ids, comma-separated (optional)" value={evidence} onChange={(e) => setEvidence(e.target.value)} />
+          </div>
+          <p className="muted" style={{ fontSize: 12, margin: "4px 0 0" }}>
+            Idempotency key <span className="mono">{idem}</span> — retries of this form replay safely; it rotates after a successful intake.
+          </p>
+          <div className="btn-row" style={{ marginTop: 8 }}>
+            <button className="btn" disabled={busy} onClick={() => void submit()} data-testid="intake-submit">
+              {busy ? "Submitting…" : "Submit intake"}
+            </button>
+            <button className="btn secondary" onClick={() => setOpen(false)}>Close</button>
+          </div>
+          {done ? <p className="muted" data-testid="intake-done">{done}</p> : null}
+          <ErrorBox error={error} />
+        </div>
+      )}
+    </Section>
+  );
+}
+
 export default function AfterSales() {
   const [cases, setCases] = useState<AfterSalesCase[]>([]);
   const [metrics, setMetrics] = useState<AfterSalesMetrics | null>(null);
@@ -263,6 +362,8 @@ export default function AfterSales() {
       <ErrorBox error={error} />
 
       {metrics ? <div className="metric-grid" data-testid="after-sales-metrics"><MetricCard label="Cases / 工单" value={metrics.totalCases} /><MetricCard label="Auto answer" value={metrics.autoAnswerRate} percent /><MetricCard label="Approval" value={metrics.approvalRate} percent /><MetricCard label="Human handoff" value={metrics.humanHandoffRate} percent /><MetricCard label="Reconciliation" value={metrics.reconciliationRate} percent /><MetricCard label="Audit completeness" value={metrics.auditCompletenessRate} percent /></div> : null}
+
+      <IntakeSection onIntaked={(id) => { setSelectedId(id); void refresh(); }} />
 
       <div className="after-sales-layout">
         <Section title="Case queue" zh="售后队列">
