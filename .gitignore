@@ -15,3 +15,4 @@ evals/report/
 packages/compat-runner/*-report.json
 .zcode/
 implementations/python-reference/.venv/
+promotion/
