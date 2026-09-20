@@ -1,92 +1,49 @@
-# Open Support Agent Spec（OSAS，开放客服 Agent 规范）
-
 <div align="center">
-  <img src="docs/assets/osas-hero.svg" alt="OSAS：面向客服业务的可治理 AI Agent" width="100%" />
+  <img src="docs/assets/osas-hero.svg" alt="OSAS：受治理的客服智能体" width="100%" />
 
-  <p><strong>面向客服业务的可治理、可互操作 AI Agent。</strong><br />
-  一份 Schema 优先的统一契约：读取可信数据、生成结构化建议、执行策略门禁、<br />
-  默认 Shadow Mode，并解释每一个结果。</p>
+  <h1>知道自己边界的客服 AI Agent。</h1>
+
+  <p><strong>OSAS</strong>（开放客服智能体规范）是一份面向受治理客服 Agent 的开放契约：
+  模型负责提议，策略引擎负责决定，适配器负责执行，审计轨迹负责解释。</p>
 
   <p>
     <a href="README.md">English</a> ·
-    <a href="#快速开始">快速开始</a> ·
+    <a href="#六十秒跑通">本地运行</a> ·
     <a href="docs/spec-v0.2.zh-CN.md">阅读规范</a> ·
     <a href="CONTRIBUTING.zh-CN.md">参与贡献</a>
   </p>
+
+  <p>
+    <a href="https://github.com/shidesheng0218/open-support-agent-spec/actions/workflows/ci.yml"><img src="https://github.com/shidesheng0218/open-support-agent-spec/actions/workflows/ci.yml/badge.svg" alt="CI 状态" /></a>
+    <a href="LICENSE"><img src="https://img.shields.io/badge/license-Apache--2.0-2563EB?style=flat-square" alt="Apache 2.0 许可证" /></a>
+    <a href="docs/spec-v0.2.zh-CN.md"><img src="https://img.shields.io/badge/规范-v0.2%20Draft-F59E0B?style=flat-square" alt="v0.2 草案" /></a>
+    <img src="https://img.shields.io/badge/Node-%3E%3D20-339933?style=flat-square&logo=node.js&logoColor=white" alt="Node.js 20 或更高" />
+  </p>
 </div>
 
-<p align="center">
-  <a href="LICENSE"><img src="https://img.shields.io/badge/license-Apache--2.0-2563EB?style=flat-square" alt="Apache 2.0 许可证" /></a>
-  <a href="docs/spec-v0.2.zh-CN.md"><img src="https://img.shields.io/badge/spec-v0.2%20Draft-F59E0B?style=flat-square" alt="v0.2 草案" /></a>
-  <a href="https://github.com/shidesheng0218/open-support-agent-spec/actions/workflows/ci.yml"><img src="https://github.com/shidesheng0218/open-support-agent-spec/actions/workflows/ci.yml/badge.svg" alt="CI 状态" /></a>
-  <img src="https://img.shields.io/badge/Node-%3E%3D20-339933?style=flat-square&logo=node.js&logoColor=white" alt="Node.js 20 或更高" />
-  <img src="https://img.shields.io/badge/pnpm-11-F69220?style=flat-square&logo=pnpm&logoColor=white" alt="pnpm 11" />
-</p>
+<br />
 
-> **当前状态：v0.2 草案（Draft）。** OSAS 是正在积极演进中的开放规范草案，**并非**
-> 已确立的行业标准。在 v1.0 之前，接口、Schema 与行为都可能发生变化，详见
-> [状态与路线图](#状态与路线图)。
-
-## 为什么需要 OSAS？
-
-生产级客服 Agent 不能只有“会回答”的模型，还需要一份把推理与权限分开、把模型输出
-变成类型化建议，并让安全路径成为默认路径的统一契约。
-
-| 难题 | OSAS 的回答 |
-|---|---|
-| 模型可能建议危险写入 | 模型权限上限是 `request-approval`，永远拿不到 `execute`。 |
-| 每个客服/电商系统 API 都不同 | `SupportAdapter` 提供稳定、携带租户上下文的工具接口。 |
-| “大概成功了”无法审计 | 建议、决策、模型调用、人工接管和写入都变成 `AuditEvent`。 |
-| 直接上线风险高、难复现 | 默认 `shadow`；兼容性与策略门禁可确定、可离线复现。 |
-
-## 一眼看懂
-
-| 20 个 MCP 工具 | 3 个 Profile | 120 条策略 + 100 条售后案例 | 345 项兼容 + 51 项黑盒检查 |
+| 20 个 MCP 工具 | 3 个 Profile | 220 条合成评测用例 | 345 项兼容 + 51 项黑盒检查 |
 |---|---|---|---|
-| Core、电商、SaaS | Schema 驱动契约 | 离线安全评测 | HTTP 黑盒一致性 |
+| Core、电商、SaaS | Schema 驱动契约 | 离线、CI 硬门禁 | HTTP 黑盒一致性 |
 
-仓库同时提供规范文本、机器可校验 JSON Schema、TypeScript 参考实现、Web 控制台、参考
-Adapter、兼容性套件与可复现的策略评测。
+> **状态：v0.2 草案。** 这是一份处于活跃开发中的开放规范，不是自称的行业标准。
+> v1.0 之前接口仍可能变化——见[路线图](#路线图)。
 
-## 架构
+## 核心主张
 
-```mermaid
-flowchart LR
-    M[大模型或 Mock Provider] --> G[模型网关<br/>路由 · 预算 · 注入检测]
-    G --> T[MCP 工具面<br/>20 个类型化工具]
-    T --> A[Support Adapter<br/>自定义 · Mock · Zendesk · Shopify]
-    A --> B[(客服 / 电商 / SaaS 后端)]
-    G --> P[确定性策略引擎]
-    P -->|auto_execute| X[Shadow Run / 执行边界]
-    P -->|pending_approval| H[人工审批或接管]
-    H --> X
-    X --> A
-    G -. 每次调用 .-> E[(AuditEvent 审计轨迹)]
-    P -. 每次决策 .-> E
-    X -. 每个结果 .-> E
+一个强大的模型不等于一个安全的操作者。OSAS 把推理与权限分开：模型的输出
+先变成一张类型化的 `ActionProposal`，每个提案都必须通过确定性的策略门禁，
+而只有服务端才能执行。
 
-    classDef model fill:#312E81,stroke:#A78BFA,color:#fff
-    classDef gate fill:#164E63,stroke:#67E8F9,color:#fff
-    classDef adapter fill:#065F46,stroke:#6EE7B7,color:#fff
-    classDef audit fill:#78350F,stroke:#FCD34D,color:#fff
-    class M,G,T model
-    class P,H,X gate
-    class A,B adapter
-    class E audit
-```
+| 难题 | OSAS 的答案 |
+|---|---|
+| 模型可能提出不安全的写操作 | 模型封顶在 `request-approval`，永远拿不到 `execute`。 |
+| 每家客服系统的 API 都不一样 | 一个稳定、租户感知的 `SupportAdapter` 接口。 |
+| “大概成功了”不是审计轨迹 | 每个提案、决策、模型调用与写入都会成为哈希链上的 `AuditEvent`。 |
+| 直接上线风险高 | Shadow 模式是默认姿态：在人类写下最终结果前，什么都不执行。 |
 
-模型绝不持有后端凭据。所有读写都经由 `SupportAdapter` 接口完成，调用方以携带明确权限的
-`Principal` 身份发起；所有写入都是结构化的 `ActionProposal`，必须先通过确定性的策略
-求值才能执行。
-
-边界设计只有一句话：**模型负责提议，策略负责决策，Adapter 负责执行，审计负责解释**。
-
-## 快速开始
-
-从 clone 到看到一个带策略门禁的演示，大约只需要一分钟。环境要求：Node >= 20
-（推荐 Node 22）、pnpm 11；想体验一键环境时再安装 Docker。
-
-### 最快路径：Docker
+## 六十秒跑通
 
 ```bash
 git clone https://github.com/shidesheng0218/open-support-agent-spec.git
@@ -94,268 +51,170 @@ cd open-support-agent-spec
 docker compose up --build
 ```
 
-然后打开：
+然后打开 [localhost:8080](http://localhost:8080) 的控制台，在 `/demo` 页运行
+三个引导场景：
 
-| 入口 | 地址 | 可以看什么 |
+| 场景 | 策略结果 | 证明了什么 |
 |---|---|---|
-| Web 控制台 | [`localhost:8080`](http://localhost:8080) | `/demo`、`/developer`、`/agent`、`/platform` |
-| API 健康检查 | [`localhost:3001/health`](http://localhost:3001/health) | 服务与规范状态 |
-| 工具目录 | [`localhost:3001/v1/meta/tools`](http://localhost:3001/v1/meta/tools) | 20 个类型化 MCP 工具 |
+| $25 损坏商品退款 | `auto_execute` | 证据齐全的有界动作直接执行。 |
+| $120 服务额度 | `pending_approval` | 更高风险的动作停在人工闸门。 |
+| 注入指令 | 阻断 + 接管 | 不安全的路径被拒绝，且可见。 |
 
-<details>
-<summary><strong>演示到底证明了什么？</strong></summary>
+没有 Docker？`pnpm install && pnpm build && pnpm dev:api && pnpm dev:web`，
+然后打开 [localhost:5173](http://localhost:5173)。
 
-| 场景 | 策略结果 | 说明 |
-|---|---|---|
-| $25 电商退款 | `auto_execute` | 证据新鲜且符合租户策略，可以执行有边界的动作。 |
-| 超阈值 SaaS 额度 | `pending_approval` | 风险更高的动作先停在人审门禁。 |
-| 未验证身份或提示注入 | `policy_rejected` + 接管 | 不安全路径被阻断，并进入可见的人工处理流。 |
+## 工作原理
 
-</details>
-
-### 本地运行（pnpm）
-
-```bash
-pnpm install && pnpm build
-pnpm dev:api        # API 运行于 http://localhost:3001（SEED_DEMO 演示数据）
-pnpm dev:web        # 控制台运行于 http://localhost:5173（代理 /v1 与 /health 到 :3001）
-```
-
-常用检查：
-
-```bash
-curl http://localhost:3001/health
-pnpm typecheck      # 整个 workspace 的严格 TS 检查
-pnpm test           # 构建 + 全部单元测试
-pnpm test:compat    # Schema/兼容套件 → tests/compat/report/latest.json
-```
-
-### Docker 运行
-
-```bash
-docker compose up --build    # 或：pnpm docker:up
-```
-
-- 控制台：http://localhost:8080
-- API：http://localhost:3001（`GET /health` → `{ status: "ok", ... }`）
-
-Docker 构建上下文为**仓库根目录**（两个 Dockerfile 都复制整个 pnpm workspace）；
-仓库刻意不提供 `.dockerignore`，以保持 workspace 目录结构完整。
-
-### 运行时配置（Milestone 2）
-
-所有配置均为环境变量——带注释的模板见 [.env.example](.env.example)。
-
-- **认证**（`OSAS_AUTH_MODE`）：`demo`（默认；`x-osas-role` / `x-osas-actor-id` /
-  `x-tenant-id` 请求头）或 `jwt`（通过 `OSAS_JWKS_URL` / `OSAS_JWT_ISSUER` /
-  `OSAS_JWT_AUDIENCE` 验证 OIDC Bearer Token；租户与角色只取自验证后的 claims，
-  `x-tenant-id` 被忽略）。在 `NODE_ENV=production` 下 demo 模式**启动即失败关闭**。
-  外部 principal 永远无法持有 `execute` 权限；`system_executor` 仅限服务端内部。
-- **存储**（`OSAS_STORAGE`）：`memory`（默认）或 `postgres`（需要 `DATABASE_URL`；
-  数据库不可达时启动失败关闭）。PostgreSQL 用法：
-
-  ```bash
-  docker compose --profile postgres up -d db migrate   # 启动数据库并执行迁移
-  pnpm db:migrate && pnpm db:seed                       # 或在宿主机上执行
-  OSAS_STORAGE=postgres DATABASE_URL=postgres://osas:osas@localhost:5432/osas pnpm dev:api
-  # 或全部走 compose：
-  OSAS_STORAGE=postgres docker compose --profile postgres up --build
-  ```
-
-  `pnpm db:reset` 重建 schema（仅限开发环境；`NODE_ENV=production` 下拒绝执行）。
-- **LLM**（`OSAS_LLM_PROVIDER`）：`mock`（默认，确定性、无网络）或
-  `openai-compatible`（`OSAS_LLM_BASE_URL` / `OSAS_LLM_API_KEY` /
-  `OSAS_LLM_MODEL_FAST` / `OSAS_LLM_MODEL_STANDARD`）。classify/extract 路由到
-  fast 模型，reply/propose 路由到 standard 模型。未同时配置
-  `OSAS_LLM_INPUT_USD_PER_MTOKEN` 与 `OSAS_LLM_OUTPUT_USD_PER_MTOKEN` 时，成本记为
-  *unknown*（绝不伪造）。`OSAS_LLM_DAILY_BUDGET_USD` / `OSAS_LLM_CASE_BUDGET_USD`：
-  达到 80% 写入 `budget_warning` 审计事件；达到上限后模型调用在触达 Provider
-  之前被阻断。用量可通过 `GET /v1/usage` 查询（仅 policy_admin/auditor）。
-
-### 运行时配置（受控执行，v0.3 Draft）
-
-- **执行模式**（`OSAS_EXECUTION_MODE`）：`shadow`（默认）只模拟 Proposal，
-  不改变 Provider 状态；`proposal_only` 只生成建议；`sandbox` 通过确定性的
-  Sandbox Adapter 完整运行执行、幂等、审计与对账链路。`live` 仍然
-  **拒绝启动**（`LIVE_EXECUTION_NOT_AVAILABLE_IN_V0_1_1`），本版本不提供
-  生产执行能力。
-- 模型永远拿不到 `execute` 权限；只有系统执行主体可以触发执行尝试；不确定结果
-  必须进入对账，禁止自动重试。详见
-  [受控执行](docs/controlled-execution.zh-CN.md) 与
-  [RFC 0003](rfcs/0003-controlled-execution-profile.zh-CN.md)。
-- **参考 Adapter**（未配置时失败即关闭；演示环境不需要）：Zendesk
-  （`ZENDESK_BASE_URL`/`ZENDESK_SUBDOMAIN`、`ZENDESK_EMAIL`、
-  `ZENDESK_API_TOKEN`、`ZENDESK_ESCALATION_GROUP_ID`）、只读 Shopify
-  （`SHOPIFY_SHOP_DOMAIN`、`SHOPIFY_ADMIN_ACCESS_TOKEN`、可选
-  `SHOPIFY_API_VERSION`）与 Chatwoot（`CHATWOOT_BASE_URL`、
-  `CHATWOOT_ACCOUNT_ID`、`CHATWOOT_API_TOKEN`、可选
-  `CHATWOOT_ESCALATION_TEAM_ID`）。详见
-  [docs/zendesk-shopify-shadow.zh-CN.md](docs/zendesk-shopify-shadow.zh-CN.md)
-  与 [docs/chatwoot-adapter.zh-CN.md](docs/chatwoot-adapter.zh-CN.md)。
-
-### 运行时配置（Milestone 4）
-
-- **Conformance Mode**（`OSAS_CONFORMANCE_MODE=true` + `OSAS_CONFORMANCE_KEY`）：
-  启用仅供测试的端点 `POST /v1/conformance/reset`、
-  `POST /v1/conformance/fixtures/load`、`GET /v1/conformance/snapshot`
-  （均要求 `X-OSAS-Conformance-Key` 头）。**严禁在生产环境启用**——
-  `NODE_ENV=production` 时启动直接失败（fail closed），缺少 key 同样拒绝启动。
-  CI 只在一次性的 Docker 测试环境中启用。详见
-  [docs/conformance.zh-CN.md](docs/conformance.zh-CN.md)。
-
-## 黑盒兼容性与评测（Milestone 4）
-
-OSAS 把安全当作发布属性，而不是 README 里的口号：
-
-```mermaid
-flowchart TB
-    C[干净 checkout] --> I[pnpm install --frozen-lockfile]
-    I --> B[pnpm build]
-    B --> T[pnpm test]
-    T --> TC[pnpm typecheck]
-    TC --> E[pnpm eval:policy]
-    E --> K{所有门禁通过？}
-    K -->|是| D[Docker 一致性 + Playwright E2E]
-    K -->|否| S[在集成前停止]
-    D --> R[输出机器可读报告]
-
-    classDef good fill:#065F46,stroke:#6EE7B7,color:#fff
-    classDef stop fill:#7F1D1D,stroke:#FCA5A5,color:#fff
-    class B,T,TC,E,D,R good
-    class S stop
-```
-
-- **`pnpm osas:compat -- --target http://localhost:3001`** —— `@osas/compat-runner`，
-  黑盒一致性 Runner：只通过 HTTP 与目标实现通信，校验服务发现
-  （`/.well-known/osas`、specVersion、Capability Manifest）、工具与 Schema、
-  策略模拟结果；当配置了 Conformance Key（`OSAS_CONFORMANCE_MODE=true` +
-  `OSAS_CONFORMANCE_KEY`，或 `--conformance-key`）时运行状态型套件（策略版本
-  状态机、幂等执行、权限与租户隔离、审计链完整性）。输出机器可读 JSON 报告，
-  任何失败都会以非 0 退出码结束。
-- **`pnpm eval:policy`** —— 完全离线，对 `evals/cases/` 中 120 条合成案例
-  （30 退款、20 退货、15 补发、15 取消订单、20 普通咨询、20 安全边界）评测
-  策略引擎。硬性门禁（进入 CI）：100% Schema 合法、100% 策略一致、0 次越权、
-  0 次重复执行、0 次安全边界绕过。
-- **`pnpm eval:model`** —— 接入真实 Provider 的端到端评测；仅当显式设置
-  `OSAS_LLM_PROVIDER=openai-compatible` 及 base URL/模型时才运行（不进 CI，
-  默认 mock 下不运行）。模型的语义准确率独立展示——自动执行门禁从不以模型
-  "回答得像不像人"为准。
-- **`pnpm eval:after-sales`** —— 对 100 条合成售后案例进行评测（Top 10
-  场景各 10 条），包含覆盖、接管、安全、重复请求和虚假成功门禁。
-- **`pnpm eval:controlled`** —— 校验 v0.3 Draft 执行对象、未知结果禁止重试、
-  Provider Event 去重，并生成独立的 `ecommerce-controlled-execution` 报告。
-
-## 三条演示路径
-
-打开控制台（http://localhost:5173 或 http://localhost:8080），选择一个角色：
-
-1. **开发者**（`/developer`）—— 浏览 20 个 MCP 工具定义（`/v1/meta/tools`）、
-   查阅 JSON Schema（`/v1/schemas`），并在 playground 中用任意 Schema 校验任意
-   JSON 载荷（`POST /v1/validate`）。
-2. **客服坐席**（`/agent`）—— 处理审批队列（`/v1/approvals?status=pending`，
-   支持带备注的批准/拒绝），认领并解决人工接管单（`/v1/handoffs`）。
-3. **平台运营**（`/platform`）—— 查看审计轨迹（`/v1/audit`，按工单/建议过滤），
-   查看机器可读的兼容性报告（`/v1/compat/report`）。
-
-`/demo` 页面通过 `/v1/chat` 一键运行三个端到端脚本化场景：
-
-1. **电商退款（自动执行）** —— 已验证身份客户，$25 退款低于 $50 自动阈值，证据新鲜
-   → `auto_execute` → 执行完成，审计轨迹完整。
-2. **SaaS 额度（人工审批）** —— `credit_apply` 超过自动阈值 → `pending_approval`
-   → 出现在 `/agent` 队列 → 批准后自动执行。
-3. **人工接管（被阻断）** —— 身份未验证或消息含注入（"ignore all previous
-   instructions…"）→ 建议被阻断 + `/agent` 中可见 `HumanHandoff`。
-
-## 统一执行流
-
-所有 Agent 动作遵循同一条流水线：
+每个 Agent 动作都走同一条管线：
 
 ```mermaid
 flowchart LR
-    A[读取可信数据<br/>经由 Adapter 工具] --> B[生成 ActionProposal<br/>附带证据]
-    B --> C{确定性策略求值}
-    C -->|auto_execute| D[Shadow Run / 执行边界]
+    A[读取可信数据<br/>经适配器工具] --> B[ActionProposal<br/>附证据]
+    B --> C{确定性<br/>策略评估}
+    C -->|auto_execute| D[执行边界]
     C -->|pending_approval| H[人工审批]
     C -->|blocked| X[人工接管]
     H --> D
     D --> W[幂等回写]
-    W --> E[AuditEvent + 异常对账]
+    W --> E[审计事件轨迹]
     X --> E
-
-    classDef input fill:#312E81,stroke:#A78BFA,color:#fff
-    classDef gate fill:#164E63,stroke:#67E8F9,color:#fff
-    classDef outcome fill:#065F46,stroke:#6EE7B7,color:#fff
-    classDef blocked fill:#7F1D1D,stroke:#FCA5A5,color:#fff
-    class A,B input
-    class C,H gate
-    class D,W,E outcome
-    class X blocked
 ```
 
-不确定结果会进入 `reconciliation_required`；参考实现不会对结果未知的写入做盲目重试。
+这条边界就是设计本身：**模型提议，策略决定，适配器执行，审计解释。**
+模型从不接触后端凭据；每次适配器调用都携带租户与主体；结果不确定时
+进入对账，绝不盲目重试。
 
-## 安全边界一览
+### 权限阶梯
 
-| 边界 | 默认行为 |
-|---|---|
-| 模型权限 | `read` → `draft` → `request-approval`，永远不能 `execute` |
-| 执行模式 | v0.2 保持 `shadow`；v0.3 Draft 增加 `proposal_only` 与确定性的 `sandbox`；`live` 拒绝启动 |
-| 凭据 | 后端密钥留在 Adapter 之后，不进入模型上下文 |
-| 提示注入 | 检测、阻断、人工接管并写入审计 |
-| 成本控制 | 达到每日/单 case 上限时，在调用 Provider 前阻断 |
-| 一致性端点 | 仅测试用途、需要 key，生产环境拒绝启动 |
-
-## 权限阶梯
-
-| 权限 | 含义 | 可持有者 |
+| 权限 | 含义 | 谁可以持有 |
 |---|---|---|
-| `read` | 读取工单、客户、订单、知识库等 | model、human、system |
-| `draft` | 创建备注、升级单与建议 | model、human、system |
-| `request-approval` | 提交需审批后才能执行的建议 | model（上限）、human、system |
-| `execute` | 对已批准/自动批准的建议执行后端写入 | 仅策略引擎 / API 后端 |
+| `read` | 读取工单、客户、订单、知识库 | 模型、人工、系统 |
+| `draft` | 创建备注、升级、提案 | 模型、人工、系统 |
+| `request-approval` | 提交提案，待审批后方可执行 | 模型（封顶）、人工、系统 |
+| `execute` | 对已批准的提案执行后端写入 | 仅策略引擎 / API 后端 |
 
-模型主体的权限**上限为 `request-approval`**。模型提交请求 `execute` 权限的建议属于
-策略违规（`PERMISSION_OVERREACH`）：建议被置为 `policy_rejected`、创建人工接管单，
-并产生 `permission_overreach_blocked` 审计事件。只有策略引擎 / API 后端可以把建议
-推进到 `executing`。
+模型提案若请求 `execute`，即为策略违规（`PERMISSION_OVERREACH`）：拒绝、
+接管、审计。
 
-## 仓库结构
+### 信任是工程产物，不是承诺
+
+- **合规是门禁，不是自称**——黑盒 runner
+  （`pnpm osas:compat -- --target <url>`）只通过 HTTP 给任何实现打分；结果
+  进入公开[注册表](conformance/implementations.json)。
+- **评测离线且被 CI 硬门禁**——220 条合成用例，硬门禁：100% schema 合法、
+  100% 策略一致、零越权、零重复执行、零安全边界绕过。
+- **每种威胁都有对应测试**——[威胁模型](docs/threat-model.zh-CN.md)把
+  十三类攻击逐条映射到证明其防御的具体测试。
+
+## 深入了解
+
+<details>
+<summary><strong>运行时配置</strong>——认证、存储、LLM、执行模式、Conformance 模式</summary>
+
+<br />
+所有旋钮都是环境变量——带注释的模板见 [.env.example](.env.example)。
+全部失败即关闭。
+
+- **认证**（`OSAS_AUTH_MODE`）：`demo`（默认；`x-osas-role` /
+  `x-osas-actor-id` / `x-tenant-id` 请求头）或 `jwt`（OIDC Bearer，经
+  `OSAS_JWKS_URL` / `OSAS_JWT_ISSUER` / `OSAS_JWT_AUDIENCE` 校验）。
+  demo 模式在 `NODE_ENV=production` 下拒绝启动。外部主体永远拿不到
+  `execute`。
+- **存储**（`OSAS_STORAGE`）：`memory`（默认）或 `postgres`：
+
+  ```bash
+  docker compose --profile postgres up -d db migrate
+  OSAS_STORAGE=postgres DATABASE_URL=postgres://osas:osas@localhost:5432/osas pnpm dev:api
+  ```
+
+- **LLM**（`OSAS_LLM_PROVIDER`）：`mock`（默认；确定性、无网络）或
+  `openai-compatible`（`OSAS_LLM_BASE_URL` / `OSAS_LLM_API_KEY` /
+  `OSAS_LLM_MODEL_FAST` / `OSAS_LLM_MODEL_STANDARD`）。预算上限
+  （`OSAS_LLM_DAILY_BUDGET_USD`、`OSAS_LLM_CASE_BUDGET_USD`）在触网前就
+  拦截超额调用；未配置计价的用量记为*未知*，绝不编造。
+- **执行模式**（`OSAS_EXECUTION_MODE`）：`shadow`（默认）只做模拟；
+  `proposal_only` 只起草；`sandbox` 对合成 provider 跑完整的确定性执行与
+  对账路径。`live` 拒绝启动（见
+  [受控执行](docs/controlled-execution.zh-CN.md)）。
+- **Conformance 模式**（`OSAS_CONFORMANCE_MODE` + `OSAS_CONFORMANCE_KEY`）：
+  仅供有状态套件使用的测试端点。生产环境绝不可用——启动即失败即关闭。
+  见 [docs/conformance.zh-CN.md](docs/conformance.zh-CN.md)。
+- **参考适配器**（未配置时失败即关闭；演示从不需要它们）：Zendesk、只读
+  Shopify、Chatwoot——见
+  [docs/zendesk-shopify-shadow.zh-CN.md](docs/zendesk-shopify-shadow.zh-CN.md)
+  与 [docs/chatwoot-adapter.zh-CN.md](docs/chatwoot-adapter.zh-CN.md)。
+
+</details>
+
+<details>
+<summary><strong>控制台</strong>——六个角色，一页总览</summary>
+
+<br />
+
+| 页面 | 角色 | 看什么 |
+|---|---|---|
+| `/demo` | 所有人 | 一键场景 + 自由输入消息（走 `/v1/chat`） |
+| `/developer` | 开发者 | 20 个 MCP 工具、JSON Schema、在线校验 |
+| `/agent` | 人工坐席 | 审批队列与人工接管 |
+| `/after-sales` | 运营 | 售后 Top-10：立案、证据、审批、sandbox 凭证、对账 |
+| `/shadow` | 审查者 | Shadow 运行审核与聚合影子指标 |
+| `/platform` | 治理 | 防篡改审计轨迹与兼容报告 |
+
+</details>
+
+<details>
+<summary><strong>仓库结构</strong></summary>
+
+<br />
 
 ```
-schemas/                 权威 JSON Schema（draft 2020-12）+ manifests
-  execution-v0.3/        受控执行 Draft Schema
+schemas/                 权威 JSON Schema（draft 2020-12）+ 清单
+  execution-v0.3/        受控执行草案的 Schema
 packages/
   core/                  @osas/core             类型、枚举、状态机、detectInjection
-  schema-validator/      @osas/schema-validator 基于 Ajv 的 schemas/ 加载与校验
-  policy-engine/         @osas/policy-engine    TenantPolicy 求值、权限阶梯、执行编排
-  model-gateway/         @osas/model-gateway    provider 接口、MockModelProvider、路由、预算
-  adapter/               @osas/adapter          SupportAdapter 接口 + BYO Adapter 模板
-  zendesk-adapter/       @osas/zendesk-adapter  Zendesk 工单参考 Adapter（Milestone 3）
-  shopify-adapter/       @osas/shopify-adapter  只读 Shopify 参考 Adapter（Milestone 3）
-  chatwoot-adapter/      @osas/chatwoot-adapter Chatwoot（开源客服平台）参考 Adapter
+  schema-validator/      @osas/schema-validator 基于 schemas/ 的 Ajv 加载与校验
+  policy-engine/         @osas/policy-engine    评估、权限阶梯、执行、审计链
+  model-gateway/         @osas/model-gateway    provider 接口、路由、预算、遥测
+  adapter/               @osas/adapter          SupportAdapter 接口 + BYO 模板
+  zendesk-adapter/       @osas/zendesk-adapter  Zendesk 工单参考适配器
+  shopify-adapter/       @osas/shopify-adapter  只读 Shopify 参考适配器
+  chatwoot-adapter/      @osas/chatwoot-adapter Chatwoot 参考适配器
   ecommerce-shadow/      @osas/ecommerce-shadow Shadow/Sandbox 执行、凭证、对账
-  mock-backend/          @osas/mock-backend     合成 fixtures + MockSupportAdapter
-  store-postgres/        @osas/store-postgres   PostgreSQL 存储 + SQL 迁移（Milestone 2）
-  mcp-server/            @osas/mcp-server       20 个工具定义 + stdio MCP 服务器
-  compat-runner/         @osas/compat-runner    黑盒 HTTP 一致性 Runner（v0.2 + v0.3 Profile）
+  mock-backend/          @osas/mock-backend     合成固件 + MockSupportAdapter
+  store-postgres/        @osas/store-postgres   PostgreSQL 存储与迁移
+  mcp-server/            @osas/mcp-server       20 个工具定义 + stdio MCP server
+  compat-runner/         @osas/compat-runner    黑盒 HTTP 一致性 runner
 apps/
   api/                   @osas/api              Fastify 5 HTTP API（端口 3001）
   web/                   @osas/web              React 18 + Vite 控制台（端口 5173）
 tests/
-  compat/                @osas/compat-suite     Schema/兼容套件 + JSON 报告
+  compat/                @osas/compat-suite     白盒兼容套件 + JSON 报告
   e2e/                   @osas/e2e              Playwright 冒烟（E2E=1）
-evals/                   @osas/evals            120 条策略 + 100 条售后合成评测集
+evals/                   @osas/evals            220 条合成策略/售后用例
 implementations/
-  python-reference/      HTTP 参考候选（Core + Ecommerce + Sandbox）
-conformance/             公共实现登记表与徽章
-examples/                embed-policy-engine    @osas/policy-engine 最小独立嵌入示例
+  python-reference/      第二实现（通过黑盒套件）
+conformance/             公开实现注册表、徽章、固件权威来源
+examples/                embed-policy-engine    @osas/policy-engine 的最小嵌入示例
 docs/  rfcs/  .github/workflows/  docker-compose.yml
 ```
 
-## 使用 MCP 服务器
+</details>
 
-`@osas/mcp-server` 通过 stdio 将 Agent 全部能力暴露为 20 个 MCP 工具。客户端配置示例
-（先执行 `pnpm build`）：
+<details>
+<summary><strong>MCP 工具面</strong>——20 个工具，以及为什么 execute 永远不在其中</summary>
+
+<br />
+
+`@osas/mcp-server` 通过 stdio 把全部 agent 能力暴露为 20 个 MCP 工具：
+
+| Profile | 工具 |
+|---|---|
+| core | `osas_core_get_case`、`osas_core_search_cases`、`osas_core_get_customer`、`osas_core_search_knowledge`、`osas_core_create_case_note`、`osas_core_create_escalation`、`osas_core_create_action_proposal` |
+| ecommerce | `osas_ecom_get_order`、`osas_ecom_list_orders`、`osas_ecom_get_shipment`、`osas_ecom_get_shipment_incident`、`osas_ecom_get_refund_status`、`osas_ecom_create_item_claim_request`、`osas_ecom_create_exchange_request` |
+| saas | `osas_saas_get_subscription`、`osas_saas_list_invoices`、`osas_saas_get_credit_balance`、`osas_saas_create_credit_request`、`osas_saas_create_cancellation_request`、`osas_saas_create_plan_change_request` |
+
+写类工具只创建 `ActionProposal`（状态 `proposed`，权限 `request-approval`）。
+`executeAction`**绝不**注册为工具——执行属于策略引擎与 API 后端。
 
 ```json
 {
@@ -368,91 +227,90 @@ docs/  rfcs/  .github/workflows/  docker-compose.yml
 }
 ```
 
-工具清单：
+</details>
 
-| Profile | 工具 |
-|---|---|
-| core | `osas_core_get_case`、`osas_core_search_cases`、`osas_core_get_customer`、`osas_core_search_knowledge`、`osas_core_create_case_note`、`osas_core_create_escalation`、`osas_core_create_action_proposal` |
-| ecommerce | `osas_ecom_get_order`、`osas_ecom_list_orders`、`osas_ecom_get_shipment`、`osas_ecom_get_shipment_incident`、`osas_ecom_get_refund_status`、`osas_ecom_create_item_claim_request`、`osas_ecom_create_exchange_request` |
-| saas | `osas_saas_get_subscription`、`osas_saas_list_invoices`、`osas_saas_get_credit_balance`、`osas_saas_create_credit_request`、`osas_saas_create_cancellation_request`、`osas_saas_create_plan_change_request` |
+<details>
+<summary><strong>接入你自己的系统</strong></summary>
 
-写入类工具只会创建 `ActionProposal`（状态 `proposed`，权限 `request-approval`），
-绝不直接执行。`executeAction` **永远不会**被注册为工具。
+<br />
+参考后端是内存 mock。接入真实系统时，实现 `@osas/adapter` 的
+`SupportAdapter` 接口——从 `packages/adapter/templates/byo-adapter.template.ts`
+起步。适配器在每次调用时收到携带租户与调用主体的 `ToolContext`，并且失败
+即关闭。见[适配器开发指南](docs/adapter-guide.zh-CN.md)；Zendesk、Shopify
+与 Chatwoot 适配器是完整参考。
 
-## 接入自有 Adapter
-
-参考实现的后端是内存 Mock。对接真实系统（客服平台、电商、计费）时，实现
-`@osas/adapter` 的 `SupportAdapter` 接口即可 —— 从
-`packages/adapter/templates/byo-adapter.template.ts` 开始，每个方法都有 TODO 指引。
-Adapter 抛出 `AdapterNotFoundError`（→ API 404）/ `AdapterPermissionError`（→ 403），
-每次调用都会收到包含租户与调用主体（Principal）的 `ToolContext`。详见
-[Adapter 开发指南](docs/adapter-guide.zh-CN.md)；`@osas/zendesk-adapter`、
-`@osas/shopify-adapter` 与 `@osas/chatwoot-adapter` 是完整的参考实现。关于发布策略：
-仅 `@osas/core`、`@osas/schema-validator`、`@osas/policy-engine` 发布到 npm；
-各 Adapter 及其余 workspace 包均为 private 参考实现 —— 无法通过 npm 安装
-（例如 `npm install @osas/chatwoot-adapter` 不可行），请从仓库源码构建或复制改造。
-如果只想在
-既有系统中引入治理层，可直接嵌入 `@osas/policy-engine` —— 见
-[包 README](packages/policy-engine/README.zh-CN.md) 与可运行示例
+只有 `@osas/core`、`@osas/schema-validator`、`@osas/policy-engine` 发布到
+npm；其余包均为私有参考实现——请从仓库检出构建。如果只想在既有系统中采用
+治理层，直接嵌入 `@osas/policy-engine`——见可运行的
 [examples/embed-policy-engine](examples/embed-policy-engine)。
 
-## 文档
+</details>
 
-- 规范：[docs/spec-v0.2.zh-CN.md](docs/spec-v0.2.zh-CN.md) · [English](docs/spec-v0.2.md)
-- Adapter 开发指南：[docs/adapter-guide.zh-CN.md](docs/adapter-guide.zh-CN.md) · [English](docs/adapter-guide.md)
-- Zendesk + Shopify Shadow Mode：[docs/zendesk-shopify-shadow.zh-CN.md](docs/zendesk-shopify-shadow.zh-CN.md) · [English](docs/zendesk-shopify-shadow.md)
-- Chatwoot Adapter：[docs/chatwoot-adapter.zh-CN.md](docs/chatwoot-adapter.zh-CN.md) · [English](docs/chatwoot-adapter.md)
-- 第三方实现指南：[docs/implementing-osas.zh-CN.md](docs/implementing-osas.zh-CN.md) · [English](docs/implementing-osas.md)
-- Conformance Mode（仅限测试）：[docs/conformance.zh-CN.md](docs/conformance.zh-CN.md) · [English](docs/conformance.md)
-- 受控执行（v0.3 Draft）：[docs/controlled-execution.zh-CN.md](docs/controlled-execution.zh-CN.md) · [English](docs/controlled-execution.md)
-- v0.3 Conformance Profile：[docs/conformance-v0.3.zh-CN.md](docs/conformance-v0.3.zh-CN.md) · [English](docs/conformance-v0.3.md)
-- 工程契约：[CONTRACTS.md](CONTRACTS.md)
-- 贡献指南：[CONTRIBUTING.zh-CN.md](CONTRIBUTING.zh-CN.md) · [English](CONTRIBUTING.md)
-- 治理：[GOVERNANCE.md](GOVERNANCE.md)
-- 安全策略：[SECURITY.md](SECURITY.md)
-- 行为准则：[CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md)
-- RFC：[rfcs/](rfcs/)（从 [0001-v0.1-core](rfcs/0001-v0.1-core.md) 开始；定位：[0002-osas-as-mcp-governance-profile](rfcs/0002-osas-as-mcp-governance-profile.md)；受控执行：[0003-controlled-execution-profile](rfcs/0003-controlled-execution-profile.zh-CN.md)）
-- 变更日志：[CHANGELOG.md](CHANGELOG.md)
+<details>
+<summary><strong>验证命令</strong></summary>
 
-## 状态与路线图
+<br />
 
-OSAS v0.2 仍是**草案（Draft）**，并在 v0.3 受控执行 Draft 开发期间保持向后兼容。
+```bash
+pnpm typecheck      # 全 workspace 严格 TS
+pnpm test           # 构建 + 全部单测（含 345 项兼容套件）
+pnpm test:compat    # 白盒兼容套件 → tests/compat/report/latest.json
+pnpm osas:compat -- --target http://localhost:3001   # 黑盒 runner
+pnpm eval:policy    # 带硬门禁的离线策略评测
+pnpm verify         # 完整发布门禁（typecheck + 测试 + 评测 + docker + e2e）
+```
+
+</details>
+
+## 路线图
+
+OSAS v0.2 仍是**草案**，在 v0.3 受控执行作为独立草案开发期间保持向后兼容。
 通往 v1.0 的路径：
 
+- [x] v0.3 受控执行草案通过 Sandbox 一致性套件。
+- [x] 第二个实现通过黑盒 runner（v0.2 + v0.3）——仓内
+      [Python 参考实现](implementations/python-reference/)，由 CI
+      （`python-compat`）把关。它与本仓同属一个组织，不计入下面的独立性门槛。
 - [ ] v0.2.1 维护版本不存在文档、Schema、版本号漂移。
-- [x] v0.3 受控执行 Draft 通过 Sandbox Conformance——参考实现在 29 项
-      `controlled-execution` runner Profile 上全绿
-      （[徽章](conformance/badges/osas-reference-v0.3.json)），Python 候选
-      实现同样通过。
-- [x] Python 实现通过黑盒 runner（v0.2 只读 + 有状态套件、v0.3 受控执行
-      Profile）——仓内候选实现见
-      [implementations/python-reference](implementations/python-reference/)，
-      由 CI 的 `python-compat` job 把关。它与本仓同属一个组织，因此不计入
-      下面的独立性门槛。
-- [ ] 至少 **3 个独立实现**（本参考实现之外）通过某一 Profile 的兼容性套件——
-      注册标准见 [conformance/README.md](conformance/README.md)。
+- [ ] 至少 **3 个独立实现**通过某一 Profile 的兼容套件——
+      [注册标准](conformance/README.md)。
 - [ ] 全部规范性文档中英双语齐备，且保持同步更新。
 - [ ] 无阻塞核心语义的未决 RFC；治理结构扩展为多方共治
-      （见 [GOVERNANCE.md](GOVERNANCE.md) 与
-      [RFC 0004](rfcs/0004-multi-party-governance.zh-CN.md) 草案）。
+      （见 [GOVERNANCE.md](GOVERNANCE.md)、[RFC 0004](rfcs/0004-multi-party-governance.zh-CN.md)）。
 
 同一路径上的生态与加固事项：
 
 - [ ] [RFC 0006](rfcs/0006-external-policy-decision-point.zh-CN.md)（外部策略
-      决策点，只允许从严）被接受，并提供 OPA 示例。
+      决策点，只允许从严）被接受，并提供 AGT/OPA 示例。
 - [ ] [RFC 0005](rfcs/0005-information-flow-control.zh-CN.md)（信息流控制）
-      从设计注记升级为正式提案，并出现把现有参数脱敏推广为通用流转规则的
-      首个实现。
-- [ ] AG-UI 审批 UX 集成指南在真实前端中验证：
-      [docs/ag-ui-integration.zh-CN.md](docs/ag-ui-integration.zh-CN.md)。
-- [ ] 威胁模型与安全需求同步维护：
-      [docs/threat-model.zh-CN.md](docs/threat-model.zh-CN.md)。
+      从设计注记升级为正式提案，并出现首个实现。
+- [ ] AG-UI 审批 UX 集成在真实前端中验证
+      （[指南](docs/ag-ui-integration.zh-CN.md)）。
+- [ ] 威胁模型与安全需求同步维护
+      （[docs/threat-model.zh-CN.md](docs/threat-model.zh-CN.md)）。
 - [ ] 起草 RFC 0007（live 执行）——前置条件：Provider 认证、租户显式开启、
-      回滚/补偿、运维监控、独立的 Live 合规套件（见
+      回滚/补偿、运维监控、独立 Live 合规套件（见
       [RFC 0003](rfcs/0003-controlled-execution-profile.zh-CN.md)）。
 
-在此之前，次版本之间可能出现不兼容变更；详见 [CHANGELOG.md](CHANGELOG.md) 与
+v1.0 之前，次版本之间可能出现不兼容变更——见 [CHANGELOG.md](CHANGELOG.md) 与
 [语义化版本策略](GOVERNANCE.md#versioning)。
+
+## 文档
+
+- 规范：[docs/spec-v0.2.md](docs/spec-v0.2.md) · [中文规范](docs/spec-v0.2.zh-CN.md)
+- 适配器指南：[docs/adapter-guide.md](docs/adapter-guide.md) · [中文](docs/adapter-guide.zh-CN.md)
+- Zendesk + Shopify 影子模式：[docs/zendesk-shopify-shadow.md](docs/zendesk-shopify-shadow.md) · [中文](docs/zendesk-shopify-shadow.zh-CN.md)
+- Chatwoot 适配器：[docs/chatwoot-adapter.md](docs/chatwoot-adapter.md) · [中文](docs/chatwoot-adapter.zh-CN.md)
+- 实现 OSAS（第三方指南）：[docs/implementing-osas.md](docs/implementing-osas.md) · [中文](docs/implementing-osas.zh-CN.md)
+- Conformance 模式：[docs/conformance.md](docs/conformance.md) · [中文](docs/conformance.zh-CN.md)
+- 受控执行（v0.3 草案）：[docs/controlled-execution.md](docs/controlled-execution.md) · [中文](docs/controlled-execution.zh-CN.md)
+- v0.3 合规 Profile：[docs/conformance-v0.3.md](docs/conformance-v0.3.md) · [中文](docs/conformance-v0.3.zh-CN.md)
+- 威胁模型：[docs/threat-model.md](docs/threat-model.md) · [中文](docs/threat-model.zh-CN.md)
+- 竞品格局：[docs/competitive-landscape.md](docs/competitive-landscape.md) · [中文](docs/competitive-landscape.zh-CN.md)
+- 工程契约：[CONTRACTS.md](CONTRACTS.md)
+- 贡献：[CONTRIBUTING.md](CONTRIBUTING.md) · [中文](CONTRIBUTING.zh-CN.md)
+- 治理：[GOVERNANCE.md](GOVERNANCE.md) · 安全：[SECURITY.md](SECURITY.md) · 行为准则：[CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md)
+- RFC：[rfcs/](rfcs/) · 变更日志：[CHANGELOG.md](CHANGELOG.md)
 
 ## 许可证
 
