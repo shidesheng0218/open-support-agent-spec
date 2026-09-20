@@ -38,6 +38,7 @@ Scope notes:
 | T10 | Cost exhaustion | A loop burns the LLM budget | Pre-call budget enforcement (daily + per-case caps), `BudgetExceededError` before any network call, `budget_warning` audit at 80% | `packages/model-gateway/src/gateway.test.ts` |
 | T11 | Conformance-mode abuse | Test endpoints reachable in production | Conformance Mode refuses to start in production; endpoints are unregistered (404) when off; constant-time key comparison | `apps/api/src/conformance.test.ts`; runner wrong-key check |
 | T12 | Schema smuggling | Extra fields smuggle semantics past validators | `additionalProperties: false` everywhere; validate-before-act (422 `SCHEMA_INVALID`); the schema, not the prose, is the authority | `packages/schema-validator`; compat suite schema fixtures |
+| T13 | Stale-approval drag | An approval sits pending for hours, then gets approved against a stale context (order shipped, policy changed, evidence expired) | Approval fail-safe lifecycle: `expiresAt` stamped at creation (policy `approval.timeoutSeconds`); reads report the effective `expired` status; a late decision is refused with 409 `APPROVAL_TIMED_OUT`, the proposal is closed as `rejected` (no DUPLICATE_REQUEST dead end), and the denial is audited once. Lineage: modelled on the Microsoft Agent Governance Toolkit's approval fail-safe — OSAS's `onTimeout` is deny-only, stricter than AGT's `deny\|allow\|suspend` | `packages/policy-engine/src/approval-lifecycle.test.ts`; `apps/api/src/approval-expiry.test.ts` |
 
 ## Residual risks (accepted, documented)
 

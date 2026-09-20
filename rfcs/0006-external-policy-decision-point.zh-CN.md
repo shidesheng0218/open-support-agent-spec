@@ -34,8 +34,12 @@ block`)，绝不能放宽。合规性不变：兼容套件仍只测试规范算�
 
 与此同时，通用策略引擎（部署最广的是 OPA/Rego）已经解决了丰富的、
 确定性的、可测试的策略评估——并且明确把"对 AI 工具调用的策略强制"
-作为营销场景。它们缺的是 OSAS 的领域语义：提案、主体、证据、决策、
-审计。显然有价值的组合是：**OSAS 拥有契约；外部 PDP 只贡献更严的决策。**
+作为营销场景。截至 2026 年 9 月，微软的 Agent Governance Toolkit（AGT）
+提供了更贴合的一层：其 Agent Control Specification 是一个确定性、
+fail-closed 的策略决策运行时，裁决词表封闭（`allow` / `deny` /
+`transform` / `escalate`），自带审批 fail-safe 生命周期与 Merkle 链
+审计。两者都缺的是 OSAS 的领域语义：提案、主体、证据、幂等、审计。
+显然有价值的组合是：**OSAS 拥有契约；外部 PDP 只贡献更严的决策。**
 
 让这个组合可以被安全标准化的设计约束是：只允许从严的委托。规范检查
 （越权、注入、profile 匹配、身份、地区、证据、重复、阈值、永不自动
@@ -72,6 +76,31 @@ PDP 就能悄悄关闭规范的安全模型——因此本 RFC 禁止放宽。
 6. 当 `D_spec` 为 `block` 时绝不咨询 PDP；PDP 的裁决也绝不能**放宽**
    决策：若 `D_ext` 轻于 `D_spec`，结果就是 `D_spec`。不存在任何机制
    ——配置、开关或规则——可以委托放宽。
+
+### 参考 PDP 与裁决映射
+
+实现 PR 涵盖两个具体的参考 PDP。其原生裁决到 OSAS 三档决策的映射为：
+
+| 外部裁决 | OSAS 效果 | 理由 |
+|---|---|---|
+| AGT `deny` / OPA deny | `block` | 直接对应。 |
+| AGT `escalate`（携带审批的可解除拒绝） | `require_approval` | 与 OSAS 审批路径结构同构——同样是"需要审批"的决策。 |
+| AGT/OPA `allow` | 不变（维持 `D_spec`) | 只允许从严：外部 allow 绝不拉低规范决策。 |
+| AGT `transform` | `require_approval`，并把该 transform 的改写追加到 `decision.transforms`（参数脱敏） | transform 断言"提交的参数本身有问题"，绝不能自动执行；transform 也绝不能使决策更宽松。 |
+| OPA 部分结果 / 不可解析 / 出错 / 超时 | `block`（失败即关闭并审计） | 见第 5 条。 |
+
+有两处不那么显然的契合，使 AGT 成为首选参考：
+
+- AGT 的 `escalate` 本身就是一等公民的"需要审批"裁决——与 OSAS 的
+  `require_approval` 状态形状一致，包括后续的人类决定生命周期。
+- AGT 的 `transform` 裁决恰好对应 OSAS 的参数脱敏通道
+  （`{ path, op: "redact", replacement? }`)——外部 PDP 可以贡献确定性
+  脱敏，经既有的 `PolicyDecision.transforms` 管线进入 `executeProposal`。
+
+值得记录的关联加固项（不属于本 RFC):AGT 把每个审批与动作的规范化输入
+哈希绑定（`enforced_identity`，执行前重新校验）。OSAS 的审批尚未与动作
+绑定；采纳该绑定可作为后续加固 RFC 的候选，与审批 fail-safe 生命周期
+配套。
 
 ### 本 RFC 不是什么
 

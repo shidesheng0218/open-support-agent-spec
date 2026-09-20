@@ -92,6 +92,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **Competitive-landscape refresh (2026-09-14 research)**: Microsoft's Agent
+  Governance Toolkit is now covered with a verified deep dive in
+  `docs/competitive-landscape.md` (EN+ZH) — verdict set, approval fail-safe,
+  action-bound approvals, IFC, Merkle audit — and the positioning table is
+  corrected (AGT has a shadow mode and a Merkle audit log; an
+  idempotency/reconciliation row was added). RFC 0006 (EN+ZH) gains the
+  AGT-first reference-PDP mapping (`escalate` → `require_approval`,
+  `transform` → param transforms). The threat model (EN+ZH) gains T13
+  (stale-approval drag), documenting the wired approval fail-safe lifecycle.
 - **New compat suite `cross-source-consistency`** (34 cases): every duplicated
   value set is asserted — `@osas/core` enum constants vs their schema enums,
   the `AuditEventType` union vs `AUDIT_EVENT_TYPES`, and every tool's

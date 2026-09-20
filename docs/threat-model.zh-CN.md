@@ -34,6 +34,7 @@
 | T10 | 成本耗尽 | 死循环烧光 LLM 预算 | 调用前预算强制（日级 + 案件级上限）,`BudgetExceededError` 在任何网络调用之前抛出，80% 时记 `budget_warning` 审计 | `packages/model-gateway/src/gateway.test.ts` |
 | T11 | Conformance Mode 被滥用 | 测试端点在生产环境可达 | Conformance Mode 在生产环境拒绝启动；模式关闭时端点根本不注册（404);key 以常量时间比较 | `apps/api/src/conformance.test.ts`;runner 的错误 key 检查 |
 | T12 | Schema 夹带 | 多余字段绕过校验夹带语义 | 全部 `additionalProperties: false`；先验证后执行（422 `SCHEMA_INVALID`);Schema 而非散文是权威 | `packages/schema-validator`；兼容套件的 schema 固件 |
+| T13 | 陈旧审批滞留 | 审批搁置数小时后才被批准，而上下文早已变化（订单已发货、策略已变更、证据已过期） | 审批 fail-safe 生命周期：创建时盖章 `expiresAt`（策略 `approval.timeoutSeconds`)；读取时呈现有效 `expired` 状态；迟到的决定被 409 `APPROVAL_TIMED_OUT` 拒绝，提案随即以 `rejected` 关闭（不产生 DUPLICATE_REQUEST 死胡同），拒绝只审计一次。谱系：借鉴微软 Agent Governance Toolkit 的审批 fail-safe——OSAS 的 `onTimeout` 只允许 deny，严于 AGT 的 `deny\|allow\|suspend` | `packages/policy-engine/src/approval-lifecycle.test.ts`;`apps/api/src/approval-expiry.test.ts` |
 
 ## 残余风险（已接受并记录）
 

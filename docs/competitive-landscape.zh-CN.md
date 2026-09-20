@@ -38,9 +38,14 @@ OSAS（Open Support Agent Spec）是面向客服 agent 的**治理优先开放�
   契约。
 - **OpenAI Agents SDK**——围绕 agent 运行的 guardrails/hooks；属于输入/输出
   校验，不是完整的"决策—审计"生命周期。
-- **Microsoft Agent Governance Toolkit + Agent Hooks（2026）**——概念上最接近的
-  邻居：框架中立的治理契约、审批超时 fail-safe、可改写 verdict 的 transform
-  hook、对标 OWASP agentic 威胁。它是横向的（不限领域），且由微软背书。
+- **Microsoft Agent Governance Toolkit（AGT）**——概念上最接近的邻居，也是
+  截至 2026 年 9 月开源世界最完整的横向治理栈：MIT 许可、五种语言 SDK、
+  十个 RFC-2119 风格规范与约 992 个自测一致性用例；其确定性 fail-closed
+  策略运行时的裁决词表（`allow` / `deny` / `transform` / `escalate`）中
+  包含携带审批的"可解除拒绝"。它已实现审批 fail-safe（超时 +
+  `on_timeout`）、与动作绑定的审批、信息流控制（源标签 → 宿口径）、
+  Merkle 链审计与 shadow 模式。横向（不限领域）、微软背书、定位为应用
+  中间件。详见下方深挖小节。
 - **Invariant Labs 规则引擎**——对 agent trace 做确定性运行时检查；能约束行为，
   但不定义客服领域模型、权限阶梯或审计哈希语义。
 
@@ -48,13 +53,39 @@ OSAS（Open Support Agent Spec）是面向客服 agent 的**治理优先开放�
 
 | 能力 | OSAS | 微软 AGT | MCP | LangGraph | 客服 SaaS（Sierra/Fin/Agentforce/Zendesk） |
 |---|---|---|---|---|---|
-| 模型能否直接执行写操作 | **永不**——硬封顶 `request-approval` | 可配置；由 hooks 强制 | 无决策层 | 可以，除非自行编码约束 | 不透明，由厂商定义 |
-| 确定性策略引擎 | **有**——声明式 TenantPolicy、worst-of 决策、默认拒绝 | 有——规则 + transform | 无 | 无（应用代码） | 黑盒 |
-| 审计语义 | **SHA-256 哈希链**，按租户、防篡改 | 日志/trace | 无 | 应用自定义 | 厂商日志，不可验证 |
-| Shadow 模式（先模拟后启用） | **有**——默认姿态 | 部分（可观测性） | 无 | 需自行实现 | 无 |
-| 厂商中立/可移植 | **是**——开放规范 + JSON Schema | 框架中立但微软主导 | 是（LF AAIF） | 是（开源） | 否 |
-| Conformance 注册表 | **有**——`conformance/implementations.json`、黑盒门禁 | 无 | 松散（SDK 兼容） | 无 | 无 |
+| 模型能否直接执行写操作 | **永不**——硬封顶 `request-approval` | 默认否——策略运行时门控每次调用 | 无决策层 | 可以，除非自行编码约束 | 不透明，由厂商定义 |
+| 确定性策略引擎 | **有**——声明式 TenantPolicy、worst-of 决策、默认拒绝 | 有——确定性 fail-closed 运行时（裁决 `allow`/`deny`/`transform`/`escalate`） | 无 | 无（应用代码） | 黑盒 |
+| 审计语义 | **SHA-256 哈希链**，按租户、防篡改 | Merkle 链审计日志 + 决策物料清单 | 无 | 应用自定义 | 厂商日志，不可验证 |
+| Shadow 模式（先模拟后启用） | **有**——默认姿态 | 有 | 无 | 需自行实现 | 无 |
+| 幂等/对账语义 | **有**——`(tenantId, idempotencyKey)` 重放、结果不确定 → 对账、禁止盲重试 | **无** | 无 | 无 | 由厂商定义 |
+| 厂商中立/可移植 | **是**——开放规范 + JSON Schema | 框架中立但微软主导 | 是（LF Projects, LLC） | 是（开源） | 否 |
+| Conformance 注册表 | **有**——`conformance/implementations.json`、黑盒门禁 | 自测向量（约 992 个）；无第三方注册表 | 松散（SDK 兼容） | 无 | 无 |
 | 客服领域模型 | **有**——helpdesk 适配器、20 工具域、多租户 TenantPolicy | 无 | 无 | 无 | 有（专有） |
+
+## 深挖：微软 AGT——最近的邻居，逐项对照
+
+2026-09-14 依据公开仓库与文档核实。AGT 的 Agent Control Specification
+（ACS）是一个无状态、确定性、fail-closed 的策略决策运行时；被其拒绝的
+动作在该运行时内"结构性不可能"执行。它是我们所知唯一几乎逐项对上
+OSAS 治理格子的项目。
+
+| 维度 | AGT | OSAS |
+|---|---|---|
+| 决策词表 | `allow` / `deny` / `transform` / `escalate`（escalate = 携带审批的可解除拒绝） | `auto_execute` / `require_approval` / `block` |
+| 审批 fail-safe | `timeout_seconds` + `on_timeout: deny \| allow \| suspend`；审批与动作绑定（`enforced_identity` = 规范化动作输入的 SHA-256，执行前重新校验） | `timeoutSeconds` + `onTimeout: "deny"` **仅此一项**（只允许拒绝是刻意为之）；过期即关闭提案，不存在陈旧审批死胡同；动作绑定是候选加固项（见 RFC 0006） |
+| 信息流控制 | 源标签 → 宿口径、no-write-down、Rego/Cedar 实现 | 仅有设计注记（RFC 0005） |
+| 审计 | Merkle 链日志 + 决策物料清单 | 按租户 SHA-256 哈希链 + `GET /v1/audit/verify` |
+| 幂等/对账 | **无** | 核心语义：`(tenantId, idempotencyKey)` 重放、`uncertain` → 对账任务、绝不自动重试 |
+| 客服领域 | 无（横向） | 工单、订单、退款、理赔、换货、证据、审批、接管——另有参考 helpdesk 适配器 |
+| Conformance | 约 992 个自测向量 | 第三方黑盒 runner + 公开注册表——出题方不是厂商自己 |
+| 许可/治理 | MIT，微软主导 | Apache-2.0，创始维护者；v1.0 起多方席位（RFC 0004） |
+
+**解读**：AGT 是一个领域通用的治理层，在"审批与动作绑定"和 IFC 上走
+得更远；OSAS 是一份领域完备的契约，其幂等/对账语义与可被第三方验证的
+合规机制在 AGT 中没有对应物。两者是组合关系而非对冲：RFC 0006 定义了
+外部策略决策点接缝，AGT（或 OPA）运行时可以在该接缝上**收紧**——绝不
+放宽——OSAS 的决策；AGT 的 `transform` 裁决也恰好映射到 OSAS 的参数
+脱敏 transforms。
 
 ## OSAS 的差异化
 
@@ -73,8 +104,11 @@ OSAS（Open Support Agent Spec）是面向客服 agent 的**治理优先开放�
 
 - **上游挤压**。如果 MCP/AAIF 长出执行决策层，OSAS 可能被挤向小众。缓解：
   把 OSAS 定位为 agent 协议的治理 *profile*（RFC 0002），而非竞争协议。
-- **微软引力**。AGT 自带 Azure/GitHub 分发与 OWASP 对齐背书。OSAS 无法在资源
-  上对抗，必须在客服领域做出更强的规范，并保持真正的厂商中立。
+- **微软引力**。AGT 真实存在且成熟很快（半年约 6k star、五种语言 SDK、
+  周级发版）：审批 fail-safe 超时、与动作绑定的审批、IFC、Merkle 审计链
+  均已出货。OSAS 无法在资源上对抗，必须在客服领域做深（领域生命周期、
+  幂等与对账语义）、保持真正的厂商中立，并——依 RFC 0006——把 AGT 当作
+  可插拔的策略决策点：让采用 AGT 强化 OSAS，而非取代 OSAS。
 - **生态规模**。目前只有 2 个实现（1 个参考实现 + 1 个仓内候选），对比数百个
   MCP server。v1.0 的 ≥3 独立实现门槛同时是护城河——见下文。
 

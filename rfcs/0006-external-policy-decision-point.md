@@ -41,10 +41,14 @@ Today the only escape hatches are bad ones:
 
 Meanwhile, general-purpose policy engines (OPA/Rego being the most deployed)
 already solve rich, deterministic, testable policy evaluation — and are
-explicitly marketed for AI tool-call enforcement. What they lack is the OSAS
-domain semantics: proposals, principals, evidence, decisions, audit. The
-useful composition is obvious: **OSAS owns the contract; an external PDP may
-contribute stricter decisions.**
+explicitly marketed for AI tool-call enforcement. As of September 2026,
+Microsoft's Agent Governance Toolkit (AGT) ships an even closer fit: its Agent
+Control Specification is a deterministic, fail-closed policy decision runtime
+with a closed verdict set (`allow` / `deny` / `transform` / `escalate`), a
+fail-safe approval lifecycle, and Merkle-chained audit. What both lack is the
+OSAS domain semantics: proposals, principals, evidence, idempotency, audit.
+The useful composition is obvious: **OSAS owns the contract; an external PDP
+may contribute stricter decisions.**
 
 The design constraint that makes this safe to standardize: tightening-only
 delegation. The normative checks (permission overreach, injection, profile
@@ -87,6 +91,35 @@ RFC forbids it.
    never *lower* the decision: if `D_ext` is less severe than `D_spec`, the
    result is `D_spec`. There is no mechanism — config, flag, or rule — to
    delegate loosening.
+
+### Reference PDPs and verdict mapping
+
+Two concrete reference PDPs are in scope for the implementation PRs. The
+mapping from their native verdicts onto the OSAS three-grade decision is:
+
+| External verdict | OSAS effect | Rationale |
+|---|---|---|
+| AGT `deny` / OPA deny | `block` | Direct. |
+| AGT `escalate` (liftable deny carrying an approval) | `require_approval` | Structurally identical to the OSAS approval path — an approval-seeking decision. |
+| AGT/OPA `allow` | unchanged (`D_spec` stands) | Tightening-only: an external allow never lowers the normative decision. |
+| AGT `transform` | `require_approval` plus the transform's rewrites appended to `decision.transforms` (param transforms) | A transform asserts "the params as submitted are wrong"; that is never auto-executable. A transform must never make a decision more permissive. |
+| OPA partial / unparseable / error / timeout | `block` (fail closed, audited) | See rule 5. |
+
+Two non-obvious compatibilities make AGT the primary reference:
+
+- AGT's `escalate` is already "an approval is needed" as a first-class
+  verdict — the OSAS `require_approval` state has the same shape, including
+  the human-decision lifecycle.
+- AGT's `transform` verdict is exactly OSAS's param-transform channel
+  (`{ path, op: "redact", replacement? }`) — an external PDP can contribute
+  deterministic redactions that ride the existing `PolicyDecision.transforms`
+  pipeline into `executeProposal`.
+
+Related hardening worth noting (not part of this RFC): AGT binds each approval
+to the action's canonical input hash (`enforced_identity`, re-verified before
+execution). OSAS approvals are not yet action-bound; adopting that binding is
+a candidate for a future hardening RFC alongside the approval fail-safe
+lifecycle.
 
 ### What this is not
 
