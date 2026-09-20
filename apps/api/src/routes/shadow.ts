@@ -110,8 +110,11 @@ export async function shadowRoutes(app: FastifyInstance): Promise<void> {
   });
 
   // Aggregated Shadow Metrics (schemas/core/shadow-metrics.json): derived from
-  // the tenant's ShadowRun records over the requested period. Buckets count
-  // runs whose proposal is still resolvable; rates share that population so
+  // the tenant's ShadowRun records over the requested period. Decision buckets
+  // come straight from each run's recorded policyDecision (so the totals are
+  // self-consistent even if a referenced proposal is no longer resolvable);
+  // the per-action breakdown additionally needs the proposal and skips
+  // unresolvable ones. Rates share the counted population, so
   // autoExecuteRate + approvalRate + blockRate sum to 1 (0 when empty).
   app.get("/v1/shadow-runs/metrics", async (req) => {
     const ctx = ctxFor(req);
@@ -125,8 +128,6 @@ export async function shadowRoutes(app: FastifyInstance): Promise<void> {
     const counts = { autoExecuted: 0, approvalRequested: 0, blocked: 0 };
     const byAction = new Map<string, { autoExecuted: number; approvalRequested: number; blocked: number }>();
     for (const run of inPeriod) {
-      const proposal = await embed(req, run.proposalId);
-      if (!proposal) continue;
       const bucket =
         run.policyDecision.decision === "auto_execute"
           ? "autoExecuted"
@@ -134,6 +135,8 @@ export async function shadowRoutes(app: FastifyInstance): Promise<void> {
             ? "approvalRequested"
             : "blocked";
       counts[bucket] += 1;
+      const proposal = await embed(req, run.proposalId);
+      if (!proposal) continue;
       const entry = byAction.get(proposal.actionType) ?? {
         autoExecuted: 0,
         approvalRequested: 0,
@@ -162,7 +165,10 @@ export async function shadowRoutes(app: FastifyInstance): Promise<void> {
         autoExecuteRate: rate(counts.autoExecuted),
         approvalRate: rate(counts.approvalRequested),
         blockRate: rate(counts.blocked),
-        shadowCoveragePct: proposals.length > 0 ? covered.size / proposals.length : 0,
+        // Clamped to [0, 1] (the schema ceiling): runs may reference proposals
+        // the adapter no longer returns.
+        shadowCoveragePct:
+          proposals.length > 0 ? Math.min(1, covered.size / proposals.length) : 0,
       },
       createdAt: nowIso,
     };

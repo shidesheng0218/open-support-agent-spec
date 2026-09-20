@@ -1,45 +1,41 @@
 import type { FastifyInstance } from "fastify";
-import type { ToolContext } from "@osas/adapter";
 import { requireAdapterCapability, type SupportAdapter } from "@osas/adapter";
-import type { Approval, TenantPolicy } from "@osas/core";
+import type { Approval } from "@osas/core";
 import {
   APPROVAL_TIMED_OUT,
   NonExecutableActionError,
-  evaluateApprovalExpiry,
+  resolveApprovalDeadline,
 } from "@osas/policy-engine";
 import { ConflictError, SchemaInvalidError } from "../plugins.js";
-import { audit, resolveActivePolicy, runExecution } from "../domain.js";
+import {
+  audit,
+  effectiveApproval,
+  runExecution,
+  tryResolveActivePolicy,
+} from "../domain.js";
 import { ctxFor } from "./basic.js";
 import { syncAfterSalesCaseStatus } from "./after-sales.js";
 
 export async function approvalRoutes(app: FastifyInstance): Promise<void> {
   const adapter: SupportAdapter = app.adapter;
 
-  /**
-   * Fail-safe approval lifecycle: present the effective status. A pending
-   * approval past its deadline (policy `approval.timeoutSeconds` or an
-   * explicit `expiresAt`) is reported as `expired` — denial by default. The
-   * stored record is not mutated on read; the effective status is recomputed
-   * deterministically on every read.
-   */
-  const effectiveApproval = async (ctx: ToolContext, approval: Approval): Promise<Approval> => {
-    if (approval.status !== "pending") return approval;
-    let policy: TenantPolicy | undefined;
-    try {
-      policy = await resolveActivePolicy(adapter, app.policyStore, ctx, ctx.tenantId);
-    } catch {
-      return approval; // no resolvable policy -> no derivable deadline
-    }
-    const verdict = evaluateApprovalExpiry(approval, policy, new Date());
-    return verdict.status === "expired" ? { ...approval, status: "expired" } : approval;
-  };
-
   app.get("/v1/approvals", async (req) => {
     const ctx = ctxFor(req);
     await requireAdapterCapability(adapter, ctx, "approval.read");
     const q = req.query as { status?: Approval["status"] };
+    // The effective status must be computed before filtering on it, so the
+    // tenant's approvals are fetched whole and filtered here. The reference
+    // adapters return complete sets; an adapter that paginates should push
+    // the effective-status computation down instead.
     const approvals = await adapter.listApprovals(ctx, {});
-    const effective = await Promise.all(approvals.map((a) => effectiveApproval(ctx, a)));
+    const policy = await tryResolveActivePolicy(adapter, app.policyStore, ctx, ctx.tenantId);
+    if (!policy) {
+      req.log.warn(
+        { tenantId: ctx.tenantId },
+        "active policy unavailable; approvals expire only via their stamped expiresAt",
+      );
+    }
+    const effective = approvals.map((approval) => effectiveApproval(approval, policy));
     const filtered = q.status ? effective.filter((a) => a.status === q.status) : effective;
     return Promise.all(
       filtered.map(async (approval) => {
@@ -60,27 +56,38 @@ export async function approvalRoutes(app: FastifyInstance): Promise<void> {
       ]);
     }
     const existing = await adapter.getApproval(ctx, id);
-    const effective = await effectiveApproval(ctx, existing);
+    const policy = await tryResolveActivePolicy(adapter, app.policyStore, ctx, ctx.tenantId);
+    const effective = effectiveApproval(existing, policy);
     if (effective.status === "expired") {
       // Fail-safe: an undecided approval past its deadline is DENIED, never
-      // approved. No decision is recorded; the refusal is audited.
-      await audit(adapter, ctx, {
-        proposalId: existing.proposalId,
-        approvalId: existing.id,
-        eventType: "approval_decided",
-        actorType: "system",
-        actorId: "osas-api",
-        policyVersion: existing.policyVersion,
-        detail: {
-          decision: "expired",
-          reason: APPROVAL_TIMED_OUT,
-          expiresAt: existing.expiresAt,
-          refusedApproverId: body.approverId,
-        },
-      }, app.auditStore);
+      // approved. The denial is final: the proposal is closed as `rejected`
+      // so it stops blocking a fresh request through DUPLICATE_REQUEST.
+      // The first refusal (per proposal) is audited; later attempts only 409.
+      const deadline =
+        existing.expiresAt ?? (policy ? resolveApprovalDeadline(existing, policy) : undefined);
+      const proposal = await adapter.getProposal(ctx, existing.proposalId).catch(() => undefined);
+      if (proposal && proposal.status !== "rejected") {
+        await adapter.updateProposalStatus(ctx, existing.proposalId, "rejected");
+        await syncAfterSalesCaseStatus(app, ctx.tenantId, existing.proposalId, "blocked");
+        await audit(adapter, ctx, {
+          proposalId: existing.proposalId,
+          approvalId: existing.id,
+          eventType: "approval_decided",
+          actorType: "system",
+          actorId: "osas-api",
+          policyVersion: existing.policyVersion,
+          detail: {
+            decision: "expired",
+            reason: APPROVAL_TIMED_OUT,
+            ...(deadline !== undefined ? { expiresAt: deadline } : {}),
+            refusedApproverId: body.approverId,
+          },
+        }, app.auditStore);
+      }
       throw new ConflictError(
-        `approval ${id} expired at ${existing.expiresAt ?? "its deadline"} without a decision ` +
-          `(${APPROVAL_TIMED_OUT}); the fail-safe policy denies it — a new proposal is required`,
+        `approval ${id} expired at ${deadline ?? "its deadline"} without a decision ` +
+          `(${APPROVAL_TIMED_OUT}); the fail-safe policy denies it and the proposal was ` +
+          `closed as rejected — a new proposal may be created`,
       );
     }
     const approval = await adapter.decideApproval(ctx, id, body.decision, body.approverId, body.comment);

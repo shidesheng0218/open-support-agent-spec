@@ -18,7 +18,13 @@ import type {
   TenantPolicy,
 } from "@osas/core";
 import { detectInjection } from "@osas/core";
-import { evaluateProposal, executeProposal, reconcile, resolveApprovalDeadline } from "@osas/policy-engine";
+import {
+  evaluateApprovalExpiry,
+  evaluateProposal,
+  executeProposal,
+  reconcile,
+  resolveApprovalDeadline,
+} from "@osas/policy-engine";
 import type { ExecutionStore, PolicyStore } from "@osas/policy-engine";
 import { applyParamTransforms } from "@osas/policy-engine";
 import {
@@ -70,6 +76,42 @@ export async function resolveActivePolicy(
   if (active) return active;
   const legacy = await adapter.getPolicy(ctx, tenantId);
   return store.importActive(legacy, "system:legacy-import");
+}
+
+/**
+ * Resolve the tenant's active policy, or undefined when it cannot be resolved
+ * (e.g. reference adapters whose getPolicy is intentionally unsupported).
+ * Callers treat undefined as "no policy-derived deadline"; approvals with a
+ * stamped `expiresAt` still expire, since the deadline is on the record.
+ */
+export async function tryResolveActivePolicy(
+  adapter: SupportAdapter,
+  store: PolicyStore,
+  ctx: ToolContext,
+  tenantId: string,
+): Promise<TenantPolicy | undefined> {
+  try {
+    return await resolveActivePolicy(adapter, store, ctx, tenantId);
+  } catch {
+    return undefined;
+  }
+}
+
+/**
+ * Fail-safe approval lifecycle: present the effective status. A pending
+ * approval past its deadline — its stamped `expiresAt`, else the policy's
+ * `approval.timeoutSeconds` — is reported as `expired` (denial by default).
+ * Pure: the stored record is never mutated on read; the effective status is
+ * recomputed deterministically.
+ */
+export function effectiveApproval(
+  approval: Approval,
+  policy: TenantPolicy | undefined,
+  now: Date = new Date(),
+): Approval {
+  if (approval.status !== "pending") return approval;
+  const verdict = evaluateApprovalExpiry(approval, policy ?? {}, now);
+  return verdict.status === "expired" ? { ...approval, status: "expired" } : approval;
 }
 
 /**

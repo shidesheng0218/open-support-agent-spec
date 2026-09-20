@@ -9,11 +9,18 @@ import {
   type AfterSalesDecision,
   type AfterSalesRiskLevel,
   type AfterSalesScenario,
+  type Approval,
 } from "@osas/core";
-import { requireAdapterCapability, type SupportAdapter } from "@osas/adapter";
+import { requireAdapterCapability, type SupportAdapter, type ToolContext } from "@osas/adapter";
 import { SchemaInvalidError } from "../plugins.js";
 import { ctxFor } from "./basic.js";
-import { audit, resolveActivePolicy, runEvaluation } from "../domain.js";
+import {
+  audit,
+  effectiveApproval,
+  resolveActivePolicy,
+  runEvaluation,
+  tryResolveActivePolicy,
+} from "../domain.js";
 
 export interface AfterSalesStore {
   create(input: Omit<AfterSalesCase, "id" | "createdAt" | "updatedAt">): Promise<AfterSalesCase>;
@@ -203,6 +210,24 @@ async function notFoundCase(app: FastifyInstance, tenantId: string, id: string):
 export async function afterSalesRoutes(app: FastifyInstance): Promise<void> {
   const adapter: SupportAdapter = app.adapter;
 
+  /**
+   * The proposal's approvals with their EFFECTIVE status applied (fail-safe
+   * expiry), so the vertical detail/evaluate views never present an
+   * effectively-expired approval as actionable `pending`. Mirrors
+   * GET /v1/approvals.
+   */
+  const effectiveApprovalsForProposal = async (
+    app: FastifyInstance,
+    ctx: ToolContext,
+    proposalId: string,
+  ): Promise<Approval[]> => {
+    const approvals = (await app.adapter.listApprovals(ctx, {})).filter(
+      (approval) => approval.proposalId === proposalId,
+    );
+    const policy = await tryResolveActivePolicy(app.adapter, app.policyStore, ctx, ctx.tenantId);
+    return approvals.map((approval) => effectiveApproval(approval, policy));
+  };
+
   app.post("/v1/after-sales/intake", async (req, reply) => {
     const ctx = ctxFor(req);
     const body = (req.body ?? {}) as Record<string, unknown>;
@@ -269,9 +294,7 @@ export async function afterSalesRoutes(app: FastifyInstance): Promise<void> {
       const sourceCase = await adapter.getCase(ctx, record.sourceCaseId);
       const evidence = await adapter.listEvidence(ctx, { caseId: sourceCase.id });
       const evidenceCheck = requiredEvidencePresent(record.scenarioCode, record.evidenceIds, evidence);
-      const approvals = (await adapter.listApprovals(ctx, {})).filter(
-        (approval) => approval.proposalId === existingProposal.id,
-      );
+      const approvals = await effectiveApprovalsForProposal(app, ctx, existingProposal.id);
       const handoffs = (await adapter.listHandoffs(ctx, {})).filter(
         (handoff) => handoff.proposalId === existingProposal.id,
       );
@@ -471,9 +494,7 @@ export async function afterSalesRoutes(app: FastifyInstance): Promise<void> {
     const customer = record.customerId ? await adapter.getCustomer(ctx, record.customerId) : undefined;
     const evidence = await adapter.listEvidence(ctx, { caseId: sourceCase.id });
     const proposal = record.proposalId ? await adapter.getProposal(ctx, record.proposalId) : undefined;
-    const approvals = proposal
-      ? (await adapter.listApprovals(ctx, {})).filter((approval) => approval.proposalId === proposal.id)
-      : [];
+    const approvals = proposal ? await effectiveApprovalsForProposal(app, ctx, proposal.id) : [];
     const handoffs = proposal
       ? (await adapter.listHandoffs(ctx, {})).filter((handoff) => handoff.proposalId === proposal.id)
       : [];

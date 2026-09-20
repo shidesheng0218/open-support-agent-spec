@@ -134,15 +134,67 @@ describe("approval fail-safe expiry (wired)", () => {
     expect(decideRes.statusCode).toBe(409);
     expect(decideRes.json().error.message).toContain("APPROVAL_TIMED_OUT");
 
-    // The refusal is audited.
+    // The denial is final: the proposal is closed as rejected...
+    const closed = await app.inject({
+      method: "GET",
+      url: `/v1/proposals/${proposal.id}`,
+      headers: AGENT,
+    });
+    expect(closed.json().status).toBe("rejected");
+
+    // ...so an identical new request is NOT blocked as a duplicate — the
+    // fail-safe denial must not create a dead end.
+    const retry = await app.inject({
+      method: "POST",
+      url: "/v1/proposals",
+      headers: AGENT,
+      payload: {
+        caseId: "case_credit",
+        profile: "saas",
+        actionType: "credit_apply",
+        reasonCode: "goodwill",
+        params: {},
+        requestedPermission: "request-approval",
+        requestedBy: { actorType: "model", actorId: "mock-local" },
+        amount: { currency: "USD", minorUnits: 12000 },
+        evidenceIds: ["ev_ord_small"],
+        idempotencyKey: `idem_expiry_retry_${Math.random().toString(36).slice(2)}`,
+      },
+    });
+    expect(retry.statusCode).toBe(201);
+    const retryEvaluated = await app.inject({
+      method: "POST",
+      url: `/v1/proposals/${(retry.json() as ActionProposal).id}/evaluate`,
+      headers: AGENT,
+    });
+    const retryReasons = (retryEvaluated.json().decision.reasons as { code: string }[]).map(
+      (r) => r.code,
+    );
+    expect(retryReasons).not.toContain("DUPLICATE_REQUEST");
+    expect(retryEvaluated.json().decision.decision).toBe("require_approval");
+
+    // Repeating the refused decision stays refused and does NOT append a
+    // second expiry-denial audit event (the first refusal per proposal is the
+    // recorded denial).
+    const decideAgain = await app.inject({
+      method: "POST",
+      url: `/v1/approvals/${row!.id}/decide`,
+      headers: AGENT,
+      payload: { decision: "approved", approverId: "late_agent" },
+    });
+    expect(decideAgain.statusCode).toBe(409);
+
     const auditRes = await app.inject({
       method: "GET",
       url: `/v1/audit?proposalId=${proposal.id}`,
       headers: AGENT,
     });
     const events = auditRes.json() as { eventType: string; detail: Record<string, unknown> }[];
-    expect(
-      events.some((e) => e.eventType === "approval_decided" && e.detail.decision === "expired"),
-    ).toBe(true);
+    const denials = events.filter(
+      (e) => e.eventType === "approval_decided" && e.detail.decision === "expired",
+    );
+    expect(denials).toHaveLength(1);
+    expect(denials[0]!.detail.reason).toBe("APPROVAL_TIMED_OUT");
+    expect(denials[0]!.detail.expiresAt).toBeDefined();
   });
 });
