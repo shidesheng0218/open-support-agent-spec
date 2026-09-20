@@ -314,6 +314,7 @@ Until v1.0, expect breaking changes between minor versions — see
 - Implementing OSAS (third-party guide): [docs/implementing-osas.md](docs/implementing-osas.md) · [中文](docs/implementing-osas.zh-CN.md)
 - Conformance Mode: [docs/conformance.md](docs/conformance.md) · [中文](docs/conformance.zh-CN.md)
 - Controlled Execution (v0.3 Draft): [docs/controlled-execution.md](docs/controlled-execution.md) · [中文](docs/controlled-execution.zh-CN.md)
+- Commerce protocol post-purchase interop: [docs/commerce-protocol-interop.md](docs/commerce-protocol-interop.md) · [中文](docs/commerce-protocol-interop.zh-CN.md)
 - v0.3 Conformance Profiles: [docs/conformance-v0.3.md](docs/conformance-v0.3.md) · [中文](docs/conformance-v0.3.zh-CN.md)
 - Threat model: [docs/threat-model.md](docs/threat-model.md) · [中文](docs/threat-model.zh-CN.md)
 - Competitive landscape: [docs/competitive-landscape.md](docs/competitive-landscape.md) · [中文](docs/competitive-landscape.zh-CN.md)

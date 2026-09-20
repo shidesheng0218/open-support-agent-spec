@@ -9,6 +9,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **Commerce protocol post-purchase mapping**: the reference API now accepts
+  allowlisted `ucp` / `acp` post-purchase events only through its internal
+  Provider Event ingestion boundary, normalizes their payload before hashing
+  and persistence, and rejects unsupported event types fail-closed. The new
+  bilingual interop guide makes the trust boundary explicit: source adapters
+  verify upstream provenance and tenant binding before using the internal key;
+  OSAS does not claim to implement UCP or ACP and `live` remains disabled.
 - **Governance and process maturity**: DCO 1.1 with a `git commit -s`
   sign-off requirement; issue templates (bug / feature / RFC / compatibility
   claim) and a PR template mirroring the release gate; the RFC lifecycle gains

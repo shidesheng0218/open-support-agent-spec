@@ -39,6 +39,11 @@ validated, hashed, deduplicated, audited, and matched by idempotency key. A
 `payload.status` of `succeeded` or `failed` resolves the matching open
 reconciliation task.
 
+For UCP- or ACP-connected commerce integrations, the source adapter must first
+verify the upstream source and tenant binding, then use the post-purchase event
+mapping profile. It accepts an explicit allowlist and is not a raw public
+webhook receiver; see [Commerce Protocol Interop](commerce-protocol-interop.md).
+
 ## Production boundary
 
 `OSAS_EXECUTION_MODE=live` remains rejected. No reference Shopify, Zendesk, or

@@ -304,6 +304,7 @@ v1.0 之前，次版本之间可能出现不兼容变更——见 [CHANGELOG.md]
 - 实现 OSAS（第三方指南）：[docs/implementing-osas.md](docs/implementing-osas.md) · [中文](docs/implementing-osas.zh-CN.md)
 - Conformance 模式：[docs/conformance.md](docs/conformance.md) · [中文](docs/conformance.zh-CN.md)
 - 受控执行（v0.3 草案）：[docs/controlled-execution.md](docs/controlled-execution.md) · [中文](docs/controlled-execution.zh-CN.md)
+- 商业协议售后事件互操作：[docs/commerce-protocol-interop.md](docs/commerce-protocol-interop.md) · [中文](docs/commerce-protocol-interop.zh-CN.md)
 - v0.3 合规 Profile：[docs/conformance-v0.3.md](docs/conformance-v0.3.md) · [中文](docs/conformance-v0.3.zh-CN.md)
 - 威胁模型：[docs/threat-model.md](docs/threat-model.md) · [中文](docs/threat-model.zh-CN.md)
 - 竞品格局：[docs/competitive-landscape.md](docs/competitive-landscape.md) · [中文](docs/competitive-landscape.zh-CN.md)

@@ -36,6 +36,10 @@ OSAS_PROVIDER_EVENT_KEY=local-sandbox-key
 并通过幂等键匹配对账任务。`payload.status` 为 `succeeded` 或 `failed` 时，
 匹配的开放任务会被解决。
 
+对于接入 UCP 或 ACP 的商业系统，来源 Adapter 必须先完成上游来源与租户绑定
+校验，再使用事后事件映射 Profile。该入口只接受明确的白名单，且不是原始的公开
+Webhook 接收器；见[商业协议售后事件互操作](commerce-protocol-interop.zh-CN.md)。
+
 ## 生产边界
 
 `OSAS_EXECUTION_MODE=live` 仍然会启动失败。参考 Shopify、Zendesk、Chatwoot

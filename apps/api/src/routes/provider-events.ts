@@ -1,7 +1,7 @@
 import { randomUUID } from "node:crypto";
 import type { FastifyInstance } from "fastify";
 import type { ProviderEvent } from "@osas/core";
-import { hashProviderPayload } from "@osas/ecommerce-shadow";
+import { hashProviderPayload, normalizePostPurchaseEvent } from "@osas/ecommerce-shadow";
 import { createValidator, resolveSchemasDir } from "@osas/schema-validator";
 import { join } from "node:path";
 import { ConflictError, SchemaInvalidError } from "../plugins.js";
@@ -41,19 +41,37 @@ export async function providerEventRoutes(app: FastifyInstance): Promise<void> {
     }
     const payload = body.payload as Record<string, unknown>;
     const ctx = ctxFor(req);
-    const event: ProviderEvent = {
-      id: `provider_event_${randomUUID()}`,
-      specVersion: "0.3",
-      tenantId: ctx.tenantId,
-      provider: body.provider,
-      providerEventId: body.providerEventId,
-      eventType: body.eventType,
-      idempotencyKey: body.idempotencyKey,
-      occurredAt: body.occurredAt,
-      payloadHash: hashProviderPayload(payload),
-      payload,
-      createdAt: new Date().toISOString(),
-    };
+    let event: ProviderEvent;
+    if (body.provider === "ucp" || body.provider === "acp") {
+      try {
+        event = normalizePostPurchaseEvent({
+          id: `provider_event_${randomUUID()}`,
+          protocol: body.provider,
+          tenantId: ctx.tenantId,
+          providerEventId: body.providerEventId,
+          eventType: body.eventType,
+          idempotencyKey: body.idempotencyKey,
+          occurredAt: body.occurredAt,
+          payload,
+        });
+      } catch (error) {
+        throw new SchemaInvalidError([{ message: error instanceof Error ? error.message : "invalid post-purchase event" }]);
+      }
+    } else {
+      event = {
+        id: `provider_event_${randomUUID()}`,
+        specVersion: "0.3",
+        tenantId: ctx.tenantId,
+        provider: body.provider,
+        providerEventId: body.providerEventId,
+        eventType: body.eventType,
+        idempotencyKey: body.idempotencyKey,
+        occurredAt: body.occurredAt,
+        payloadHash: hashProviderPayload(payload),
+        payload,
+        createdAt: new Date().toISOString(),
+      };
+    }
     const validation = executionValidator.validate("provider-event", event);
     if (!validation.valid) throw new SchemaInvalidError(validation.errors);
     const stored = await app.providerEventStore.append(event);

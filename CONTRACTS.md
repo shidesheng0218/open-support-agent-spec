@@ -342,4 +342,4 @@ Backing stores: `ExecutionAttemptStore` / `ExecutionReceiptStore` / `Reconciliat
 | POST | /v1/proposals/:id/reconcile | `{ outcome: "succeeded" \| "failed", note? }` → ActionProposal (updated to `executed` \| `failed`; also resolves the open reconciliation task and audits `reconciliation_resolved`) |
 | GET | /v1/executions/:id | → `{ attempt, receipt? }` |
 | GET | /v1/reconciliation?status=open\|resolved | → ReconciliationTask[] |
-| POST | /v1/provider-events | requires `x-osas-provider-key` (server-side `OSAS_PROVIDER_EVENT_KEY`); dedup by `(tenantId, provider, providerEventId)` → `{ duplicate, event, proposal?, reconciliation? }` |
+| POST | /v1/provider-events | requires `x-osas-provider-key` (server-side `OSAS_PROVIDER_EVENT_KEY`); dedup by `(tenantId, provider, providerEventId)` → `{ duplicate, event, proposal?, reconciliation? }`. `provider: "ucp" | "acp"` uses the allowlisted post-purchase mapping after the source adapter verifies upstream provenance; see `docs/commerce-protocol-interop.md`. |
