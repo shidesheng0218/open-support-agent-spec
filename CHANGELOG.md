@@ -84,6 +84,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **New compat suite `cross-source-consistency`** (34 cases): every duplicated
+  value set is asserted — `@osas/core` enum constants vs their schema enums,
+  the `AuditEventType` union vs `AUDIT_EVENT_TYPES`, and every tool's
+  annotations / proposal actionType enum vs `schemas/tools/*.json`. White-box
+  total 311 → 345; README and conformance/matrix counts updated.
+- `osas_core_create_action_proposal`'s `actionType` enum now mirrors
+  `$defs/ActionType` (adds `exchange_request`, which remains never
+  auto-executed and human-fulfilled).
+- `GET /v1/shadow-runs/metrics` documented in CONTRACTS.md §17;
+  `conformance/badges/osas-reference-v0.3.json` refreshed (verifiedAt
+  2026-09-14, conformance key added to the required environment).
+- The Python reference README states its exact surface scope (proposals,
+  execution, policy lifecycle, audit, conformance — not
+  approvals/handoffs/shadow-run endpoints).
 - RFC 0003 is marked `Implemented`; GOVERNANCE names the black-box compat
   runner as the gate for third-party compatibility claims (the in-repo
   `@osas/compat-suite` regression-tests the reference implementation);
@@ -113,6 +127,32 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **Approval fail-safe follow-ups**: the expiry denial now closes the proposal
+  as `rejected`, so an identical new request is no longer blocked by
+  `DUPLICATE_REQUEST` (the previous wiring left a dead end for up to
+  `duplicateWindowSeconds`); deadline resolution prefers the stamped
+  `expiresAt` (one policy load per request instead of one per approval, and no
+  silent fail-open when the active policy cannot be resolved — stamped
+  approvals still expire); the after-sales detail/evaluate views apply the
+  same effective-status mapping as `GET /v1/approvals` (no actionable
+  `pending` for effectively-expired approvals).
+- **Shadow metrics edge cases**: decision buckets now come from each run's
+  recorded `policyDecision` (totals stay self-consistent when a referenced
+  proposal is no longer resolvable) and `shadowCoveragePct` is clamped to
+  `[0, 1]`.
+- **README (EN+ZH) tool table** completed: all 20 MCP tools listed (four
+  after-sales tools were missing).
+- **SECURITY.md scope notes** corrected: authentication (demo/JWT) and
+  tenant isolation do exist and are tested — reference-grade, not
+  production-grade; the log claim now matches the implementation (no
+  request/response bodies are logged; authorization/email/phone are redacted)
+  and cites spec §9's fuller body-redaction requirement.
+- **`AUDIT_EVENT_TYPES`** gains `budget_warning` (present in the
+  `AuditEventType` union and the schema enum, missing from the runtime
+  constant).
+- **docs/conformance.md (EN+ZH)**: snapshot count list and postgres reset
+  table list brought up to date; the `empty` fixture description corrected
+  (it keeps the demo policy and after-sales fixtures).
 - **MCP documentation facts**: `mutatingHint` is documented as an
   OSAS-defined annotation carried under `Tool._meta["osas/annotations"]` —
   not an MCP standard hint (the MCP set is `readOnlyHint`/`destructiveHint`/

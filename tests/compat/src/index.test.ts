@@ -9,6 +9,7 @@ import { registerStateMachines } from "./state-machines.js";
 import { registerPolicyMatrix } from "./policy-matrix.js";
 import { registerIdempotencyReconciliation } from "./idempotency-reconciliation.js";
 import { registerCapabilitiesPolicyAudit } from "./capabilities-policy-audit.js";
+import { registerConsistency } from "./consistency.js";
 
 // Single-entry test file: vitest runs files in isolated workers, so all suites
 // register through one shared collector here to guarantee a complete report.
@@ -21,6 +22,7 @@ registerStateMachines(collector);
 registerPolicyMatrix(collector);
 registerIdempotencyReconciliation(collector);
 registerCapabilitiesPolicyAudit(collector);
+registerConsistency(collector);
 
 afterAll(() => {
   const report = collector.build();

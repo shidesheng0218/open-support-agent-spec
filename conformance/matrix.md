@@ -5,7 +5,7 @@ Per-case pass matrix for implementations in
 endpoint scenario), columns are implementations. **pass** = green in the latest
 recorded run; **n/a** = suite does not apply to that implementation.
 
-Latest recorded runs (2026-09-14): white-box **311 passed / 0 failed**
+Latest recorded runs (2026-09-14): white-box **345 passed / 0 failed**
 (TypeScript reference); black-box **22/22 passed** (v0.2 suites) and **29/29
 passed** (v0.3 `controlled-execution` profile) for both the TypeScript
 reference and the Python reference candidate.
@@ -27,6 +27,7 @@ other implementation is verified through the black-box runner below.
 | `policy-matrix` — §4 policy matrix: threshold, identity, evidence freshness, region, permission overreach, injection, duplicate, reason code, currency (11 cases) | pass | n/a (TS-only suite) |
 | `idempotency-reconciliation` — idempotent replay, no side effects, `uncertain` → reconciliation without auto-retry, reconcile → executed (4 cases) | pass | n/a (TS-only suite) |
 | `capabilities-policy-audit` — CapabilityManifest validation, 20 capabilities, tool capability mapping, policy lifecycle immutability, audit hash chain integrity and tenant isolation (8 cases) | pass | n/a (TS-only suite) |
+| `cross-source-consistency` — every duplicated value set agrees: `@osas/core` enum constants vs schema enums, the `AuditEventType` union vs `AUDIT_EVENT_TYPES`, and all 20 tool annotations/actionType enums vs `schemas/tools/*.json` (34 cases) | pass | n/a (TS-only suite) |
 
 ## Black-box runner (`pnpm osas:compat -- --target <url>`, `@osas/compat-runner`)
 

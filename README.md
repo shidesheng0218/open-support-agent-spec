@@ -42,7 +42,7 @@ default path.
 
 ## At a glance
 
-| 20 MCP tools | 3 profiles | 120 policy + 100 after-sales cases | 311 compat + 51 black-box checks |
+| 20 MCP tools | 3 profiles | 120 policy + 100 after-sales cases | 345 compat + 51 black-box checks |
 |---|---|---|---|
 | Core, ecommerce, SaaS | Schema-driven contracts | Offline safety evals | HTTP black-box conformance |
 
@@ -385,7 +385,7 @@ Tools:
 | Profile | Tools |
 |---|---|
 | core | `osas_core_get_case`, `osas_core_search_cases`, `osas_core_get_customer`, `osas_core_search_knowledge`, `osas_core_create_case_note`, `osas_core_create_escalation`, `osas_core_create_action_proposal` |
-| ecommerce | `osas_ecom_get_order`, `osas_ecom_list_orders`, `osas_ecom_get_shipment` |
+| ecommerce | `osas_ecom_get_order`, `osas_ecom_list_orders`, `osas_ecom_get_shipment`, `osas_ecom_get_shipment_incident`, `osas_ecom_get_refund_status`, `osas_ecom_create_item_claim_request`, `osas_ecom_create_exchange_request` |
 | saas | `osas_saas_get_subscription`, `osas_saas_list_invoices`, `osas_saas_get_credit_balance`, `osas_saas_create_credit_request`, `osas_saas_create_cancellation_request`, `osas_saas_create_plan_change_request` |
 
 Mutation tools only create `ActionProposal` objects (status `proposed`, permission

@@ -169,6 +169,10 @@ export const TOOL_DEFINITIONS: ToolDefinition[] = [
       properties: {
         caseId: { type: "string" },
         profile: { type: "string", enum: ["core", "ecommerce", "saas"] },
+        // Mirrors $defs/ActionType in schemas/core/common.json (the schema is
+        // the authority). exchange_request is allowed here even though it is
+        // never auto-executed — the policy engine caps it at require_approval
+        // and fulfillment is human-only, same as the dedicated shortcut tool.
         actionType: {
           type: "string",
           enum: [
@@ -178,6 +182,7 @@ export const TOOL_DEFINITIONS: ToolDefinition[] = [
             "return_request",
             "reshipment",
             "cancel_order",
+            "exchange_request",
             "credit_apply",
             "subscription_cancel",
             "plan_change",

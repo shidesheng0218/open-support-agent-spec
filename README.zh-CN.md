@@ -41,7 +41,7 @@
 
 ## 一眼看懂
 
-| 20 个 MCP 工具 | 3 个 Profile | 120 条策略 + 100 条售后案例 | 311 项兼容 + 51 项黑盒检查 |
+| 20 个 MCP 工具 | 3 个 Profile | 120 条策略 + 100 条售后案例 | 345 项兼容 + 51 项黑盒检查 |
 |---|---|---|---|
 | Core、电商、SaaS | Schema 驱动契约 | 离线安全评测 | HTTP 黑盒一致性 |
 
@@ -373,7 +373,7 @@ docs/  rfcs/  .github/workflows/  docker-compose.yml
 | Profile | 工具 |
 |---|---|
 | core | `osas_core_get_case`、`osas_core_search_cases`、`osas_core_get_customer`、`osas_core_search_knowledge`、`osas_core_create_case_note`、`osas_core_create_escalation`、`osas_core_create_action_proposal` |
-| ecommerce | `osas_ecom_get_order`、`osas_ecom_list_orders`、`osas_ecom_get_shipment` |
+| ecommerce | `osas_ecom_get_order`、`osas_ecom_list_orders`、`osas_ecom_get_shipment`、`osas_ecom_get_shipment_incident`、`osas_ecom_get_refund_status`、`osas_ecom_create_item_claim_request`、`osas_ecom_create_exchange_request` |
 | saas | `osas_saas_get_subscription`、`osas_saas_list_invoices`、`osas_saas_get_credit_balance`、`osas_saas_create_credit_request`、`osas_saas_create_cancellation_request`、`osas_saas_create_plan_change_request` |
 
 写入类工具只会创建 `ActionProposal`（状态 `proposed`，权限 `request-approval`），

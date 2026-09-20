@@ -28,13 +28,18 @@ unless you prefer otherwise.
 
 - **The reference implementation is demo-grade.** It is designed to make the
   specification runnable and testable — not to be deployed as a production
-  support system. It ships with an in-memory mock backend and a deterministic
-  mock model provider, without authentication or multi-tenant isolation.
+  support system. It ships with an in-memory mock backend, a deterministic mock
+  model provider, and a demo auth mode (`OSAS_AUTH_MODE=demo`), and it has
+  never been hardened or audited for production. Authentication (demo headers
+  or JWT/OIDC) and per-tenant isolation do exist and are covered by tests, but
+  they are reference-grade, not production-grade.
 - **Never feed real customer data** into this repository, its demos, its issues,
   or its fixtures. All fixtures under `packages/mock-backend/` are synthetic.
-- **Logs redact PII.** The reference API redacts authorization headers, email,
-  phone, and free-text bodies from its logs; keep this property intact in
-  contributions.
+- **Logs redact PII.** The reference API logs no request/response bodies and
+  configures log redaction for authorization headers, email, and phone
+  (`req.headers.authorization`, `*.email`, `*.phone` in `apps/api/src/plugins.ts`).
+  Spec §9 additionally requires any log pipeline that emits free-text bodies to
+  redact them — keep both properties intact in contributions.
 - **The model layer holds no credentials.** Models never receive backend
   credentials; all backend access flows through the adapter with an explicit
   principal and permission. Do not introduce code paths that pass secrets to a

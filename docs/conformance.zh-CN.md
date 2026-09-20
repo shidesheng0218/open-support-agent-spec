@@ -32,12 +32,13 @@ Runner 在自身环境中读到同样的变量，或收到 `--conformance-key <k
 | 端点 | 行为 |
 |---|---|
 | `POST /v1/conformance/reset` | 清空全部可变状态并重新载入 CONTRACTS.md §11 演示 fixtures；返回快照。 |
-| `POST /v1/conformance/fixtures/load` | 请求体 `{ "name": "demo" \| "empty" }`；`empty` 只保留演示策略（无工单/客户/订单）。 |
-| `GET /v1/conformance/snapshot` | 按租户统计（工单、建议、接管单、审计事件、策略版本、ShadowRun、用量记录）及审计链校验结果。 |
+| `POST /v1/conformance/fixtures/load` | 请求体 `{ "name": "demo" \| "empty" }`；`empty` 保留演示策略与售后 fixtures（`shipmentIncidents`、`refundTransactions`、`itemClaims`、`exchangeRequests`），并清零工单/客户/订单/物流/订阅/发票/知识库/证据/建议。 |
+| `GET /v1/conformance/snapshot` | 按租户统计（工单、建议、接管单、审计事件、策略版本、ShadowRun、用量记录、执行尝试/凭证、对账任务、provider 事件）及审计链校验结果。 |
 
 当 `OSAS_STORAGE=postgres` 时，reset 会额外清空存储表
-（`policy_versions`、`audit_events`、`execution_records`、`shadow_runs`、
-`model_usage`）；Adapter 数据集始终是内存 mock。
+（`provider_events`、`reconciliation_tasks`、`execution_receipts`、
+`execution_attempts`、`execution_records`、`shadow_runs`、`model_usage`、
+`audit_events`、`policy_versions`）；Adapter 数据集始终是内存 mock。
 
 ## 失败即关闭（fail closed）保证
 

@@ -1,9 +1,14 @@
 # OSAS Python Reference Implementation (candidate)
 
-A Python implementation of the OSAS v0.2 HTTP surface plus the v0.3 Controlled
-Execution Sandbox profile. It passes the black-box compatibility runner's full
-v0.2 suite (read-only + stateful) and the v0.3 `controlled-execution` profile —
-see "Verifying" below.
+A Python implementation of the OSAS v0.2 proposal/execution surface plus the
+v0.3 Controlled Execution Sandbox profile. It passes the black-box
+compatibility runner's full v0.2 suite (read-only + stateful) and the v0.3
+`controlled-execution` profile — see "Verifying" below.
+
+Scope note: it does **not** implement the approvals / handoffs / shadow-run
+endpoints (its capability manifest declares only what it serves); the black-box
+suites do not exercise those surfaces, so its `conforming` registration covers
+the surfaces it does implement.
 
 It is intentionally small and safe:
 

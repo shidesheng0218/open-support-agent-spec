@@ -36,12 +36,14 @@ when Conformance Mode is off (404).
 | Endpoint | Behavior |
 |---|---|
 | `POST /v1/conformance/reset` | Wipes all mutable state and re-seeds the CONTRACTS.md §11 demo fixtures; returns a snapshot. |
-| `POST /v1/conformance/fixtures/load` | Body `{ "name": "demo" \| "empty" }`; `empty` keeps only the demo policy (no cases/customers/orders). |
-| `GET /v1/conformance/snapshot` | Per-tenant counts (cases, proposals, handoffs, audit events, policy versions, ShadowRuns, usage records) plus the audit-chain verification result. |
+| `POST /v1/conformance/fixtures/load` | Body `{ "name": "demo" \| "empty" }`; `empty` keeps the demo policy and the after-sales fixtures (`shipmentIncidents`, `refundTransactions`, `itemClaims`, `exchangeRequests`) and zeroes cases/customers/orders/shipments/subscriptions/invoices/knowledge/evidence/proposals. |
+| `GET /v1/conformance/snapshot` | Per-tenant counts (cases, proposals, handoffs, audit events, policy versions, ShadowRuns, usage records, execution attempts/receipts, reconciliation tasks, provider events) plus the audit-chain verification result. |
 
 With `OSAS_STORAGE=postgres`, reset additionally clears the store tables
-(`policy_versions`, `audit_events`, `execution_records`, `shadow_runs`,
-`model_usage`); the adapter dataset itself is always the in-memory mock.
+(`provider_events`, `reconciliation_tasks`, `execution_receipts`,
+`execution_attempts`, `execution_records`, `shadow_runs`, `model_usage`,
+`audit_events`, `policy_versions`); the adapter dataset itself is always the
+in-memory mock.
 
 ## Fail-closed guarantees
 
