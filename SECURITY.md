@@ -35,11 +35,12 @@ unless you prefer otherwise.
   they are reference-grade, not production-grade.
 - **Never feed real customer data** into this repository, its demos, its issues,
   or its fixtures. All fixtures under `packages/mock-backend/` are synthetic.
-- **Logs redact PII.** The reference API logs no request/response bodies and
-  configures log redaction for authorization headers, email, and phone
-  (`req.headers.authorization`, `*.email`, `*.phone` in `apps/api/src/plugins.ts`).
-  Spec §9 additionally requires any log pipeline that emits free-text bodies to
-  redact them — keep both properties intact in contributions.
+- **Logs redact PII.** The reference API logs no request/response bodies by
+  default and configures log redaction for authorization headers, email,
+  phone, and free-text body fields (`req.headers.authorization`, `*.email`,
+  `*.phone`, `req.body`, `res.body`, `*.body` — see `apps/api/src/plugins.ts`,
+  pinned by `src/log-redaction.test.ts`). Keep this property intact in
+  contributions.
 - **The model layer holds no credentials.** Models never receive backend
   credentials; all backend access flows through the adapter with an explicit
   principal and permission. Do not introduce code paths that pass secrets to a

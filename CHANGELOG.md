@@ -18,6 +18,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   (multi-party governance, Draft, EN+ZH) and
   [RFC 0006](rfcs/0006-external-policy-decision-point.md) (external policy
   decision point — optional, tightening-only, Draft, EN+ZH).
+- **DCO enforcement**: `scripts/check-dco.mjs` (sign-off must match the
+  commit's author or committer; merge commits skipped) runs in the PR-only
+  `dco` CI job and locally via `pnpm check:dco`; CONTRIBUTING (EN+ZH) states
+  the enforcement.
+- **Log redaction now covers free-text bodies** (spec §9): `req.body`,
+  `res.body`, and `*.body` join the redact paths in the API logger, pinned by
+  a behaviour test (`apps/api/src/log-redaction.test.ts`) that drives real
+  pino output.
 - **Machine-readable demo fixtures**: `conformance/fixtures/demo-tenant.json`
   is the authoritative form of the CONTRACTS.md §11 dataset, with relative
   `now±N<unit>` timestamp tokens so the dataset never goes stale; generated

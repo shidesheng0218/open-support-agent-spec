@@ -24,10 +24,23 @@ export const SYSTEM_PRINCIPAL: Principal = {
   permission: "execute",
 };
 
+// Spec §9: log pipelines MUST redact at least the authorization header,
+// email, phone, and free-text bodies. `*.body` covers nested request/response
+// payloads; the explicit req/res paths keep the intent readable. Behaviour is
+// pinned by src/log-redaction.test.ts.
+export const LOG_REDACT_PATHS = [
+  "req.headers.authorization",
+  "*.email",
+  "*.phone",
+  "req.body",
+  "res.body",
+  "*.body",
+] as const;
+
 export const loggerOptions = {
   level: process.env.LOG_LEVEL ?? "info",
   redact: {
-    paths: ["req.headers.authorization", "*.email", "*.phone"],
+    paths: [...LOG_REDACT_PATHS],
     censor: "[redacted]",
   },
 };
