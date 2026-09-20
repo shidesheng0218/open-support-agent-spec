@@ -33,12 +33,12 @@
 
   <g transform="translate(86 352)">
     <rect width="184" height="48" rx="24" fill="white" fill-opacity="0.12" stroke="white" stroke-opacity="0.22"/>
-    <text x="92" y="31" text-anchor="middle" fill="white" font-family="Inter, ui-sans-serif, system-ui, sans-serif" font-size="17" font-weight="700">v0.1 Draft</text>
+    <text x="92" y="31" text-anchor="middle" fill="white" font-family="Inter, ui-sans-serif, system-ui, sans-serif" font-size="17" font-weight="700">v0.2 Draft</text>
     <rect x="200" width="190" height="48" rx="24" fill="#34D399" fill-opacity="0.18" stroke="#6EE7B7" stroke-opacity="0.6"/>
     <text x="295" y="31" text-anchor="middle" fill="#D1FAE5" font-family="Inter, ui-sans-serif, system-ui, sans-serif" font-size="17" font-weight="700">Apache-2.0</text>
   </g>
 
-  <g transform="translate(735 116)">
+  <g transform="translate(745 140) scale(0.82)">
     <path d="M84 88H202M286 88H404M488 88H606" stroke="url(#accent)" stroke-width="5" stroke-linecap="round"/>
     <path d="M194 80L208 88L194 96M396 80L410 88L396 96M598 80L612 88L598 96" stroke="#67E8F9" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
     <g>
