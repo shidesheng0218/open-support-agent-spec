@@ -5,7 +5,7 @@ import { buildControlledExecutionReport } from "./controlled-execution-eval.js";
 
 const here = dirname(fileURLToPath(import.meta.url));
 const outPath = resolve(here, "../report/controlled-execution-latest.json");
-const report = buildControlledExecutionReport();
+const report = await buildControlledExecutionReport();
 mkdirSync(dirname(outPath), { recursive: true });
 writeFileSync(outPath, JSON.stringify(report, null, 2) + "\n", "utf8");
 console.log(`eval:controlled — ${report.profile}`);

@@ -152,12 +152,19 @@ export async function proposalRoutes(app: FastifyInstance): Promise<void> {
       );
     }
     await syncAfterSalesCaseStatus(app, ctx.tenantId, proposal.id, "executing");
+    // RFC 0008: when the proposal came through the approval path, bind the
+    // execution to the approved action digest.
+    const approvals = await adapter.listApprovals(ctx, {});
+    const bindingApproval = approvals.find(
+      (a) => a.proposalId === proposal.id && a.status === "approved",
+    );
     const outcome = await runExecution(adapter, ctx, app.executionStore, proposal, {
       sink: app.auditStore,
       mode: app.executionMode.mode,
       attemptStore: app.executionAttemptStore,
       receiptStore: app.executionReceiptStore,
       reconciliationStore: app.reconciliationStore,
+      ...(bindingApproval ? { approval: bindingApproval } : {}),
       ...(app.pgPool ? { pgPool: app.pgPool } : {}),
     });
     await syncAfterSalesCaseStatus(

@@ -62,12 +62,15 @@ class Collector {
     );
     return {
       specVersion: controlled ? "0.3" : "0.2",
-      generator: controlled ? "@osas/compat-runner@0.3.0-draft" : "@osas/compat-runner@0.2.0",
+      generator: controlled ? "@osas/compat-runner@0.3.0-draft" : "@osas/compat-runner@0.2.1",
       profile: controlled ? "ecommerce-controlled-execution" : "osas-v0.2",
       target: options.target,
       runAt: new Date().toISOString(),
       mode: { stateful },
       ok: totals.failed === 0,
+      // The registry gate is stricter than ok: a skipped check is a check that
+      // did not run, and a claim made on partial evidence is not a gate pass.
+      gateOk: totals.failed === 0 && totals.skipped === 0,
       totals,
       suites,
     };

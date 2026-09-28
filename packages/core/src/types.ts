@@ -220,6 +220,13 @@ export interface Approval {
   expiresAt?: IsoDateTime;
   /** Policy approval group whose members may decide this approval. */
   approverGroupId?: string;
+  /**
+   * RFC 0008: SHA-256 (64 lowercase hex chars) over the canonical stable-JSON
+   * serialization of `{ actionType, params }` of the approved proposal,
+   * stamped at creation and re-verified at the execution boundary. Optional in
+   * v0.x; absent on approvals created before RFC 0008 (the check is skipped).
+   */
+  actionDigest?: string;
   createdAt: IsoDateTime;
   updatedAt: IsoDateTime;
 }
@@ -294,6 +301,7 @@ export type AuditEventType =
   | "handoff_resolved"
   | "prompt_injection_blocked"
   | "permission_overreach_blocked"
+  | "action_binding_mismatch_blocked"
   | "budget_exceeded"
   | "budget_warning"
   | "model_call_recorded"

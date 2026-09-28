@@ -3,6 +3,7 @@ export * from "./stable-stringify.js";
 export * from "./money.js";
 export * from "./evaluate.js";
 export * from "./execution.js";
+export * from "./action-binding.js";
 export * from "./audit-chain.js";
 export * from "./policy-store.js";
 export * from "./approval-lifecycle.js";

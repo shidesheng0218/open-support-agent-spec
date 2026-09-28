@@ -94,6 +94,9 @@ importers:
       '@osas/core':
         specifier: workspace:*
         version: link:../packages/core
+      '@osas/ecommerce-shadow':
+        specifier: workspace:*
+        version: link:../packages/ecommerce-shadow
       '@osas/model-gateway':
         specifier: workspace:*
         version: link:../packages/model-gateway

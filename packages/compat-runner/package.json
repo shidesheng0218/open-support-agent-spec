@@ -1,8 +1,25 @@
 {
   "name": "@osas/compat-runner",
-  "version": "0.2.0",
-  "private": true,
+  "version": "0.2.1",
   "type": "module",
+  "description": "Black-box HTTP conformance runner for the Open Support Agent Spec (OSAS): score any implementation over HTTP; gateOk is the registry gate.",
+  "license": "Apache-2.0",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/shidesheng0218/open-support-agent-spec.git",
+    "directory": "packages/compat-runner"
+  },
+  "keywords": [
+    "osas",
+    "conformance",
+    "ai-agents",
+    "customer-support",
+    "governance",
+    "black-box-testing"
+  ],
+  "engines": {
+    "node": ">=20"
+  },
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "exports": {
@@ -17,11 +34,15 @@
   "files": [
     "dist"
   ],
+  "publishConfig": {
+    "access": "public"
+  },
   "scripts": {
     "build": "tsc -p tsconfig.json",
     "typecheck": "tsc --noEmit -p tsconfig.json",
     "test": "vitest run",
-    "compat": "tsx src/cli.ts"
+    "compat": "tsx src/cli.ts",
+    "prepublishOnly": "pnpm run build && pnpm run test"
   },
   "dependencies": {
     "@osas/core": "workspace:*",

@@ -86,6 +86,29 @@ OSAS 承诺自本文档日期起 **12 个月的双修订支持窗口**：
 - 窗口期结束时项目将重新评估：下线旧路径、再延长一次，或发布迁移
   RFC。本文档不改动任何代码；上述计划是承诺，而非实现。
 
+## 5. Interceptors 工作组（观察项）
+
+MCP 社区的 **Interceptors 工作组**正在定义一等拦截原语，包含两种类型——
+`validators`（检查调用并返回通过/失败）与 `mutators`（变换其负载）——覆盖
+工具调用、资源读取、prompt 获取等，可以进程内、边车或远程方式执行，并按
+优先级排序成链。如果该原语落地，它将成为每个 MCP 宿主都实现的拦截契约，
+也是 OSAS 的策略决策最自然插入的那一层。
+
+现在就把映射说清楚，让接缝是刻意设计而非事后改造：
+
+- 一次 OSAS **策略求值**就是一个裁决比通过/失败更丰富的 validator——
+  `auto_execute` / `require_approval` / `block`。`block` 映射为 validator 的
+  拒绝；`require_approval` 是 MCP 不建模的挂起，因此它留在 OSAS 层的流程里
+  （见 §1 的 MRTR 讨论），绝不退化为静默放行。
+- OSAS 的**参数 transforms**（`{ path, op: "redact" }`）映射到 mutator
+  类型——不变式是：mutator 只能收紧（脱敏），绝不能放宽 validator 批准的
+  内容。
+- MCP 的 `idempotentHint` 至今仍是一个建议性布尔值，没有键、没有校验、没有
+  对账；OSAS 的 `(tenantId, idempotencyKey)` 契约是它下面的执行层。
+
+OSAS 会跟踪该工作组的进展，并在原语稳定后以 RFC 形式发布绑定，而不是
+先做一个临时实现。
+
 ## 状态
 
 Draft（草案）。一旦至少一个独立实现在互操作测试中确认了 MRTR 映射，

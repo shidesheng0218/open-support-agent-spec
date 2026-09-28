@@ -11,6 +11,31 @@ This is an **OSAS mapping profile**, not a claim of conformance to UCP, ACP,
 or any provider's webhook format. An adapter owns the upstream protocol
 client, authentication, signature verification, and field extraction.
 
+## Relationship to AP2 (Agent Payments Protocol)
+
+[AP2](https://github.com/google-agentic-commerce/AP2) (donated to the FIDO
+Alliance at v0.2) standardizes **signed, typed, non-repudiable intent** for
+payments: Verifiable Digital Credentials and Checkout/Payment Mandates with
+open (constraints) and closed (authorized) stages, chained so the mandate
+sequence forms a verifiable audit trail. The structural kinship with OSAS is
+real — an OSAS `ActionProposal` is a typed intent record, and the per-tenant
+hash chain plays the role AP2's mandate chain plays for payments.
+
+The deliberate division of labor:
+
+- **AP2 owns payment intent** — proving *the buyer authorized this charge*;
+  it evaluates no policy and decides nothing about execution.
+- **OSAS owns the support write boundary** — whether a refund/credit/reshipment
+  may auto-execute, requires approval, or is blocked, plus idempotent execution
+  and reconciliation against the system of record.
+
+An implementation that receives AP2 mandates SHOULD carry the mandate reference
+through as evidence (`Evidence.kind: "order"` / `policy` with the mandate id in
+`source`) rather than treating mandate validation as policy evaluation. OSAS
+does not re-implement mandate verification, and passing the OSAS conformance
+suites implies nothing about AP2. A future RFC MAY define a tighter mapping if
+≥2 implementations converge on one.
+
 ## Trust boundary
 
 An adapter MUST complete all of the following before it calls the internal

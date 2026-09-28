@@ -16,19 +16,58 @@
     "updatedAt"
   ],
   "properties": {
-    "id": { "$ref": "./common.json#/$defs/Id" },
-    "specVersion": { "$ref": "./common.json#/$defs/SpecVersion" },
-    "tenantId": { "$ref": "./common.json#/$defs/Id" },
-    "proposalId": { "$ref": "./common.json#/$defs/Id" },
-    "status": { "type": "string", "enum": ["pending", "approved", "rejected", "expired"] },
-    "approverId": { "type": "string" },
-    "comment": { "type": "string" },
-    "policyVersion": { "type": "string" },
-    "requestedAt": { "$ref": "./common.json#/$defs/DateTime" },
-    "decidedAt": { "$ref": "./common.json#/$defs/DateTime" },
-    "expiresAt": { "$ref": "./common.json#/$defs/DateTime" },
-    "approverGroupId": { "type": "string" },
-    "createdAt": { "$ref": "./common.json#/$defs/DateTime" },
-    "updatedAt": { "$ref": "./common.json#/$defs/DateTime" }
+    "id": {
+      "$ref": "./common.json#/$defs/Id"
+    },
+    "specVersion": {
+      "$ref": "./common.json#/$defs/SpecVersion"
+    },
+    "tenantId": {
+      "$ref": "./common.json#/$defs/Id"
+    },
+    "proposalId": {
+      "$ref": "./common.json#/$defs/Id"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "pending",
+        "approved",
+        "rejected",
+        "expired"
+      ]
+    },
+    "approverId": {
+      "type": "string"
+    },
+    "comment": {
+      "type": "string"
+    },
+    "policyVersion": {
+      "type": "string"
+    },
+    "requestedAt": {
+      "$ref": "./common.json#/$defs/DateTime"
+    },
+    "decidedAt": {
+      "$ref": "./common.json#/$defs/DateTime"
+    },
+    "expiresAt": {
+      "$ref": "./common.json#/$defs/DateTime"
+    },
+    "approverGroupId": {
+      "type": "string"
+    },
+    "createdAt": {
+      "$ref": "./common.json#/$defs/DateTime"
+    },
+    "updatedAt": {
+      "$ref": "./common.json#/$defs/DateTime"
+    },
+    "actionDigest": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$",
+      "description": "SHA-256 over the canonical stable-JSON serialization of { actionType, params } of the approved proposal (RFC 0008). Recomputed and verified at execution time."
+    }
   }
 }

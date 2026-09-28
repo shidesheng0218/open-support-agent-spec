@@ -24,6 +24,7 @@ describe("compat runner against the reference API", () => {
     const target = await listen(await buildApp({ logger: false }));
     const report = await runCompat({ target });
     expect(report.ok).toBe(true);
+    expect(report.gateOk).toBe(false); // stateful suite skipped → not a gate pass
     expect(report.mode.stateful).toBe(false);
     expect(report.totals.failed).toBe(0);
     const stateful = report.suites.find((s) => s.name === "stateful");
@@ -45,6 +46,7 @@ describe("compat runner against the reference API", () => {
     expect(report.mode.stateful).toBe(true);
     expect(report.totals.failed).toBe(0);
     expect(report.ok).toBe(true);
+    expect(report.gateOk).toBe(true); // full suite ran — registry-grade evidence
     const stateful = report.suites.find((s) => s.name === "stateful");
     expect(stateful?.passed).toBeGreaterThanOrEqual(8);
   });

@@ -13,7 +13,10 @@ The authoritative gate for any compatibility claim is defined in
 [GOVERNANCE.md](../GOVERNANCE.md#declaring-compatibility): the black-box
 compatibility runner (`@osas/compat-runner`, invoked as
 `osas:compat -- --target <url>`) must pass against the implementation over
-HTTP, **including the stateful suite**, with `ok: true` in the report.
+HTTP, **including the stateful suite**, with **`gateOk: true`** in the report.
+`gateOk` is `ok` plus **zero skipped checks** — the runner enforces in tooling
+what was previously only policy: a stateful-skipped run reports `ok: true` but
+`gateOk: false` and does not satisfy the gate.
 
 ## Status values in `implementations.json`
 
@@ -36,7 +39,7 @@ hold:
    different organization or individual than the OSAS founding maintainers.
 3. **Passing evidence** — the black-box compat runner passes against a live
    target operated by the implementer (or reproducible CI evidence), including
-   the stateful suite, with `ok: true` in the report.
+   the stateful suite, with **`gateOk: true`** in the report.
 4. **Named spec version** — the claim names the spec version tested (e.g.
    "OSAS 0.2 ecommerce-compatible").
 

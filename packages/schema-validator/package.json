@@ -1,6 +1,6 @@
 {
   "name": "@osas/schema-validator",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "description": "Ajv 2020-12 based JSON Schema validation for OSAS objects against the schemas/ manifest.",
   "license": "Apache-2.0",
   "type": "module",
@@ -24,7 +24,7 @@
     "access": "public"
   },
   "scripts": {
-    "build": "tsc -p tsconfig.json",
+    "build": "tsc -p tsconfig.json && node scripts/copy-schemas.mjs",
     "typecheck": "tsc --noEmit -p tsconfig.json",
     "test": "vitest run"
   },

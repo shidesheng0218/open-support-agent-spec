@@ -102,6 +102,32 @@ this document:
   extend once, or publish a migration RFC. No code changes are made by this
   document; the plan above is a commitment, not an implementation.
 
+## 5. The Interceptors Working Group (watch item)
+
+The MCP community's **Interceptors Working Group** is chartering a first-class
+interception primitive with two types — `validators` (inspect a call and return
+pass/fail) and `mutators` (transform its payload) — spanning tool calls,
+resource reads, prompt gets, and more, executable in-process, as a sidecar, or
+remote, in priority-ordered chains. If that primitive ships, it becomes the
+interception contract every MCP host implements, and it is the layer OSAS's
+policy decisions most naturally plug into.
+
+The mapping, stated now so the seam is deliberate rather than retrofitted:
+
+- An OSAS **policy evaluation** is a validator with a richer verdict than
+  pass/fail — `auto_execute` / `require_approval` / `block`. `block` maps to a
+  validator refusal; `require_approval` is a suspension MCP does not model, so
+  it remains an OSAS-level flow (see §1 on MRTR), never a silent pass.
+- OSAS **param transforms** (`{ path, op: "redact" }`) map onto the mutator
+  type — with the invariant that a mutator may only tighten (redact), never
+  widen, what a validator approved.
+- MCP's `idempotentHint` remains an advisory boolean with no key, no
+  verification, and no reconciliation; OSAS's `(tenantId, idempotencyKey)`
+  contract is the enforcement layer underneath it.
+
+OSAS will track the working group and, once the primitive stabilizes, publish
+the binding as an RFC rather than shipping an ad-hoc one.
+
 ## Status
 
 Draft. This document will be promoted alongside the corresponding RFC once at

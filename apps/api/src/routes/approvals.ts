@@ -122,6 +122,8 @@ export async function approvalRoutes(app: FastifyInstance): Promise<void> {
         attemptStore: app.executionAttemptStore,
         receiptStore: app.executionReceiptStore,
         reconciliationStore: app.reconciliationStore,
+        // RFC 0008: bind this execution to the approval just decided.
+        approval,
         ...(app.pgPool ? { pgPool: app.pgPool } : {}),
       });
       await syncAfterSalesCaseStatus(

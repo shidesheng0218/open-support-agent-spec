@@ -13,7 +13,7 @@ import type { ModelGateway } from "@osas/model-gateway";
 import type { UsageStore } from "@osas/model-gateway";
 
 export const SPEC_VERSION = "0.2";
-export const API_VERSION = "0.2.0";
+export const API_VERSION = "0.2.1";
 // Canonical home is auth.ts (the auth hook owns tenant resolution).
 export { DEFAULT_TENANT } from "./auth.js";
 
@@ -151,6 +151,10 @@ export function errorHandler(err: FastifyError, req: FastifyRequest, reply: Fast
   }
   if (err instanceof PolicyImmutableError || err.name === "PolicyImmutableError") {
     return send(409, "POLICY_IMMUTABLE", err.message);
+  }
+  if (err.name === "ActionBindingMismatchError") {
+    // RFC 0008: the proposal no longer matches its approved action digest.
+    return send(409, "ACTION_BINDING_MISMATCH", err.message);
   }
   if (
     err instanceof IllegalTransitionError ||

@@ -49,6 +49,7 @@ export const POLICY_REASON_CODES = [
   "REGION_UNLISTED",
   "INSUFFICIENT_EVIDENCE",
   "EVIDENCE_STALE",
+  "NEVER_AUTO_EXECUTE",
 ] as const;
 
 export type PolicyReasonCode = (typeof POLICY_REASON_CODES)[number];

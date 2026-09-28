@@ -5,6 +5,7 @@ import {
   type ExecutionResult,
   type ProposalStatus,
 } from "@osas/core";
+import { assertActionBinding, type ActionBinding } from "./action-binding.js";
 import { applyParamTransforms } from "./param-transforms.js";
 
 /**
@@ -110,6 +111,9 @@ export interface ExecuteOutcome {
  *   stored result with `replayed: true` and never calls the adapter.
  * - Status guard: proposal must be `approved`, otherwise throws
  *   {@link ExecutionStatusError} (API maps to 409).
+ * - Action binding (RFC 0008): when `binding.actionDigest` is supplied, the
+ *   proposal's `{ actionType, params }` must hash to it, otherwise throws
+ *   {@link ActionBindingMismatchError} before any transition or adapter call.
  * - Transitions: approved → executing → executed | failed |
  *   reconciliation_required. Uncertain outcomes are NEVER auto-retried.
  * - §4 step 11: `proposal.policyDecision.transforms` (e.g. redaction) are
@@ -122,6 +126,7 @@ export async function executeProposal(
   adapter: ActionExecutor,
   store: ExecutionStore,
   now: Date = new Date(),
+  binding?: ActionBinding,
 ): Promise<ExecuteOutcome> {
   // Fail closed: some actionTypes (exchange_request) are never executed, even
   // with an approval on record. Checked before replay and status guards.
@@ -137,6 +142,10 @@ export async function executeProposal(
   if (proposal.status !== "approved") {
     throw new ExecutionStatusError(proposal.status);
   }
+
+  // RFC 0008: an approval authorizes an exact action, not a proposal reference.
+  // The digest covers the pre-transform params — what the approver saw.
+  assertActionBinding(proposal, binding);
 
   const executing = transitionProposal(proposal, "executing");
   // §4 step 11: the decision's transforms (e.g. PII redaction) are applied by

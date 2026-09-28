@@ -120,8 +120,11 @@ Agent 改变业务状态的**唯一**途径。建议是一条结构化、可审�
 `profile` **必须**与 actionType 所属 Profile 一致（参考实现中以 `ACTION_TYPE_PROFILE`
 映射表达）。不一致构成 `PROFILE_MISMATCH` 违规（§5 第 3 步），并在 Schema 层同样被拒绝。
 
-**金融类 actionType**：`refund`、`reshipment`、`credit_apply`。这三类要求提供 `amount`
-并引用至少一条证据。
+**金融类 actionType**：`refund`、`reshipment`、`credit_apply`，以及作为金融类动作的
+`exchange_request`（§15.5）。这些 actionType 至少引用一条证据，且由引擎强制
+（`INSUFFICIENT_EVIDENCE`，§5 第 10 步）。`refund`、`reshipment`、`credit_apply`
+的建议**必须**携带 `amount`，以便进行阈值求值（§5 第 7 步）；`exchange_request`
+以 `params` 中的 `priceDelta` 表达金额（§15.4）。
 
 ### 2.6 Approval（审批）
 
@@ -129,12 +132,21 @@ Agent 改变业务状态的**唯一**途径。建议是一条结构化、可审�
 |---|---|---|---|
 | `tenantId` | string | 是 | 所属租户 |
 | `proposalId` | string | 是 | 被审批的建议 |
-| `status` | enum | 是 | `pending` \| `approved` \| `rejected` |
+| `status` | enum | 是 | `pending` \| `approved` \| `rejected` \| `expired` |
 | `approverId` | string | 否 | 做出决定的人 |
 | `comment` | string | 否 | 审批备注 |
 | `policyVersion` | string | 是 | 发起审批时的策略版本 |
 | `requestedAt` | date-time | 是 | 发起时间 |
 | `decidedAt` | date-time | 否 | 决定时间 |
+| `expiresAt` | date-time | 否 | 超过该时间后审批不可再被决定 |
+| `approverGroupId` | string | 否 | 审批请求路由到的审批组 |
+| `actionDigest` | string | 否 | RFC 0008：对被批准建议的 `{ actionType, params }` 规范化 JSON 的 SHA-256（64 位小写十六进制）；在执行边界重新校验（§6） |
+
+**审批 fail-safe（过期）。** 处于 `pending` 的审批在其 `expiresAt` 过期——显式设置时
+以显式值为准，否则为 `requestedAt` + 租户策略的 `approval.timeoutSeconds`（§2.7）。过期后
+再尝试决定**必须**以 409 `APPROVAL_TIMED_OUT` 拒绝：审批变为 `expired`，建议关闭为
+`rejected`，且该拒绝只审计一次。超时处理仅允许拒绝——`approval.onTimeout` 恒为
+`"deny"`；不存在"超时放行"或"超时挂起"的配置。
 
 ### 2.7 TenantPolicy 与 PolicyRule（租户策略与规则）
 
@@ -150,6 +162,7 @@ Agent 改变业务状态的**唯一**途径。建议是一条结构化、可审�
 | `budget` | object | 否 | `{ dailyUsdCap?: number }` 模型预算提示 |
 | `rules` | PolicyRule[] | 是 | 求值规则 |
 | `defaultDecision` | const | 是 | 恒为 `"block"` —— 未匹配的动作一律阻断 |
+| `approval` | object | 否 | `{ timeoutSeconds?: integer, onTimeout: "deny", approverGroups?: [{ id, memberIds }] }` —— 审批 fail-safe 配置（§2.6） |
 
 `PolicyRule`：
 
@@ -163,6 +176,7 @@ Agent 改变业务状态的**唯一**途径。建议是一条结构化、可审�
 | `identityMaxAgeSeconds` | integer | 否 | 身份验证最大年龄 |
 | `allowedRegions` | string[] | 否 | 地区允许列表（缺省 = 全部允许） |
 | `blockedRegions` | string[] | 否 | 地区禁止列表 |
+| `transforms` | array | 否 | 确定性参数改写 `[{ path, op: "redact", replacement? }]`，随决策携带（§5），在适配器见到参数之前应用；绝不附加在 `block` 决策上 |
 
 ### 2.8 AuditEvent（审计事件）
 
@@ -189,7 +203,10 @@ Agent 改变业务状态的**唯一**途径。建议是一条结构化、可审�
 `handoff_created`、`handoff_resolved`、`prompt_injection_blocked`、
 `permission_overreach_blocked`、`budget_exceeded`、`model_call_recorded`，
 以及（v0.1.1）`policy_draft_created`、`policy_simulated`、`policy_approved`、
-`policy_activated`、`policy_retired`。
+`policy_activated`、`policy_retired`；以及（执行、预算与影子运行新增）
+`budget_warning`、`execution_attempt_created`、`provider_event_received`、
+`shadow_run_created`、`shadow_run_reviewed`；以及（RFC 0008）
+`action_binding_mismatch_blocked`。
 
 ### 2.9 HumanHandoff（人工接管）
 
@@ -309,9 +326,13 @@ PolicyDecision = {
   decision: "auto_execute" | "require_approval" | "block",
   reasons: [{ code: string, message: string }],
   policyVersion: string,
-  evaluatedAt: date-time
+  evaluatedAt: date-time,
+  transforms?: [{ path: string, op: "redact", replacement?: string }]
 }
 ```
+
+非 `block` 的决策**可以**携带命中规则的 `transforms`；`block` 决策绝不携带
+transforms（被阻断的动作不会被部分执行）。
 
 算法收集**全部**适用原因；最终决策取最严重者：
 `block` > `require_approval` > `auto_execute`。按序执行以下步骤：
@@ -343,6 +364,12 @@ PolicyDecision = {
     （`expiresAt` < 当前时间）或自 `retrievedAt` 起超过 `maxEvidenceAgeSeconds`
     → `require_approval`。
 11. 否则采用命中规则的 `decision`（`auto_execute` 或 `require_approval`）。
+12. **`NEVER_AUTO_EXECUTE`** —— actionType 属于绝不自动执行集合
+    （`exchange_request`，§15.5）→ 决策被封顶为 `require_approval`，即使命中的规则
+    写的是 `auto_execute`。
+
+上述步骤顺序是参考实现的阅读顺序。由于最终决策取所有适用原因中最严重者，检查顺序
+在结果中不可观测。
 
 副作用（由引擎或 API 层执行）：
 
@@ -372,6 +399,11 @@ PolicyDecision = {
 3. `reconcile(proposalId, outcome)` 仅允许从 `reconciliation_required` 发起，把建议
    推进到 `executed` 或 `failed`，并产生 `reconciliation_resolved`。对账是人工驱动
    的恢复路径，不是自动重试。
+4. **动作绑定（RFC 0008）。** 当执行由审批授权时，执行实现**必须**用建议的
+   `{ actionType, params }` 重新计算该审批的 `actionDigest`，两者不一致时**必须**拒绝
+   执行——且在任何状态迁移或适配器调用之前（409 `ACTION_BINDING_MISMATCH`，并恰好
+   审计一次 `action_binding_mismatch_blocked`；建议不做状态迁移）。摘要覆盖的是
+   转换前的 params：即审批人所见。该字段出现之前创建的审批没有摘要，跳过校验。
 
 ## 7. 工具 Profile（MCP）
 
@@ -392,12 +424,16 @@ Agent 只能通过 20 个 MCP 工具与后端交互。每个工具的输入 Sche
 | 8 | `osas_ecom_get_order` | ecommerce | `getOrder` |
 | 9 | `osas_ecom_list_orders` | ecommerce | `listOrders` |
 | 10 | `osas_ecom_get_shipment` | ecommerce | `getShipment` |
-| 11 | `osas_saas_get_subscription` | saas | `getSubscription` |
-| 12 | `osas_saas_list_invoices` | saas | `listInvoices` |
-| 13 | `osas_saas_get_credit_balance` | saas | `getCreditBalance` |
-| 14 | `osas_saas_create_credit_request` | saas | `createActionProposal` |
-| 15 | `osas_saas_create_cancellation_request` | saas | `createActionProposal` |
-| 16 | `osas_saas_create_plan_change_request` | saas | `createActionProposal` |
+| 11 | `osas_ecom_get_shipment_incident` | ecommerce | `getShipmentIncident` |
+| 12 | `osas_ecom_get_refund_status` | ecommerce | `getRefundStatus` |
+| 13 | `osas_ecom_create_item_claim_request` | ecommerce | `proposeItemClaim` |
+| 14 | `osas_ecom_create_exchange_request` | ecommerce | `createActionProposal` |
+| 15 | `osas_saas_get_subscription` | saas | `getSubscription` |
+| 16 | `osas_saas_list_invoices` | saas | `listInvoices` |
+| 17 | `osas_saas_get_credit_balance` | saas | `getCreditBalance` |
+| 18 | `osas_saas_create_credit_request` | saas | `createActionProposal` |
+| 19 | `osas_saas_create_cancellation_request` | saas | `createActionProposal` |
+| 20 | `osas_saas_create_plan_change_request` | saas | `createActionProposal` |
 
 规范性规则：
 
@@ -511,14 +547,16 @@ v0.1.1 新增能力声明、策略版本生命周期与审计完整性。所有�
 | `implementationVersion` | string | 是 | 实现版本号 |
 | `profiles` | array | 是 | `{ name: core\|ecommerce\|saas, capabilities: Capability[] }` |
 | `transports` | array | 是 | `http`、`mcp` 的子集 |
-| `executionModes` | array | 是 | `proposal_only`、`shadow`、`live` 的子集 |
+| `executionModes` | array | 是 | `proposal_only`、`shadow`、`sandbox`、`live` 的子集 |
 | `adapterVersion` | string | 是 | Adapter 契约版本 |
 
-规范定义的 16 种能力：`case.read`、`customer.read`、`knowledge.read`、
+规范定义的 20 种能力：`case.read`、`customer.read`、`knowledge.read`、
 `evidence.read`、`note.write`、`escalation.write`、`proposal.write`、
 `approval.read`、`approval.decide`、`audit.read`、`ecommerce.order.read`、
 `ecommerce.shipment.read`、`ecommerce.refund.propose`、
-`ecommerce.refund.execute`、`saas.subscription.read`、`saas.credit.propose`。
+`ecommerce.refund.execute`、`ecommerce.shipment_incident.read`、
+`ecommerce.refund_status.read`、`ecommerce.item_claim.propose`、
+`ecommerce.exchange.propose`（§15.6）、`saas.subscription.read`、`saas.credit.propose`。
 
 Adapter 通过可选的 `getCapabilities` 方法暴露能力清单。一旦声明即生效：
 任何所需能力未被声明的 MCP 工具调用或 HTTP 操作**必须**以
@@ -569,7 +607,7 @@ Adapter 保持宽松行为（向后兼容）。
 
 ### 12.4 一致性新增检查
 
-兼容性套件新增检查：能力清单 Schema 有效性、参考实现清单声明全部 16 种能力、
+兼容性套件新增检查：能力清单 Schema 有效性、参考实现清单声明全部 20 种能力、
 工具→能力映射、只读清单的合法声明、策略版本不可变性与生命周期合法性、
 以及审计哈希链篡改检测与跨租户隔离。
 

@@ -50,7 +50,9 @@ An implementation may declare **OSAS profile compatibility** (for `core`,
 `ecommerce`, or `saas`) only if the black-box compatibility runner
 (`@osas/compat-runner`, invoked as `osas:compat -- --target <url>`) passes against
 that implementation over HTTP — including the stateful suite — and the
-machine-readable report shows `ok: true` for the declared profile. The in-repo
+machine-readable report shows **`gateOk: true`** for the declared profile. `gateOk`
+is `ok` with the additional requirement of **zero skipped checks**, so a run that
+skipped the stateful suite cannot satisfy the gate. The in-repo
 compatibility suite (`@osas/compat-suite`) regression-tests the reference
 implementation itself; it shares the report semantics (`ok` / suites / per-check)
 but is not the gate for third-party declarations. Compatibility claims must name

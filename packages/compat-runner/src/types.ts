@@ -18,7 +18,7 @@ export interface RunnerSuite {
 
 export interface CompatRunReport {
   specVersion: "0.2" | "0.3";
-  generator: "@osas/compat-runner@0.2.0" | "@osas/compat-runner@0.3.0-draft";
+  generator: "@osas/compat-runner@0.2.1" | "@osas/compat-runner@0.3.0-draft";
   profile: "osas-v0.2" | "ecommerce-controlled-execution";
   target: string;
   runAt: string;
@@ -27,6 +27,13 @@ export interface CompatRunReport {
     stateful: boolean;
   };
   ok: boolean;
+  /**
+   * The registry gate: true only when every check ran and passed — i.e.
+   * `ok` with zero skipped checks. A read-only run (no conformance key) skips
+   * the stateful suite, so it reports `ok: true` but `gateOk: false`.
+   * GOVERNANCE.md requires `gateOk: true` for a compatibility claim.
+   */
+  gateOk: boolean;
   totals: { passed: number; failed: number; skipped: number };
   suites: RunnerSuite[];
 }

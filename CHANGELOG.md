@@ -9,6 +9,31 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **Action-bound approvals (RFC 0008, EN+ZH)**: an Approval now carries an
+  optional `actionDigest` — SHA-256 over the canonical stable-JSON serialization
+  of the approved proposal's `{ actionType, params }`, stamped at creation. The
+  execution boundary re-computes and verifies it before any state transition or
+  adapter call; a mismatch is refused with 409 `ACTION_BINDING_MISMATCH` and
+  audited once as the new `action_binding_mismatch_blocked` event type. Adapted
+  from Microsoft AGT's `enforced_identity` (ADR-0030) onto the OSAS approval
+  lifecycle; approvals predating the field skip the check (backward compatible).
+  Threat model gains T14 (approval/execution divergence).
+- **Compat runner registry gate**: the report gains `gateOk` — `ok` with the
+  additional requirement of zero skipped checks, so a stateful-skipped run can
+  no longer read as a gate pass. GOVERNANCE.md and `conformance/README.md` now
+  require `gateOk: true` for a registry entry; CI asserts it on all four
+  black-box runs.
+- **Controlled-execution eval is now behavioural**: the three vacuous checks
+  (a hardcoded `check(true)`, a `Set` tautology, and a literal-object
+  assertion) are replaced by assertions that drive the real execution path —
+  `executeProposal` against a counting adapter plus the provider-event store:
+  `uncertain` parks in `reconciliation_required` and a blind retry is blocked
+  by the status guard; a replayed idempotency key returns the stored result
+  with no second adapter call; provider events deduplicate on
+  `(tenantId, provider, providerEventId)`; `exchange_request` is refused before
+  any adapter call.
+
+
 - **Commerce protocol post-purchase mapping**: the reference API now accepts
   allowlisted `ucp` / `acp` post-purchase events only through its internal
   Provider Event ingestion boundary, normalizes their payload before hashing
@@ -211,6 +236,43 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `execution_attempt_created` and `provider_event_received`, which the
   reference implementation has been emitting — previously valid events would
   have failed their own published schema.
+
+## [0.2.1] - 2026-09-28
+
+A maintenance release of the v0.2 line: **no behavioural, schema-shape, or
+spec-version change** — it corrects documentation/schema/version drift found
+by a full self-audit (see `docs/competitive-deep-dive.md` §6.2).
+
+### Fixed
+
+- **Normative spec tool table** (spec §7, EN+ZH): the prose said "20 MCP
+  tools" while the normative table listed 16 rows; the four §15.6 tools
+  (`osas_ecom_get_shipment_incident`, `osas_ecom_get_refund_status`,
+  `osas_ecom_create_item_claim_request`, `osas_ecom_create_exchange_request`)
+  are now listed, so the normative surface matches `TOOL_DEFINITIONS`.
+- **Capability counts agree** (spec §12.1/§12.4, EN+ZH): "16 spec-defined
+  capabilities" corrected to the 20 in `CAPABILITIES`, including the four
+  after-sales capabilities; §12.1's `executionModes` row now includes
+  `sandbox`.
+- **Approval fail-safe is now normative prose, not schema-only** (spec §2.6,
+  §2.7, EN+ZH): `Approval.status` gains `expired`; the table gains `expiresAt`
+  and `approverGroupId`; and the timeout semantics behind threat T13
+  (`approval.timeoutSeconds`, deny-only `onTimeout`, 409 `APPROVAL_TIMED_OUT`)
+  are written into the spec.
+- **`PolicyRule.transforms` and `PolicyDecision.transforms` documented** (spec
+  §2.7, §5, EN+ZH); `NEVER_AUTO_EXECUTE` is now an explicit evaluation step
+  (§5 step 12) and a member of `POLICY_REASON_CODES` in `@osas/policy-engine`.
+- **`AuditEventType` prose list completed** (spec §2.8, EN+ZH) with
+  `budget_warning`, `execution_attempt_created`, `provider_event_received`,
+  `shadow_run_created`, `shadow_run_reviewed`.
+- **`docs/implementing-osas.md` (EN+ZH)**: schema counts corrected (core 15,
+  ecommerce 6) and the ecommerce tool list completed (7 tools).
+- **`schemas/manifest-v0.3.json`**: `after-sales-case` and
+  `after-sales-decision`, previously on disk but registered in no top-level
+  manifest, are now registered.
+- **Version-consistency gate** (`scripts/check-version-consistency.mjs`): the
+  stale-tool-count check now also scans the normative spec files so this class
+  of drift cannot recur silently.
 
 ## [0.2.0] - 2026-09-07
 

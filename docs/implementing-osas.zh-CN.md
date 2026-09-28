@@ -28,7 +28,7 @@ v1.0 的硬性门槛**，实现者将在 v1.0 获得正式治理席位（见
 ## 最小实现路径
 
 `schemas/manifest.json` 是权威清单，按 profile 分组：**core**
-（`core/` 下 14 项）、**ecommerce**（`profiles/ecommerce/` 下 2 项）、
+（`core/` 下 15 项）、**ecommerce**（`profiles/ecommerce/` 下 6 项）、
 **saas**（`profiles/saas/` 下 3 项），以及 **tools**（`tools/` 下 20 个
 MCP 工具输入 Schema）。v0.3 Draft 的受控执行 Schema 单独列在
 `schemas/manifest-v0.3.json`。
@@ -47,11 +47,16 @@ MCP 工具输入 Schema）。v0.3 Draft 的受控执行 Schema 单独列在
 
 ### Ecommerce profile（在 core 之上叠加）
 
-- Schema：`profiles/ecommerce/order.json`、`profiles/ecommerce/shipment.json`。
-- 动作类型：`refund`、`return_request`、`reshipment`、`cancel_order`
-  （`refund`/`reshipment` 为金融动作：必须带金额 + ≥1 条证据）。
+- Schema：`profiles/ecommerce/order.json`、`profiles/ecommerce/shipment.json`、
+  `profiles/ecommerce/shipment-incident.json`、`profiles/ecommerce/refund-transaction.json`、
+  `profiles/ecommerce/item-claim.json`、`profiles/ecommerce/exchange-request.json`。
+- 动作类型：`refund`、`return_request`、`reshipment`、`cancel_order`、
+  `exchange_request`（金融类动作：`refund`/`reshipment`/`credit_apply` 必须带金额；
+  所有金融类动作都要求 ≥1 条证据 —— 规范 §2.5、§15.5）。
 - 工具输入 Schema：`osas_ecom_get_order`、`osas_ecom_list_orders`、
-  `osas_ecom_get_shipment`。
+  `osas_ecom_get_shipment`、`osas_ecom_get_shipment_incident`、
+  `osas_ecom_get_refund_status`、`osas_ecom_create_item_claim_request`、
+  `osas_ecom_create_exchange_request`。
 
 ### SaaS profile（在 core 之上叠加）
 
@@ -102,14 +107,26 @@ runner 发送的 `x-tenant-id` / `x-osas-role` 请求头；JWT 模式的目标�
 ## 用 compat runner 验证
 
 黑盒 runner（`@osas/compat-runner`，`packages/compat-runner/src/`）只通过
-HTTP 驱动你的实现——不 import 你的任何代码，并在本地用本仓库的 Schema
-校验响应。
+HTTP 驱动你的实现——不 import 你的任何代码，并在本地用规范的 Schema 校验响应
+（Schema 已随包打包，npm 安装可脱离本仓库独立使用）。
 
 ### 准备
 
+包发布后无需检出本仓库：
+
+```bash
+npx @osas/compat-runner --target https://your-osas-service.example.com
+```
+
+若从本仓库检出的代码运行：
+
 ```bash
 pnpm install && pnpm build      # 构建 @osas/core、schema-validator 等 runner 依赖
+pnpm osas:compat -- --target https://your-osas-service.example.com
 ```
+
+整个闭环——实现下文的表面、把 runner 指过去、读报告——被设计成能在一个下午内
+完成。
 
 ### 只读套件（无需 key）
 
@@ -181,20 +198,23 @@ pnpm osas:compat -- --target http://localhost:8080 \
 ```jsonc
 {
   "specVersion": "0.2",
-  "generator": "@osas/compat-runner@0.2.0",
+  "generator": "@osas/compat-runner@0.2.1",
   "target": "http://localhost:8080",
   "runAt": "2026-09-07T…",
   "mode": { "stateful": true },
   "ok": true,                       // 失败检查数为零
+  "gateOk": true,                   // 失败与跳过都为零 —— 注册表门槛
   "totals": { "passed": 22, "failed": 0, "skipped": 0 },
   "suites": [ { "name": "…", "passed": 0, "failed": 0, "skipped": 0, "checks": [ { "name": "…", "status": "pass|fail|skip", "detail": "…" } ] } ]
 }
 ```
 
-`ok: true` 表示**失败检查数为零**（skip 不导致失败，但基于
-stateful 被跳过的运行做声明，证据力较弱）。该格式与
-[GOVERNANCE.md](../GOVERNANCE.md#declaring-compatibility) 所引用、由仓库
-内套件产出到 `tests/compat/report/latest.json` 的报告格式一致：同样的
+`ok: true` 表示**失败检查数为零**；`gateOk: true` 还要求**跳过数为零**——
+未带 conformance key 的只读运行会跳过 stateful 套件，因此报告为
+`ok: true` 且 `gateOk: false`。
+[GOVERNANCE.md](../GOVERNANCE.md#declaring-compatibility) 要求注册条目必须
+`gateOk: true`。该格式与仓库内套件产出到
+`tests/compat/report/latest.json` 的报告格式一致：同样的
 `ok` / `suites` / 逐项检查语义。
 
 ## 复现审计哈希链

@@ -129,6 +129,7 @@ export const AUDIT_EVENT_TYPES: readonly AuditEventType[] = [
   "handoff_resolved",
   "prompt_injection_blocked",
   "permission_overreach_blocked",
+  "action_binding_mismatch_blocked",
   "budget_warning",
   "budget_exceeded",
   "model_call_recorded",

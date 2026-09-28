@@ -7,6 +7,8 @@
     { "name": "execution-v0.3/reconciliation-task", "path": "execution-v0.3/reconciliation-task.json" },
     { "name": "execution-v0.3/provider-event", "path": "execution-v0.3/provider-event.json" },
     { "name": "execution-v0.3/execution-capability", "path": "execution-v0.3/execution-capability.json" },
+    { "name": "execution-v0.3/after-sales-case", "path": "execution-v0.3/after-sales-case.json" },
+    { "name": "execution-v0.3/after-sales-decision", "path": "execution-v0.3/after-sales-decision.json" },
     { "name": "core/shadow-metrics", "path": "core/shadow-metrics.json" }
   ]
 }

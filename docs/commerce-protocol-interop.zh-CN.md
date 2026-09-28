@@ -9,6 +9,27 @@ OSAS 用于治理交易完成后的售后动作；它不实现结账、支付，
 这是一个 **OSAS 映射 Profile**，并不声称符合 UCP、ACP 或任何 Provider 的
 Webhook 格式。Adapter 负责上游协议客户端、认证、签名校验和字段提取。
 
+## 与 AP2（Agent Payments Protocol）的关系
+
+[AP2](https://github.com/google-agentic-commerce/AP2)（v0.2 起捐赠给 FIDO
+Alliance）为支付标准化了**已签名、强类型、不可否认的意图**：可验证数字凭证
+（VDC）与 Checkout/Payment Mandate，各有开放（约束）与封闭（已授权）两个阶段，
+且 Mandate 链式串联形成可验证的审计轨迹。与 OSAS 的结构相似性确实存在——OSAS
+的 `ActionProposal` 是强类型意图记录，按租户哈希链扮演的角色正是 AP2 的
+mandate 链在支付中的角色。
+
+刻意的分工：
+
+- **AP2 管支付意图**——证明*买家授权了这笔扣款*；它不求值任何策略，也不决定
+  执行与否。
+- **OSAS 管客服写边界**——一笔退款/额度/补发可以自动执行、需要审批还是必须阻断，
+  以及面向记录系统的幂等执行与对账。
+
+收到 AP2 mandate 的实现**应当**把 mandate 引用作为证据携带（`Evidence.kind` 取
+`"order"` 或 `"policy"`，mandate id 放入 `source`），而不是把 mandate 校验当作
+策略求值。OSAS 不重新实现 mandate 校验，且通过 OSAS 一致性套件不意味着任何
+AP2 合规。若 ≥2 个实现收敛出同一种映射，未来的 RFC 可以定义更紧的映射。
+
 ## 信任边界
 
 Adapter 调用内部 `POST /v1/provider-events` 前，必须完成以下工作：

@@ -106,7 +106,14 @@ A model proposal requesting `execute` is a policy violation
   results land in a public [registry](conformance/implementations.json).
 - **Evaluations are offline and CI-hard-gated** — 220 synthetic cases with
   hard gates: 100% schema validity, 100% policy consistency, zero overreach,
-  zero duplicate executions, zero security-boundary bypass.
+  zero duplicate executions, zero security-boundary bypass. Read these gates
+  precisely: the harness is offline (no model, no adapter, no network) and
+  measures **agreement between the dataset's expected decisions and the
+  reference policy engine** — it proves internal consistency, not correctness
+  against real traffic. The after-sales set's own coverage bookkeeping is
+  public in the report: 20 of 100 scenarios reach a real sandbox outcome; the
+  rest are `shadow_only` / `proposal_only` / missing a domain object or
+  adapter.
 - **Every threat has a test** — the [threat model](docs/threat-model.md) maps
   thirteen attack classes to the exact test that proves the defense.
 
@@ -280,7 +287,7 @@ Execution develops as a separate Draft profile. The path to v1.0:
       in-repo [Python reference](implementations/python-reference/), gated by CI
       (`python-compat`). It is same-organization, so it does not count toward
       the independence gate.
-- [ ] v0.2.1 maintenance release with no documentation/schema/version drift.
+- [x] v0.2.1 maintenance release with no documentation/schema/version drift.
 - [ ] At least **3 independent implementations** pass the compat suite for a
       profile — [registration criteria](conformance/README.md).
 - [ ] All normative documents in English and Chinese, kept in lockstep.

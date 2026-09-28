@@ -14,14 +14,15 @@ const warn = (msg) => warnings.push(msg);
 const read = (rel) => readFileSync(join(root, rel), "utf8");
 const readJson = (rel) => JSON.parse(read(rel));
 
-/* ---------- 1. package versions (lockstep 0.2.0) ---------- */
+/* ---------- 1. package versions (lockstep 0.2.1) ---------- */
 
-const EXPECTED_VERSION = "0.2.0";
+const EXPECTED_VERSION = "0.2.1";
 const EXPECTED_SPEC = "0.2";
 const PUBLIC_PACKAGES = new Set([
   "@osas/core",
   "@osas/schema-validator",
   "@osas/policy-engine",
+  "@osas/compat-runner",
 ]);
 
 const pkgFiles = ["package.json"];
@@ -65,6 +66,14 @@ for (const rel of ["packages/core/src/enums.ts", "apps/api/src/plugins.ts"]) {
   const m = read(rel).match(/SPEC_VERSION\s*=\s*"([^"]+)"/);
   if (!m) fail(`${rel}: SPEC_VERSION constant not found`);
   else if (m[1] !== EXPECTED_SPEC) fail(`${rel}: SPEC_VERSION is "${m[1]}", expected "${EXPECTED_SPEC}"`);
+}
+
+/* ---------- 2b. API_VERSION constant (reported by /health) ---------- */
+
+{
+  const m = read("apps/api/src/plugins.ts").match(/API_VERSION\s*=\s*"([^"]+)"/);
+  if (!m) fail("apps/api/src/plugins.ts: API_VERSION constant not found");
+  else if (m[1] !== EXPECTED_VERSION) fail(`apps/api/src/plugins.ts: API_VERSION is "${m[1]}", expected "${EXPECTED_VERSION}"`);
 }
 
 /* ---------- 3. schemas ---------- */
@@ -136,7 +145,7 @@ for (const rel of ["packages/core/src/enums.ts", "apps/api/src/plugins.ts"]) {
   if (sourceNames.length !== toolSchemaNames.length || sourceNames.some((name, i) => name !== toolSchemaNames[i])) {
     fail("packages/mcp-server/src/tool-definitions.ts and schemas/tools are not a 1:1 canonical tool list");
   }
-  for (const rel of ["README.md", "README.zh-CN.md", "rfcs/0002-osas-as-mcp-governance-profile.md"]) {
+  for (const rel of ["README.md", "README.zh-CN.md", "rfcs/0002-osas-as-mcp-governance-profile.md", "docs/spec-v0.2.md", "docs/spec-v0.2.zh-CN.md"]) {
     const text = read(rel);
     if (/\b16 tools\b|16 个 MCP 工具|16 个工具/i.test(text)) {
       fail(`${rel}: stale 16-tool claim; current canonical tool count is 20`);

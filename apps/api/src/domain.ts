@@ -26,7 +26,12 @@ import {
   resolveApprovalDeadline,
 } from "@osas/policy-engine";
 import type { ExecutionStore, PolicyStore } from "@osas/policy-engine";
-import { applyParamTransforms } from "@osas/policy-engine";
+import {
+  ACTION_BINDING_MISMATCH,
+  applyParamTransforms,
+  assertActionBinding,
+  computeActionDigest,
+} from "@osas/policy-engine";
 import {
   PostgresAuditStore,
   PostgresExecutionStore,
@@ -266,6 +271,9 @@ export async function runEvaluation(
       policyVersion: decision.policyVersion,
       requestedAt,
       ...(expiresAt !== undefined ? { expiresAt } : {}),
+      // RFC 0008: bind the approval to the exact action the approver saw
+      // (pre-transform params). Re-verified at the execution boundary.
+      actionDigest: computeActionDigest(proposal),
       updatedAt: requestedAt,
     });
     await audit(adapter, ctx, {
@@ -313,6 +321,10 @@ export async function runExecution(
     attemptStore?: ExecutionAttemptStore;
     receiptStore?: ExecutionReceiptStore;
     reconciliationStore?: ReconciliationStore;
+    /** RFC 0008: the decided approval authorizing this execution, when the
+     * proposal came through the approval path. Its actionDigest is re-verified
+     * against the proposal before anything executes. */
+    approval?: Approval;
   } = {},
 ): Promise<ExecutionOutcome> {
   if (opts.mode === "proposal_only" || opts.mode === "shadow") {
@@ -336,6 +348,28 @@ export async function runExecution(
     throw new ConflictError(
       `Proposal ${proposal.id} is "${proposal.status}"; only approved proposals can be executed`,
     );
+  }
+
+  // RFC 0008: verify the approval binds to this exact action BEFORE transforms —
+  // the digest covers what the approver saw (pre-transform params). A mismatch
+  // is audited once and refused; nothing transitions and the adapter is never
+  // called.
+  if (opts.approval?.actionDigest) {
+    try {
+      assertActionBinding(proposal, { actionDigest: opts.approval.actionDigest });
+    } catch (err) {
+      await audit(adapter, ctx, {
+        caseId: proposal.caseId,
+        proposalId: proposal.id,
+        approvalId: opts.approval.id,
+        eventType: "action_binding_mismatch_blocked",
+        actorType: "system",
+        actorId: "osas-api",
+        policyVersion: opts.approval.policyVersion,
+        detail: { code: ACTION_BINDING_MISMATCH, approvalId: opts.approval.id },
+      }, opts.sink);
+      throw err;
+    }
   }
 
   // §4 step 11: apply the decision's param transforms (e.g. PII redaction)

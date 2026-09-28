@@ -22,6 +22,10 @@ Options:
   -h, --help               Show this help
 
 Exit codes: 0 = all checks passed, 1 = one or more checks failed, 2 = usage error.
+
+The report's gateOk field is the registry gate: true only when every check ran
+and passed (ok with zero skips). A run without --conformance-key skips the
+stateful suite and reports gateOk: false.
 `;
 
 function parseArgs(argv: string[]): RunnerOptions & { out?: string } {

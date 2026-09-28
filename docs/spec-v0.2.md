@@ -124,8 +124,12 @@ request that must pass policy evaluation (§5) before execution.
 this as the `ACTION_TYPE_PROFILE` map). A mismatch is a `PROFILE_MISMATCH` violation
 (§5 step 3) and is also rejected at the schema level.
 
-**Financial actionTypes**: `refund`, `reshipment`, `credit_apply`. These require `amount`
-and at least one evidence reference.
+**Financial actionTypes**: `refund`, `reshipment`, `credit_apply`, and — as a
+financial-class action (§15.5) — `exchange_request`. For these actionTypes at least
+one evidence reference is required and enforced (`INSUFFICIENT_EVIDENCE`, §5 step 10).
+Proposals for `refund`, `reshipment`, and `credit_apply` MUST carry `amount` so
+threshold evaluation (§5 step 7) can run; `exchange_request` expresses value as
+`priceDelta` in `params` (§15.4).
 
 ### 2.6 Approval
 
@@ -133,12 +137,23 @@ and at least one evidence reference.
 |---|---|---|---|
 | `tenantId` | string | yes | Owning tenant |
 | `proposalId` | string | yes | Proposal under approval |
-| `status` | enum | yes | `pending` \| `approved` \| `rejected` |
+| `status` | enum | yes | `pending` \| `approved` \| `rejected` \| `expired` |
 | `approverId` | string | no | Deciding human |
 | `comment` | string | no | Decision comment |
 | `policyVersion` | string | yes | Policy version under which approval was requested |
 | `requestedAt` | date-time | yes | Request time |
 | `decidedAt` | date-time | no | Decision time |
+| `expiresAt` | date-time | no | Deadline after which the approval can no longer be decided |
+| `approverGroupId` | string | no | Approver group the request was routed to |
+| `actionDigest` | string | no | RFC 0008: SHA-256 (64 lowercase hex) over the canonical stable-JSON serialization of `{ actionType, params }` of the approved proposal; re-verified at the execution boundary (§6) |
+
+**Approval fail-safe (expiry).** A pending approval expires at its `expiresAt` — the
+explicit value when set, otherwise `requestedAt` + the tenant policy's
+`approval.timeoutSeconds` (§2.7). A decision attempted after expiry MUST be rejected
+with 409 `APPROVAL_TIMED_OUT`: the approval becomes `expired`, the proposal closes as
+`rejected`, and the denial is audited exactly once. Timeout handling is deny-only —
+`approval.onTimeout` is always `"deny"`; there is no allow-on-timeout or
+suspend-on-timeout configuration.
 
 ### 2.7 TenantPolicy and PolicyRule
 
@@ -154,6 +169,7 @@ The deterministic rulebook evaluated per tenant.
 | `budget` | object | no | `{ dailyUsdCap?: number }` model budget hint |
 | `rules` | PolicyRule[] | yes | Evaluated rules |
 | `defaultDecision` | const | yes | Always `"block"` — unmatched actions are blocked |
+| `approval` | object | no | `{ timeoutSeconds?: integer, onTimeout: "deny", approverGroups?: [{ id, memberIds }] }` — approval fail-safe configuration (§2.6) |
 
 `PolicyRule`:
 
@@ -167,6 +183,7 @@ The deterministic rulebook evaluated per tenant.
 | `identityMaxAgeSeconds` | integer | no | Max identity verification age |
 | `allowedRegions` | string[] | no | Region allow-list (absent = all allowed) |
 | `blockedRegions` | string[] | no | Region deny-list |
+| `transforms` | array | no | Deterministic param rewrites `[{ path, op: "redact", replacement? }]` that ride on the decision (§5) and are applied before the adapter sees the params; never attached to `block` decisions |
 
 ### 2.8 AuditEvent
 
@@ -193,7 +210,10 @@ Every meaningful step emits an append-only audit event.
 `handoff_created`, `handoff_resolved`, `prompt_injection_blocked`,
 `permission_overreach_blocked`, `budget_exceeded`, `model_call_recorded`,
 and (v0.1.1) `policy_draft_created`, `policy_simulated`, `policy_approved`,
-`policy_activated`, `policy_retired`.
+`policy_activated`, `policy_retired`; and (execution, budget, and shadow additions)
+`budget_warning`, `execution_attempt_created`, `provider_event_received`,
+`shadow_run_created`, `shadow_run_reviewed`; and (RFC 0008)
+`action_binding_mismatch_blocked`.
 
 ### 2.9 HumanHandoff
 
@@ -315,9 +335,13 @@ PolicyDecision = {
   decision: "auto_execute" | "require_approval" | "block",
   reasons: [{ code: string, message: string }],
   policyVersion: string,
-  evaluatedAt: date-time
+  evaluatedAt: date-time,
+  transforms?: [{ path: string, op: "redact", replacement?: string }]
 }
 ```
+
+A decision that is not `block` MAY carry the matched rule's `transforms`; a `block`
+decision never carries transforms (a blocked action is never partially executed).
 
 The algorithm collects **all** applicable reasons; the final decision is the worst of
 `block` > `require_approval` > `auto_execute`. Steps, in order:
@@ -350,6 +374,13 @@ The algorithm collects **all** applicable reasons; the final decision is the wor
     `retrievedAt`) → `require_approval`.
 11. Otherwise the matched rule's `decision` applies (`auto_execute` or
     `require_approval`).
+12. **`NEVER_AUTO_EXECUTE`** — the actionType is in the never-auto-execute set
+    (`exchange_request`, §15.5) → the decision is capped at `require_approval`, even if
+    the matched rule says `auto_execute`.
+
+The step order above is the reference implementation's reading order. Because the final
+decision is the worst of all applicable reasons, check order is not observable in the
+result.
 
 Side effects (engine or API layer):
 
@@ -381,6 +412,14 @@ Rules:
 3. `reconcile(proposalId, outcome)` is only valid from `reconciliation_required` and
    moves the proposal to `executed` or `failed`, emitting `reconciliation_resolved`.
    Reconciliation is a human-driven recovery path, not an automatic retry.
+4. **Action binding (RFC 0008).** When an approval authorized the execution, the
+   executing implementation MUST recompute the approval's `actionDigest` from the
+   proposal's `{ actionType, params }` and MUST refuse the execution — before any
+   state transition or adapter call — when the digests differ (409
+   `ACTION_BINDING_MISMATCH`, audited exactly once as
+   `action_binding_mismatch_blocked`; the proposal is not transitioned). The digest
+   covers the pre-transform params: what the approver saw. Approvals created before
+   this field existed carry no digest and skip the check.
 
 ## 7. Tool profiles (MCP)
 
@@ -401,12 +440,16 @@ lives at `schemas/tools/<tool_name>.json`; tool metadata is the pure-data export
 | 8 | `osas_ecom_get_order` | ecommerce | `getOrder` |
 | 9 | `osas_ecom_list_orders` | ecommerce | `listOrders` |
 | 10 | `osas_ecom_get_shipment` | ecommerce | `getShipment` |
-| 11 | `osas_saas_get_subscription` | saas | `getSubscription` |
-| 12 | `osas_saas_list_invoices` | saas | `listInvoices` |
-| 13 | `osas_saas_get_credit_balance` | saas | `getCreditBalance` |
-| 14 | `osas_saas_create_credit_request` | saas | `createActionProposal` |
-| 15 | `osas_saas_create_cancellation_request` | saas | `createActionProposal` |
-| 16 | `osas_saas_create_plan_change_request` | saas | `createActionProposal` |
+| 11 | `osas_ecom_get_shipment_incident` | ecommerce | `getShipmentIncident` |
+| 12 | `osas_ecom_get_refund_status` | ecommerce | `getRefundStatus` |
+| 13 | `osas_ecom_create_item_claim_request` | ecommerce | `proposeItemClaim` |
+| 14 | `osas_ecom_create_exchange_request` | ecommerce | `createActionProposal` |
+| 15 | `osas_saas_get_subscription` | saas | `getSubscription` |
+| 16 | `osas_saas_list_invoices` | saas | `listInvoices` |
+| 17 | `osas_saas_get_credit_balance` | saas | `getCreditBalance` |
+| 18 | `osas_saas_create_credit_request` | saas | `createActionProposal` |
+| 19 | `osas_saas_create_cancellation_request` | saas | `createActionProposal` |
+| 20 | `osas_saas_create_plan_change_request` | saas | `createActionProposal` |
 
 Normative rules:
 
@@ -529,14 +572,16 @@ An implementation MAY publish a `CapabilityManifest`
 | `implementationVersion` | string | yes | Implementation release |
 | `profiles` | array | yes | `{ name: core\|ecommerce\|saas, capabilities: Capability[] }` |
 | `transports` | array | yes | Subset of `http`, `mcp` |
-| `executionModes` | array | yes | Subset of `proposal_only`, `shadow`, `live` |
+| `executionModes` | array | yes | Subset of `proposal_only`, `shadow`, `sandbox`, `live` |
 | `adapterVersion` | string | yes | Adapter contract version |
 
-The 16 spec-defined capabilities: `case.read`, `customer.read`,
+The 20 spec-defined capabilities: `case.read`, `customer.read`,
 `knowledge.read`, `evidence.read`, `note.write`, `escalation.write`,
 `proposal.write`, `approval.read`, `approval.decide`, `audit.read`,
 `ecommerce.order.read`, `ecommerce.shipment.read`, `ecommerce.refund.propose`,
-`ecommerce.refund.execute`, `saas.subscription.read`, `saas.credit.propose`.
+`ecommerce.refund.execute`, `ecommerce.shipment_incident.read`,
+`ecommerce.refund_status.read`, `ecommerce.item_claim.propose`,
+`ecommerce.exchange.propose` (§15.6), `saas.subscription.read`, `saas.credit.propose`.
 
 Adapters expose the manifest through the optional `getCapabilities` provider
 method. Once declared, the manifest binds: any MCP tool call or HTTP operation
@@ -595,7 +640,7 @@ redaction rules (email, phone, Authorization) are unchanged.
 ### 12.4 Conformance additions
 
 The compat suite additionally checks: capability-manifest schema validity, that
-the reference manifest declares all 16 capabilities, tool→capability mapping,
+the reference manifest declares all 20 capabilities, tool→capability mapping,
 read-only manifests, policy version immutability and lifecycle legality, and
 audit hash-chain tamper detection with cross-tenant isolation.
 

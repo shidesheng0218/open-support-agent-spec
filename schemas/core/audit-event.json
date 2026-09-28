@@ -63,7 +63,8 @@
         "policy_activated",
         "policy_retired",
         "shadow_run_created",
-        "shadow_run_reviewed"
+        "shadow_run_reviewed",
+        "action_binding_mismatch_blocked"
       ]
     },
     "actorType": {

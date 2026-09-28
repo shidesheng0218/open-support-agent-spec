@@ -35,6 +35,7 @@
 | T11 | Conformance Mode 被滥用 | 测试端点在生产环境可达 | Conformance Mode 在生产环境拒绝启动；模式关闭时端点根本不注册（404);key 以常量时间比较 | `apps/api/src/conformance.test.ts`;runner 的错误 key 检查 |
 | T12 | Schema 夹带 | 多余字段绕过校验夹带语义 | 全部 `additionalProperties: false`；先验证后执行（422 `SCHEMA_INVALID`);Schema 而非散文是权威 | `packages/schema-validator`；兼容套件的 schema 固件 |
 | T13 | 陈旧审批滞留 | 审批搁置数小时后才被批准，而上下文早已变化（订单已发货、策略已变更、证据已过期） | 审批 fail-safe 生命周期：创建时盖章 `expiresAt`（策略 `approval.timeoutSeconds`)；读取时呈现有效 `expired` 状态；迟到的决定被 409 `APPROVAL_TIMED_OUT` 拒绝，提案随即以 `rejected` 关闭（不产生 DUPLICATE_REQUEST 死胡同），拒绝只审计一次。谱系：借鉴微软 Agent Governance Toolkit 的审批 fail-safe——OSAS 的 `onTimeout` 只允许 deny，严于 AGT 的 `deny\|allow\|suspend` | `packages/policy-engine/src/approval-lifecycle.test.ts`;`apps/api/src/approval-expiry.test.ts` |
+| T14 | 审批/执行分叉（TOCTOU） | 审批后建议的 params 被篡改，或建议 B 拿着建议 A 的审批去执行 | 动作绑定审批（RFC 0008）：审批携带 `actionDigest` = 对规范化 `{ actionType, params }` 的 SHA-256，创建时盖章；执行边界在任何状态迁移或适配器调用之前重算并比对；不一致 → 409 `ACTION_BINDING_MISMATCH` + 恰好一条 `action_binding_mismatch_blocked` 审计事件。谱系：将 AGT ADR-0030 的 `enforced_identity` 适配到 OSAS 审批生命周期 | `packages/policy-engine/src/action-binding.test.ts`；`apps/api` 执行测试 |
 
 ## 残余风险（已接受并记录）
 

@@ -31,7 +31,7 @@ ISO 8601 `date-time`; IDs are opaque strings.
 ## The minimal implementation path
 
 `schemas/manifest.json` is the v0.2 authoritative inventory. It groups schemas by
-profile: **core** (14 entries under `core/`), **ecommerce** (2 under
+profile: **core** (15 entries under `core/`), **ecommerce** (6 under
 `profiles/ecommerce/`), **saas** (3 under `profiles/saas/`), and **tools**
 (20 MCP tool input schemas under `tools/`). The v0.3 Draft execution schemas
 are listed separately in `schemas/manifest-v0.3.json`.
@@ -50,11 +50,17 @@ are listed separately in `schemas/manifest-v0.3.json`.
 
 ### Ecommerce profile (additive over core)
 
-- Schemas: `profiles/ecommerce/order.json`, `profiles/ecommerce/shipment.json`.
-- Action types: `refund`, `return_request`, `reshipment`, `cancel_order`
-  (financial rules for `refund`/`reshipment`: amount + ≥1 evidence).
+- Schemas: `profiles/ecommerce/order.json`, `profiles/ecommerce/shipment.json`,
+  `profiles/ecommerce/shipment-incident.json`,
+  `profiles/ecommerce/refund-transaction.json`, `profiles/ecommerce/item-claim.json`,
+  `profiles/ecommerce/exchange-request.json`.
+- Action types: `refund`, `return_request`, `reshipment`, `cancel_order`,
+  `exchange_request` (financial-class: `refund`/`reshipment`/`credit_apply` carry
+  `amount`; all financial-class actions require ≥1 evidence — spec §2.5, §15.5).
 - Tool input schemas: `osas_ecom_get_order`, `osas_ecom_list_orders`,
-  `osas_ecom_get_shipment`.
+  `osas_ecom_get_shipment`, `osas_ecom_get_shipment_incident`,
+  `osas_ecom_get_refund_status`, `osas_ecom_create_item_claim_request`,
+  `osas_ecom_create_exchange_request`.
 
 ### SaaS profile (additive over core)
 
@@ -110,13 +116,26 @@ JWT-mode targets are driven with `--token` (see below).
 
 The black-box runner (`@osas/compat-runner`, `packages/compat-runner/src/`)
 drives your implementation over HTTP only — it never imports your code. It
-validates responses locally against the schemas in this repository.
+validates responses locally against the spec's schemas (bundled into the
+package, so the npm install works standalone).
 
 ### Setup
 
+No repository checkout is needed once the package is published:
+
+```bash
+npx @osas/compat-runner --target https://your-osas-service.example.com
+```
+
+From a checkout of this repository instead:
+
 ```bash
 pnpm install && pnpm build      # builds @osas/core, schema-validator, runner deps
+pnpm osas:compat -- --target https://your-osas-service.example.com
 ```
+
+The whole loop — implement the surface below, point the runner at it, read the
+report — is designed to fit in an afternoon.
 
 ### Read-only suites (no key required)
 
@@ -191,21 +210,24 @@ The report is machine-readable JSON:
 ```jsonc
 {
   "specVersion": "0.2",
-  "generator": "@osas/compat-runner@0.2.0",
+  "generator": "@osas/compat-runner@0.2.1",
   "target": "http://localhost:8080",
   "runAt": "2026-09-07T…",
   "mode": { "stateful": true },
   "ok": true,                       // zero failed checks
+  "gateOk": true,                   // zero failed AND zero skipped — the registry gate
   "totals": { "passed": 22, "failed": 0, "skipped": 0 },
   "suites": [ { "name": "…", "passed": 0, "failed": 0, "skipped": 0, "checks": [ { "name": "…", "status": "pass|fail|skip", "detail": "…" } ] } ]
 }
 ```
 
-`ok: true` means **zero failed checks** (skips do not fail the run, but a
-claim based on a stateful-skipped run is weak evidence). This mirrors the
+`ok: true` means **zero failed checks**; `gateOk: true` additionally requires
+**zero skipped checks** — a read-only run without a conformance key skips the
+stateful suite and therefore reports `ok: true` with `gateOk: false`.
+[GOVERNANCE.md](../GOVERNANCE.md#declaring-compatibility) requires
+`gateOk: true` for a registry entry. This mirrors the
 report format produced by the in-repo suite at
-`tests/compat/report/latest.json` referenced by
-[GOVERNANCE.md](../GOVERNANCE.md#declaring-compatibility): same `ok` /
+`tests/compat/report/latest.json`: same `ok` /
 `suites` / per-check semantics.
 
 ## Reproducing the audit hash chain
