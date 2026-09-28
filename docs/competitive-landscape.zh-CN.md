@@ -4,6 +4,9 @@
 
 > 本文信息基于 **2026-09** 的联网调研快照。Agent 治理领域变化很快，对外引用
 > 前请先核对文末列出的原始来源。
+>
+> **本文是定位层面的概览。** 逐轴对比、附本仓库自审、并按证据强度分级的深入版本见
+> [深度竞品分析](competitive-deep-dive.zh-CN.md)——凡两者冲突之处，以深度分析为准。
 
 OSAS（Open Support Agent Spec）是面向客服 agent 的**治理优先开放规范**：
 模型提议、确定性策略引擎决定、适配器执行、审计日志解释。本文梳理周边格局——
@@ -22,8 +25,10 @@ OSAS（Open Support Agent Spec）是面向客服 agent 的**治理优先开放�
   [RFC 0002](../rfcs/0002-osas-as-mcp-governance-profile.md)）。
 - **A2A（Agent2Agent）v1.0**——规范 *agent ↔ agent* 的消息与任务委派。与 OSAS
   相邻：接触客户数据的 A2A agent 底层仍需要一层治理与审计。
-- **IBM ACP 与 Cisco AGNTCY**——两个项目均已停更或归档，并入 A2A 方向，说明
-  协议层的竞争整合速度极快。
+- **IBM ACP 与 Cisco AGNTCY**——两者命运不同，这是本节的要点：**IBM ACP 已归档**
+  （`i-am-bee/acp` 最后推送 2025-08），而 **AGNTCY 仍在活跃推进**，其重心是
+  agent 身份与可验证凭证（`identity-spec`，2026-09 仍有提交）。协议层的竞争
+  整合极快，但"协议层"本身并未停止分化。
 
 ### 2. 产品层——能力强但黑盒
 
@@ -39,13 +44,16 @@ OSAS（Open Support Agent Spec）是面向客服 agent 的**治理优先开放�
 - **OpenAI Agents SDK**——围绕 agent 运行的 guardrails/hooks；属于输入/输出
   校验，不是完整的"决策—审计"生命周期。
 - **Microsoft Agent Governance Toolkit（AGT）**——概念上最接近的邻居，也是
-  截至 2026 年 9 月开源世界最完整的横向治理栈：MIT 许可、五种语言 SDK、
-  十个 RFC-2119 风格规范与约 992 个自测一致性用例；其确定性 fail-closed
+  截至 2026 年 9 月开源世界最完整的横向治理栈：MIT 许可、5 种语言 SDK、
+  10 份规范与 33 份 ADR，约 605 个一致性测试函数（6 个 spec-conformance
+  文件中的 `test_*` 计数；不同口径下的总数曾报为约 992）；其确定性 fail-closed
   策略运行时的裁决词表（`allow` / `deny` / `transform` / `escalate`）中
   包含携带审批的"可解除拒绝"。它已实现审批 fail-safe（超时 +
-  `on_timeout`）、与动作绑定的审批、信息流控制（源标签 → 宿口径）、
+  `on_timeout`）、**与动作绑定的审批**（ADR-0030，RFC 8785 JCS 规范下的
+  SHA-256 动作摘要 + 只增审批链 + 执行时 7 项复核）、信息流控制（源标签 → 宿口径）、
   Merkle 链审计与 shadow 模式。横向（不限领域）、微软背书、定位为应用
-  中间件。详见下方深挖小节。
+  中间件。**注意：它已经带 `policy-engine/examples/support_agent/` 进入客服
+  垂直领域**——详见[深度竞品分析](competitive-deep-dive.zh-CN.md)。
 - **Invariant Labs 规则引擎**——对 agent trace 做确定性运行时检查；能约束行为，
   但不定义客服领域模型、权限阶梯或审计哈希语义。
 
@@ -59,8 +67,8 @@ OSAS（Open Support Agent Spec）是面向客服 agent 的**治理优先开放�
 | Shadow 模式（先模拟后启用） | **有**——默认姿态 | 有 | 无 | 需自行实现 | 无 |
 | 幂等/对账语义 | **有**——`(tenantId, idempotencyKey)` 重放、结果不确定 → 对账、禁止盲重试 | **无** | 无 | 无 | 由厂商定义 |
 | 厂商中立/可移植 | **是**——开放规范 + JSON Schema | 框架中立但微软主导 | 是（LF Projects, LLC） | 是（开源） | 否 |
-| Conformance 注册表 | **有**——`conformance/implementations.json`、黑盒门禁 | 自测向量（约 992 个）；无第三方注册表 | 松散（SDK 兼容） | 无 | 无 |
-| 客服领域模型 | **有**——helpdesk 适配器、20 工具域、多租户 TenantPolicy | 无 | 无 | 无 | 有（专有） |
+| Conformance 注册表 | **有**——`conformance/implementations.json`、黑盒门禁 | 约 605 个自测测试函数；无第三方注册表 | 松散（SDK 兼容） | 无 | 无 |
+| 客服领域模型 | **有**——helpdesk 适配器、20 工具域、多租户 TenantPolicy | **已有 `support_agent` 示例策略；但无生命周期模型** | 无 | 无 | 有（专有） |
 
 ## 深挖：微软 AGT——最近的邻居，逐项对照
 
@@ -75,17 +83,20 @@ OSAS 治理格子的项目。
 | 审批 fail-safe | `timeout_seconds` + `on_timeout: deny \| allow \| suspend`；审批与动作绑定（`enforced_identity` = 规范化动作输入的 SHA-256，执行前重新校验） | `timeoutSeconds` + `onTimeout: "deny"` **仅此一项**（只允许拒绝是刻意为之）；过期即关闭提案，不存在陈旧审批死胡同；动作绑定是候选加固项（见 RFC 0006） |
 | 信息流控制 | 源标签 → 宿口径、no-write-down、Rego/Cedar 实现 | 仅有设计注记（RFC 0005） |
 | 审计 | Merkle 链日志 + 决策物料清单 | 按租户 SHA-256 哈希链 + `GET /v1/audit/verify` |
-| 幂等/对账 | **无** | 核心语义：`(tenantId, idempotencyKey)` 重放、`uncertain` → 对账任务、绝不自动重试 |
-| 客服领域 | 无（横向） | 工单、订单、退款、理赔、换货、证据、审批、接管——另有参考 helpdesk 适配器 |
-| Conformance | 约 992 个自测向量 | 第三方黑盒 runner + 公开注册表——出题方不是厂商自己 |
+| 幂等/对账 | **无——且已书面声明不负责**：ACS 安全模型明确列出"不替代……幂等性，或补偿事务控制"；其 saga 仅逆序补偿，无幂等键、无对账 | 核心语义：`(tenantId, idempotencyKey)` 重放、`uncertain` → 对账任务、绝不自动重试 |
+| 客服领域 | **有 `policy-engine/examples/support_agent/`**——退款按欺诈风险拒绝、高金额升级、外发邮件告警、PII 拒绝；但无工单状态机、SLA、退款台账对账等生命周期 | 工单、订单、退款、理赔、换货、证据、审批、接管——另有参考 helpdesk 适配器 |
+| Conformance | 约 605 个自测测试函数 | 第三方黑盒 runner + 公开注册表——出题方不是厂商自己，**但今天注册表里的独立条目为 0** |
 | 许可/治理 | MIT，微软主导 | Apache-2.0，创始维护者；v1.0 起多方席位（RFC 0004） |
 
 **解读**：AGT 是一个领域通用的治理层，在"审批与动作绑定"和 IFC 上走
-得更远；OSAS 是一份领域完备的契约，其幂等/对账语义与可被第三方验证的
-合规机制在 AGT 中没有对应物。两者是组合关系而非对冲：RFC 0006 定义了
-外部策略决策点接缝，AGT（或 OPA）运行时可以在该接缝上**收紧**——绝不
-放宽——OSAS 的决策；AGT 的 `transform` 裁决也恰好映射到 OSAS 的参数
-脱敏 transforms。
+得更远——而且从本次修订起，它已经带着示例策略开始伸手进入客服垂直领域。
+OSAS 是一份领域完备的契约，其幂等/对账语义**已被 AGT 正式声明不负责**
+（"ACS 不替代……幂等性，或补偿事务控制"）。两者仍是组合关系而非对冲：
+RFC 0006 定义了外部策略决策点接缝，AGT（或 OPA）运行时可以在该接缝上
+**收紧**——绝不放宽——OSAS 的决策；AGT 的 `transform` 裁决也恰好映射到
+OSAS 的参数脱敏 transforms。**诚实的总结是：AGT 在广度与势头上领先，OSAS
+在一条与资金相关的语义轴上领先，而 OSAS 其他自称的优势目前仍是断言而非
+证据**——那句话背后的审计见[深度竞品分析](competitive-deep-dive.zh-CN.md)。
 
 ## OSAS 的差异化
 
@@ -104,11 +115,14 @@ OSAS 治理格子的项目。
 
 - **上游挤压**。如果 MCP/AAIF 长出执行决策层，OSAS 可能被挤向小众。缓解：
   把 OSAS 定位为 agent 协议的治理 *profile*（RFC 0002），而非竞争协议。
-- **微软引力**。AGT 真实存在且成熟很快（半年约 6k star、五种语言 SDK、
-  周级发版）：审批 fail-safe 超时、与动作绑定的审批、IFC、Merkle 审计链
-  均已出货。OSAS 无法在资源上对抗，必须在客服领域做深（领域生命周期、
-  幂等与对账语义）、保持真正的厂商中立，并——依 RFC 0006——把 AGT 当作
-  可插拔的策略决策点：让采用 AGT 强化 OSAS，而非取代 OSAS。
+- **微软引力**。AGT 真实存在且成熟很快（创建于 2026-03，约 7 个月后 6,350 star、
+  159 位贡献者、5 种语言 SDK）：审批 fail-safe 超时、**动作绑定审批**、IFC、
+  Merkle 审计链均已出货，且已带客服示例策略进入本垂直领域。OSAS 无法在资源上
+  对抗，必须在客服*生命周期*上做深（工单状态机、售后对象、退款台账对账）与
+  **写入安全语义**（幂等、对账、禁止盲重试——AGT 已书面声明不负责这一层）、
+  保持真正的厂商中立，并——依 RFC 0006——把 AGT 当作可插拔的策略决策点：
+  让采用 AGT 强化 OSAS，而非取代 OSAS。**风险在于时序：若 AGT 或 AWS 先补齐
+  写入幂等/对账，OSAS 的差异化轴即消失。**
 - **生态规模**。目前只有 2 个实现（1 个参考实现 + 1 个仓内候选），对比数百个
   MCP server。v1.0 的 ≥3 独立实现门槛同时是护城河——见下文。
 

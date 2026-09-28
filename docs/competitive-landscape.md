@@ -5,6 +5,11 @@
 > Information in this document reflects a web research snapshot taken
 > **2026-09**. The agent-governance space moves quickly; verify claims against
 > the primary sources listed at the end before citing them externally.
+>
+> **This document is the positioning-level overview.** For the axis-by-axis
+> comparison — with an audit of this repository, and facts graded by evidence
+> strength — see the [competitive deep dive](competitive-deep-dive.md). Where the
+> two disagree, the deep dive wins.
 
 OSAS (Open Support Agent Spec) is a **governance-first open specification** for
 customer-support agents: the model proposes, the deterministic policy engine
@@ -27,9 +32,11 @@ where the risks are.
 - **A2A (Agent2Agent) v1.0** — governs *agent ↔ agent* messaging and task
   delegation. Adjacent to OSAS: A2A agents that touch customer data still need
   a governance and audit layer underneath.
-- **IBM ACP and Cisco AGNTCY** — both initiatives have stalled or been archived
-  and absorbed into the A2A effort, a reminder that protocol-layer competition
-  consolidates fast.
+- **IBM ACP and Cisco AGNTCY** — these two have diverged, which is the point:
+  **IBM ACP is archived** (`i-am-bee/acp`, last push 2025-08), while **AGNTCY is
+  actively shipping**, focused on agent identity and verifiable credentials
+  (`identity-spec`, still receiving commits in 2026-09). Protocol-layer
+  competition consolidates fast, but the layer itself keeps fragmenting.
 
 ### 2. Product layer — capable but opaque
 
@@ -48,14 +55,19 @@ where the risks are.
   validation, not a full decision-and-audit lifecycle.
 - **Microsoft Agent Governance Toolkit (AGT)** — the closest conceptual
   neighbor, and as of September 2026 the most complete horizontal governance
-  stack in the open: MIT-licensed, five language SDKs, ten RFC-2119-style
-  specs with ~992 self-run conformance tests, and a deterministic fail-closed
-  policy runtime whose verdicts (`allow` / `deny` / `transform` / `escalate`)
-  include a liftable deny carrying an approval. It ships an approval fail-safe
-  (timeout + `on_timeout`), action-bound approvals, information-flow control
-  (source labels → sink clearances), a Merkle-chained audit log, and a shadow
-  mode. Horizontal (any domain), Microsoft-backed, and application-middleware
-  by design. See the deep dive below.
+  stack in the open: MIT-licensed, 5 language SDKs, 10 specs and 33 ADRs,
+  ~605 conformance test functions (counted across six spec-conformance files;
+  earlier totals under a different counting basis were reported as ~992), and a
+  deterministic fail-closed policy runtime whose verdicts (`allow` / `deny` /
+  `transform` / `escalate`) include a liftable deny carrying an approval. It
+  ships an approval fail-safe (timeout + `on_timeout`), **action-bound approvals**
+  (ADR-0030: SHA-256 digest over RFC 8785 JCS canonical input, an append-only
+  approval chain, and seven re-validation checks at execution time),
+  information-flow control (source labels → sink clearances), a Merkle-chained
+  audit log, and a shadow mode. Horizontal (any domain), Microsoft-backed, and
+  application-middleware by design. **Note that it has entered the support
+  vertical: `policy-engine/examples/support_agent/` ships a support policy.**
+  See the [deep dive](competitive-deep-dive.md).
 - **Invariant Labs rule engine** — deterministic runtime checks over agent
   traces; guards behavior but does not define a customer-support domain model,
   permission ladder, or audit-hash semantics.
@@ -70,8 +82,8 @@ where the risks are.
 | Shadow mode (simulate before enable) | **Yes** — default posture | Yes | No | Manual | No |
 | Idempotency / reconciliation semantics | **Yes** — `(tenantId, idempotencyKey)` replay, uncertain → reconciliation, no blind retries | **No** | No | No | Vendor-defined |
 | Vendor-neutral / portable | **Yes** — open spec + schemas | Framework-neutral but Microsoft-led | Yes (LF Projects, LLC) | Yes (OSS) | No |
-| Conformance registry | **Yes** — `conformance/implementations.json`, black-box gate | Self-run test vectors (~992); no third-party registry | Loose (SDK compat) | No | No |
-| Customer-support domain model | **Yes** — helpdesk adapters, 20-tool domain, multi-tenant TenantPolicy | No | No | No | Yes (proprietary) |
+| Conformance registry | **Yes** — `conformance/implementations.json`, black-box gate | ~605 self-run test functions; no third-party registry | Loose (SDK compat) | No | No |
+| Customer-support domain model | **Yes** — helpdesk adapters, 20-tool domain, multi-tenant TenantPolicy | **Ships a `support_agent` example policy; no lifecycle model** | No | No | Yes (proprietary) |
 
 ## Deep dive: Microsoft AGT — the closest neighbor, measured
 
@@ -87,18 +99,24 @@ governance box.
 | Approval fail-safe | `timeout_seconds` + `on_timeout: deny \| allow \| suspend`; approvals are **action-bound** (`enforced_identity` = SHA-256 of the canonical action input, re-verified before execution) | `timeoutSeconds` + `onTimeout: "deny"` **only** (deny-only is deliberate); expiry closes the proposal so no stale-approval dead end; action-binding is a candidate hardening (see RFC 0006) |
 | Information flow control | Source labels → sink clearances, no-write-down, Rego/Cedar implementations | Design note only (RFC 0005) |
 | Audit | Merkle-chained log + Decision BOM | Per-tenant SHA-256 hash chain + `GET /v1/audit/verify` |
-| Idempotency / reconciliation | **None** | Core semantics: `(tenantId, idempotencyKey)` replay, `uncertain` → reconciliation task, never auto-retry |
-| Support domain | None (horizontal) | Cases, orders, refunds, claims, exchanges, evidence, approvals, handoffs — plus reference helpdesk adapters |
-| Conformance | ~992 self-run test vectors | Third-party black-box runner + public registry — the examiner is not the vendor |
+| Idempotency / reconciliation | **None — and formally disclaimed.** Its security model lists what ACS does not replace: "…**idempotency, or compensating transaction controls**." Its sagas are reverse-order compensation only, with no idempotency keys and no reconciliation | Core semantics: `(tenantId, idempotencyKey)` replay, `uncertain` → reconciliation task, never auto-retry |
+| Support domain | **A `support_agent` example policy now ships** (`policy-engine/examples/support_agent/`): refund denied on fraud risk, escalated when high-value, external-email warning, PII denial. No ticket state machine, SLA, or refund-ledger reconciliation | Cases, orders, refunds, claims, exchanges, evidence, approvals, handoffs — plus reference helpdesk adapters |
+| Conformance | ~605 self-run test functions | Third-party black-box runner + public registry — the examiner is not the vendor, **though today the registry holds 0 independent entries** |
 | License / stewardship | MIT, Microsoft-led | Apache-2.0, founding maintainers; multi-party seats at v1.0 (RFC 0004) |
 
 **Read:** AGT is a domain-general governance layer further along on
-identity-bound approvals and IFC; OSAS is a domain-complete contract whose
-idempotency/reconciliation semantics and third-party-verifiable conformance
-have no AGT counterpart. The two compose rather than collide: RFC 0006 defines
-an external policy-decision-point seam under which an AGT (or OPA) runtime can
-*tighten* — never loosen — an OSAS decision, and AGT's `transform` verdict
-maps onto OSAS's param transforms.
+identity-bound approvals and IFC — and, as of this revision, one that has begun
+to reach into the support vertical with an example policy. OSAS is a
+domain-complete contract whose idempotency/reconciliation semantics **AGT has
+formally disclaimed** ("ACS does not replace … idempotency, or compensating
+transaction controls"). The two still compose rather than collide: RFC 0006
+defines an external policy-decision-point seam under which an AGT (or OPA)
+runtime can *tighten* — never loosen — an OSAS decision, and AGT's `transform`
+verdict maps onto OSAS's param transforms. **The honest summary is that AGT is
+ahead on breadth and momentum, OSAS is ahead on one semantic axis that matters
+for money, and OSAS's other claimed advantages are currently assertions rather
+than evidence** — see the [deep dive](competitive-deep-dive.md) for the audit
+behind that sentence.
 
 ## OSAS differentiation
 
@@ -119,13 +137,17 @@ maps onto OSAS's param transforms.
 - **Upstream absorption.** If MCP/AAIF grows an execution-decision layer, OSAS
   could be squeezed into a niche. Mitigation: position OSAS as the governance
   *profile* for agent protocols (RFC 0002) rather than a competing protocol.
-- **Microsoft gravity.** AGT is real and maturing fast (≈6k stars within six
-  months, five SDKs, weekly releases): it already ships approval fail-safe
-  timeouts, action-bound approvals, IFC, and a Merkle audit chain. OSAS cannot
-  out-spend it; it must out-domain it (support lifecycle, idempotency and
-  reconciliation semantics), stay genuinely vendor-neutral, and — per RFC
-  0006 — treat AGT as a pluggable policy decision point, so adopting AGT
-  strengthens rather than replaces OSAS.
+- **Microsoft gravity.** AGT is real and maturing fast (created 2026-03; 6,350
+  stars, 159 contributors and five SDKs about seven months later): it already
+  ships approval fail-safe timeouts, **action-bound approvals**, IFC, and a
+  Merkle audit chain — and it has now entered this vertical with a support
+  example policy. OSAS cannot out-spend it; it must out-*lifecycle* it (ticket
+  state, after-sales objects, refund-ledger reconciliation) and own the
+  **write-safety semantics** AGT has formally disclaimed, stay genuinely
+  vendor-neutral, and — per RFC 0006 — treat AGT as a pluggable policy decision
+  point, so adopting AGT strengthens rather than replaces OSAS. **The risk is
+  one of timing: if AGT or AWS closes the write idempotency/reconciliation gap
+  first, OSAS's differentiating axis disappears.**
 - **Ecosystem scale.** Two implementations (one reference, one in-repo
   candidate) versus hundreds of MCP servers. The v1.0 gate of ≥3 independent
   implementations is also the moat — see below.
