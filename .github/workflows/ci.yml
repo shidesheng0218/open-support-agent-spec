@@ -157,11 +157,13 @@ jobs:
       - name: Black-box compat runner against the Docker API (conformance mode on)
         run: pnpm osas:compat -- --target http://localhost:3001 --out "$GITHUB_WORKSPACE/compat-runner-report.json"
       - name: Assert registry-grade gate (gateOk) on the v0.2 run
-        run: grep -q '"gateOk": true' "$GITHUB_WORKSPACE/compat-runner-report.json"
+        run: |
+          grep -q '"gateOk": true' "$GITHUB_WORKSPACE/compat-runner-report.json"
       - name: Controlled Execution conformance against the Docker API
         run: pnpm osas:compat -- --target http://localhost:3001 --profile controlled-execution --conformance-key ci-conformance-test-key --provider-event-key ci-provider-event-test-key --out "$GITHUB_WORKSPACE/controlled-execution-report.json"
       - name: Assert registry-grade gate (gateOk) on the v0.3 run
-        run: grep -q '"gateOk": true' "$GITHUB_WORKSPACE/controlled-execution-report.json"
+        run: |
+          grep -q '"gateOk": true' "$GITHUB_WORKSPACE/controlled-execution-report.json"
       - uses: actions/upload-artifact@v4
         if: always()
         with:
