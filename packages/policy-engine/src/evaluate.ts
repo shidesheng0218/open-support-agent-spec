@@ -3,8 +3,16 @@ import {
   FINANCIAL_ACTION_TYPES,
   NEVER_AUTO_EXECUTE_ACTION_TYPES,
   type ActionProposal,
+  type ActionType,
   type PolicyRule,
 } from "@osas/core";
+
+/** Money-moving actions. `exchange_request` needs evidence but has no amount. */
+const AMOUNT_REQUIRED_ACTION_TYPES: readonly ActionType[] = [
+  "refund",
+  "reshipment",
+  "credit_apply",
+];
 import { deepEqual } from "./stable-stringify.js";
 import type { EvaluationContext, PolicyDecision } from "./types.js";
 
@@ -103,8 +111,30 @@ export function evaluateProposal(
       );
     }
 
-    // 7. OVER_THRESHOLD / CURRENCY_MISMATCH.
-    if (proposal.amount && rule.maxAmount) {
+    // 7. AMOUNT_REQUIRED / OVER_THRESHOLD / CURRENCY_MISMATCH.
+    // Financial actions cannot skip the threshold by omitting amount or by
+    // matching a rule that has no ceiling.
+    if (AMOUNT_REQUIRED_ACTION_TYPES.includes(proposal.actionType)) {
+      if (!proposal.amount || !rule.maxAmount) {
+        add(
+          "AMOUNT_REQUIRED",
+          `financial actionType '${proposal.actionType}' requires proposal.amount and rule.maxAmount before a threshold can be applied`,
+          "block",
+        );
+      } else if (proposal.amount.currency !== rule.maxAmount.currency) {
+        add(
+          "CURRENCY_MISMATCH",
+          `amount currency ${proposal.amount.currency} does not match rule.maxAmount currency ${rule.maxAmount.currency}`,
+          "require_approval",
+        );
+      } else if (proposal.amount.minorUnits > rule.maxAmount.minorUnits) {
+        add(
+          "OVER_THRESHOLD",
+          `amount ${proposal.amount.minorUnits} ${proposal.amount.currency} exceeds rule maxAmount ${rule.maxAmount.minorUnits} ${rule.maxAmount.currency}`,
+          "require_approval",
+        );
+      }
+    } else if (proposal.amount && rule.maxAmount) {
       if (proposal.amount.currency !== rule.maxAmount.currency) {
         add(
           "CURRENCY_MISMATCH",
@@ -178,7 +208,14 @@ export function evaluateProposal(
   // 6. DUPLICATE_REQUEST: same tenantId+caseId+actionType, deep-equal params,
   //    created within duplicateWindowSeconds, in an active status.
   const windowMs = ctx.policy.duplicateWindowSeconds * 1000;
-  const duplicate = ctx.recentProposals.find(
+  if (ctx.recentProposals === undefined) {
+    add(
+      "DUPLICATE_WINDOW_UNAVAILABLE",
+      "recentProposals was not loaded; duplicate detection fails closed",
+      "block",
+    );
+  }
+  const duplicate = (ctx.recentProposals ?? []).find(
     (p) =>
       p.id !== proposal.id &&
       p.tenantId === proposal.tenantId &&
@@ -210,6 +247,16 @@ export function evaluateProposal(
   const referenced = ctx.evidence.filter((e) =>
     proposal.evidenceIds.includes(e.id),
   );
+  const missingIds = proposal.evidenceIds.filter(
+    (id) => !referenced.some((e) => e.id === id),
+  );
+  if (missingIds.length > 0) {
+    add(
+      "INSUFFICIENT_EVIDENCE",
+      `referenced evidence was not loaded: ${missingIds.join(", ")}`,
+      "block",
+    );
+  }
   const stale = referenced.filter((e) => {
     if (e.expiresAt && new Date(e.expiresAt).getTime() < now.getTime()) {
       return true;
@@ -222,7 +269,7 @@ export function evaluateProposal(
     add(
       "EVIDENCE_STALE",
       `evidence expired or older than maxEvidenceAgeSeconds: ${stale.map((e) => e.id).join(", ")}`,
-      "require_approval",
+      "block",
     );
   }
 

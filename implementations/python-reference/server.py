@@ -257,7 +257,11 @@ def evaluate(
                 f"reasonCode '{proposal.get('reasonCode')}' is not in the allowed list for actionType '{action}'",
                 "block")
         amount, max_amount = proposal.get("amount"), rule.get("maxAmount")
-        if amount and max_amount:
+        if action in ("refund", "reshipment", "credit_apply") and (not amount or not max_amount):
+            add("AMOUNT_REQUIRED",
+                f"financial actionType '{action}' requires proposal.amount and rule.maxAmount before a threshold can be applied",
+                "block")
+        elif amount and max_amount:
             if amount.get("currency") != max_amount.get("currency"):
                 add("CURRENCY_MISMATCH",
                     f"amount currency {amount.get('currency')} does not match rule.maxAmount currency {max_amount.get('currency')}",
@@ -294,7 +298,12 @@ def evaluate(
                     f"customer region '{region}' is not in allowedRegions for actionType '{action}'",
                     "require_approval")
 
-    # 6. DUPLICATE_REQUEST.
+    # 6. DUPLICATE_REQUEST. None means the caller did not load a window.
+    if recent_proposals is None:
+        add("DUPLICATE_WINDOW_UNAVAILABLE",
+            "recentProposals was not loaded; duplicate detection fails closed",
+            "block")
+        recent_proposals = []
     window_ms = int(policy.get("duplicateWindowSeconds", 86400)) * 1000
     duplicate = next(
         (p for p in recent_proposals
@@ -317,7 +326,12 @@ def evaluate(
         add("INSUFFICIENT_EVIDENCE",
             f"financial actionType '{action}' requires at least one evidence reference", "block")
     max_age_s = int(policy.get("maxEvidenceAgeSeconds", 604800))
-    referenced = [e for e in evidence if e.get("id") in (proposal.get("evidenceIds") or [])]
+    evidence_ids = list(proposal.get("evidenceIds") or [])
+    referenced = [e for e in evidence if e.get("id") in evidence_ids]
+    missing_ids = [i for i in evidence_ids if i not in {e.get("id") for e in referenced}]
+    if missing_ids:
+        add("INSUFFICIENT_EVIDENCE",
+            "referenced evidence was not loaded: " + ", ".join(missing_ids), "block")
     stale = [
         e for e in referenced
         if (e.get("expiresAt") and _parse_ms(e["expiresAt"]) < now_ms)
@@ -326,7 +340,7 @@ def evaluate(
     if stale:
         add("EVIDENCE_STALE",
             "evidence expired or older than maxEvidenceAgeSeconds: " + ", ".join(e["id"] for e in stale),
-            "require_approval")
+            "block")
 
     # 11. Rule-matched baseline; final = worst of everything.
     if rule is not None:

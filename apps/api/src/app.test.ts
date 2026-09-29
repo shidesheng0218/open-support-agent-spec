@@ -295,18 +295,20 @@ describe("policy + execution flows (§4/§5)", () => {
     ).toBe(true);
   });
 
-  it("refund referencing expired evidence (ev_expired) requires approval with EVIDENCE_STALE (§4 rule 10)", async () => {
+  it("refund referencing expired evidence (ev_expired) is blocked with EVIDENCE_STALE (§4 rule 10)", async () => {
     const proposal = await createProposal(refundBody({ evidenceIds: ["ev_expired"] }));
 
     const { proposal: evaluated, decision } = await evaluate(proposal.id);
-    expect(decision.decision).toBe("require_approval");
+    expect(decision.decision).toBe("block");
     expect(decision.reasons.some((r) => r.code === "EVIDENCE_STALE")).toBe(true);
-    expect(evaluated.status).toBe("pending_approval");
+    expect(evaluated.status).toBe("policy_rejected");
 
-    const approvals = (
-      await app.inject({ method: "GET", url: "/v1/approvals?status=pending" })
-    ).json() as { proposalId: string }[];
-    expect(approvals.some((a) => a.proposalId === proposal.id)).toBe(true);
+    const handoffs = (
+      await app.inject({ method: "GET", url: "/v1/handoffs?status=open" })
+    ).json() as { reason: string; proposalId?: string }[];
+    expect(
+      handoffs.some((h) => h.reason === "insufficient_evidence" && h.proposalId === proposal.id),
+    ).toBe(true);
   });
 });
 

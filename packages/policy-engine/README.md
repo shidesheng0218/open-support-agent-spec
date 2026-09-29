@@ -147,11 +147,11 @@ decision (`block` > `require_approval` > `auto_execute`):
 3. `PROFILE_MISMATCH` — `actionType` doesn't belong to `proposal.profile` → block
 4. `NO_RULE` — no policy rule matches the `actionType` → block (default block)
 5. `REASON_CODE_NOT_ALLOWED` → block
-6. `DUPLICATE_REQUEST` — deep-equal params within `duplicateWindowSeconds` → block
-7. `OVER_THRESHOLD` / `CURRENCY_MISMATCH` vs `rule.maxAmount` → require_approval
+6. `DUPLICATE_REQUEST` — deep-equal params within `duplicateWindowSeconds` → block; `DUPLICATE_WINDOW_UNAVAILABLE` when `recentProposals` was not loaded → block
+7. `OVER_THRESHOLD` / `CURRENCY_MISMATCH` vs `rule.maxAmount` → require_approval; `AMOUNT_REQUIRED` when `refund` / `reshipment` / `credit_apply` has no amount or the rule has no `maxAmount` → block
 8. `IDENTITY_REQUIRED` / `IDENTITY_UNVERIFIED` → block
 9. `REGION_BLOCKED` / `REGION_UNLISTED` → block / require_approval
-10. `INSUFFICIENT_EVIDENCE` / `EVIDENCE_STALE` → block / require_approval
+10. `INSUFFICIENT_EVIDENCE` / `EVIDENCE_STALE` → block / block
 11. Otherwise the matched rule's baseline `decision`
 
 The engine is **pure**: it never mutates proposals, writes audit events, or

@@ -170,6 +170,9 @@ const HANDOFF_BY_REASON: Record<string, { reason: HandoffReason; event?: AuditEv
   IDENTITY_UNVERIFIED: { reason: "identity_unverified" },
   REGION_BLOCKED: { reason: "region_blocked" },
   INSUFFICIENT_EVIDENCE: { reason: "insufficient_evidence" },
+  EVIDENCE_STALE: { reason: "insufficient_evidence" },
+  AMOUNT_REQUIRED: { reason: "over_threshold" },
+  DUPLICATE_WINDOW_UNAVAILABLE: { reason: "duplicate_request" },
 };
 
 export interface EvaluationOutcome {

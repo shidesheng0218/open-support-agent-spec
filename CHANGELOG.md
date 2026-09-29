@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- **Fail-closed policy defaults (breaking while v0.2 is Draft).** `EVIDENCE_STALE` now blocks and hands off as `insufficient_evidence` instead of `require_approval`. `refund`, `reshipment`, and `credit_apply` block with `AMOUNT_REQUIRED` when the proposal has no `amount` or the matched rule has no `maxAmount`. A referenced evidence id that was not loaded blocks with `INSUFFICIENT_EVIDENCE`. `recentProposals === undefined` blocks with `DUPLICATE_WINDOW_UNAVAILABLE`; an empty array still means the window was loaded and empty. The chat path screens the customer message together with proposal params. `exchange_request` stays amount-optional and human-only. `specVersion` stays `0.2`. Shadow and sandbox modes are unchanged; `live` stays disabled.
+
 ### Added
 
 - **Action-bound approvals (RFC 0008, EN+ZH)**: an Approval now carries an

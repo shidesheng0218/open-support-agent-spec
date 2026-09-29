@@ -156,22 +156,53 @@ describe("evaluateProposal — §4 policy matrix", () => {
     expect(d.decision).toBe("auto_execute");
   });
 
-  it("require_approval: EVIDENCE_STALE when evidence is expired", () => {
+  it("block: EVIDENCE_STALE when evidence is expired", () => {
     const evidence = makeEvidence({ expiresAt: daysAgo(1) });
     const d = evaluateProposal(makeProposal(), baseCtx({ evidence: [evidence] }));
-    expect(d.decision).toBe("require_approval");
+    expect(d.decision).toBe("block");
     expect(d.reasons.map((r) => r.code)).toContain("EVIDENCE_STALE");
   });
 
-  it("require_approval: EVIDENCE_STALE when retrievedAt is older than maxEvidenceAgeSeconds", () => {
+  it("block: EVIDENCE_STALE when retrievedAt is older than maxEvidenceAgeSeconds", () => {
     const evidence = makeEvidence({ retrievedAt: daysAgo(10) });
     const d = evaluateProposal(makeProposal(), baseCtx({ evidence: [evidence] }));
-    expect(d.decision).toBe("require_approval");
+    expect(d.decision).toBe("block");
     expect(d.reasons.map((r) => r.code)).toContain("EVIDENCE_STALE");
+  });
+
+  it("block: AMOUNT_REQUIRED when a financial action omits amount", () => {
+    const d = evaluateProposal(makeProposal({ amount: undefined }), baseCtx());
+    expect(d.decision).toBe("block");
+    expect(d.reasons.map((r) => r.code)).toContain("AMOUNT_REQUIRED");
+  });
+
+  it("block: AMOUNT_REQUIRED when the matched rule has no maxAmount", () => {
+    const policy = makePolicy();
+    const refund = policy.rules.find((r) => r.actionType === "refund");
+    if (!refund) throw new Error("fixture policy has no refund rule");
+    delete refund.maxAmount;
+    const d = evaluateProposal(makeProposal(), baseCtx({ policy }));
+    expect(d.decision).toBe("block");
+    expect(d.reasons.map((r) => r.code)).toContain("AMOUNT_REQUIRED");
+  });
+
+  it("block: DUPLICATE_WINDOW_UNAVAILABLE when recent proposals were not supplied", () => {
+    const d = evaluateProposal(makeProposal(), baseCtx({ recentProposals: undefined }));
+    expect(d.decision).toBe("block");
+    expect(d.reasons.map((r) => r.code)).toContain("DUPLICATE_WINDOW_UNAVAILABLE");
   });
 
   it("block: INSUFFICIENT_EVIDENCE on financial action without evidenceIds", () => {
     const d = evaluateProposal(makeProposal({ evidenceIds: [] }), baseCtx());
+    expect(d.decision).toBe("block");
+    expect(d.reasons.map((r) => r.code)).toContain("INSUFFICIENT_EVIDENCE");
+  });
+
+  it("block: INSUFFICIENT_EVIDENCE when a referenced evidence record was not loaded", () => {
+    const d = evaluateProposal(
+      makeProposal({ evidenceIds: ["ev_missing"] }),
+      baseCtx({ evidence: [] }),
+    );
     expect(d.decision).toBe("block");
     expect(d.reasons.map((r) => r.code)).toContain("INSUFFICIENT_EVIDENCE");
   });

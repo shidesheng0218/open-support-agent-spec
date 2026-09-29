@@ -349,20 +349,25 @@ transforms（被阻断的动作不会被部分执行）。
 6. **`DUPLICATE_REQUEST`** —— 存在另一条具有相同 `tenantId` + `caseId` +
    `actionType` 且 `params` 深度相等的建议，创建于 `duplicateWindowSeconds` 之内，
    状态为 `executing` / `executed` / `pending_approval` / `approved`
-   → 阻断 + 人工接管（`duplicate_request`）。
+   → 阻断 + 人工接管（`duplicate_request`）。**`DUPLICATE_WINDOW_UNAVAILABLE`**
+   —— `recentProposals` 未加载（`undefined` / `null`，不是空数组）→ 阻断。
+   空数组表示窗口已加载且其中没有提案。
 7. **`OVER_THRESHOLD`** —— 存在 `amount`、规则有 `maxAmount` 且金额超出（同币种）
    → 升级为 `require_approval`。金额与上限**币种不一致**时，以原因
-   `CURRENCY_MISMATCH` 升级为 `require_approval`。
+   `CURRENCY_MISMATCH` 升级为 `require_approval`。**`AMOUNT_REQUIRED`** ——
+   `refund`、`reshipment` 或 `credit_apply` 的建议缺少 `amount`，或命中的规则
+   缺少 `maxAmount` → 阻断。省略金额不能绕过阈值。`exchange_request` 不在此列。
 8. **`IDENTITY_REQUIRED` / `IDENTITY_UNVERIFIED`** —— 规则要求
    `requireVerifiedIdentity` 而客户身份不是 `verified`，或验证时间早于
    `identityMaxAgeSeconds` → 阻断 + 人工接管（`identity_unverified`）。
 9. **`REGION_BLOCKED`** —— `customer.region` ∈ 规则 `blockedRegions`
    → 阻断 + 人工接管（`region_blocked`）。**`REGION_UNLISTED`** —— 规则有
    `allowedRegions` 且 region ∉ 列表 → `require_approval`。
-10. **`INSUFFICIENT_EVIDENCE`** —— 金融类 actionType 无 `evidenceIds` → 阻断 +
-    人工接管（`insufficient_evidence`）。**`EVIDENCE_STALE`** —— 任一引用证据已过期
-    （`expiresAt` < 当前时间）或自 `retrievedAt` 起超过 `maxEvidenceAgeSeconds`
-    → `require_approval`。
+10. **`INSUFFICIENT_EVIDENCE`** —— 金融类 actionType 无 `evidenceIds`，或任一
+    引用的证据 id 没有载入 `ctx.evidence` → 阻断 + 人工接管（`insufficient_evidence`）。
+    **`EVIDENCE_STALE`** —— 任一引用证据已过期（`expiresAt` < 当前时间）或自
+    `retrievedAt` 起超过 `maxEvidenceAgeSeconds` → 阻断 + 人工接管
+    （`insufficient_evidence`）。过期证据不足以进入审批。
 11. 否则采用命中规则的 `decision`（`auto_execute` 或 `require_approval`）。
 12. **`NEVER_AUTO_EXECUTE`** —— actionType 属于绝不自动执行集合
     （`exchange_request`，§15.5）→ 决策被封顶为 `require_approval`，即使命中的规则

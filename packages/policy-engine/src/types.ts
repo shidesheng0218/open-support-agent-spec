@@ -49,6 +49,8 @@ export const POLICY_REASON_CODES = [
   "REGION_UNLISTED",
   "INSUFFICIENT_EVIDENCE",
   "EVIDENCE_STALE",
+  "AMOUNT_REQUIRED",
+  "DUPLICATE_WINDOW_UNAVAILABLE",
   "NEVER_AUTO_EXECUTE",
 ] as const;
 
@@ -59,7 +61,12 @@ export interface EvaluationContext {
   customer?: Customer;
   evidence: Evidence[];
   policy: TenantPolicy;
-  recentProposals: ActionProposal[];
+  /**
+   * Recent proposals for the duplicate window. `undefined` means the caller
+   * did not load a window — evaluation fails closed. An empty array means
+   * the window was loaded and contained nothing.
+   */
+  recentProposals?: ActionProposal[];
   injectionSuspected: boolean;
   now?: Date;
 }

@@ -332,7 +332,9 @@ export async function chatRoutes(app: FastifyInstance): Promise<void> {
     }, app.auditStore);
 
     const evaluation = await runEvaluation(adapter, ctx, proposal, {
-      injectionSuspected: detectInjection(JSON.stringify(proposal.params ?? {})),
+      injectionSuspected: detectInjection(
+        [message, JSON.stringify(proposal.params ?? {})].join("\n"),
+      ),
       policy: await resolveActivePolicy(adapter, app.policyStore, ctx, ctx.tenantId),
       sink: app.auditStore,
     });

@@ -257,11 +257,12 @@
     },
     "expected": {
       "action": "refund",
-      "policyDecision": "require_approval",
+      "policyDecision": "block",
       "evidenceRequired": true,
       "reasonCodes": [
         "EVIDENCE_STALE"
-      ]
+      ],
+      "handoffReason": "insufficient_evidence"
     }
   },
   {
@@ -285,11 +286,12 @@
     },
     "expected": {
       "action": "refund",
-      "policyDecision": "require_approval",
+      "policyDecision": "block",
       "evidenceRequired": true,
       "reasonCodes": [
         "EVIDENCE_STALE"
-      ]
+      ],
+      "handoffReason": "insufficient_evidence"
     }
   },
   {
@@ -313,11 +315,12 @@
     },
     "expected": {
       "action": "refund",
-      "policyDecision": "require_approval",
+      "policyDecision": "block",
       "evidenceRequired": true,
       "reasonCodes": [
         "EVIDENCE_STALE"
-      ]
+      ],
+      "handoffReason": "insufficient_evidence"
     }
   },
   {

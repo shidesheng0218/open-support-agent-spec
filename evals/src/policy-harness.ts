@@ -189,6 +189,9 @@ const HANDOFF_BY_REASON: Readonly<Record<string, HandoffReason>> = {
   IDENTITY_UNVERIFIED: "identity_unverified",
   REGION_BLOCKED: "region_blocked",
   INSUFFICIENT_EVIDENCE: "insufficient_evidence",
+  EVIDENCE_STALE: "insufficient_evidence",
+  AMOUNT_REQUIRED: "over_threshold",
+  DUPLICATE_WINDOW_UNAVAILABLE: "duplicate_request",
   OVER_THRESHOLD: "over_threshold",
 };
 

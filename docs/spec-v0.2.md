@@ -358,20 +358,27 @@ The algorithm collects **all** applicable reasons; the final decision is the wor
 6. **`DUPLICATE_REQUEST`** — another proposal exists with the same
    `tenantId` + `caseId` + `actionType` and deep-equal `params`, created within
    `duplicateWindowSeconds`, in status `executing` / `executed` / `pending_approval` /
-   `approved` → block + handoff (`duplicate_request`).
+   `approved` → block + handoff (`duplicate_request`). **`DUPLICATE_WINDOW_UNAVAILABLE`**
+   — `recentProposals` was not loaded (`undefined` / `null`, not an empty list) →
+   block. An empty list means the window was loaded and contained nothing.
 7. **`OVER_THRESHOLD`** — `amount` present, rule has `maxAmount`, and amount exceeds it
    (same currency) → escalate to `require_approval`. A **currency mismatch** between
    amount and maxAmount escalates to `require_approval` with reason `CURRENCY_MISMATCH`.
+   **`AMOUNT_REQUIRED`** — `refund`, `reshipment`, or `credit_apply` whose proposal
+   omits `amount`, or whose matched rule omits `maxAmount` → block. Omitting the
+   amount is not a way past the threshold. `exchange_request` is not in this set.
 8. **`IDENTITY_REQUIRED` / `IDENTITY_UNVERIFIED`** — rule has `requireVerifiedIdentity`
    and the customer's identity is not `verified`, or the verification is older than
    `identityMaxAgeSeconds` → block + handoff (`identity_unverified`).
 9. **`REGION_BLOCKED`** — `customer.region` ∈ rule `blockedRegions` → block + handoff
    (`region_blocked`). **`REGION_UNLISTED`** — rule has `allowedRegions` and region ∉
    list → `require_approval`.
-10. **`INSUFFICIENT_EVIDENCE`** — financial actionType with no `evidenceIds` → block +
+10. **`INSUFFICIENT_EVIDENCE`** — financial actionType with no `evidenceIds`, or any
+    referenced evidence id that was not loaded into `ctx.evidence` → block +
     handoff (`insufficient_evidence`). **`EVIDENCE_STALE`** — any referenced evidence is
     expired (`expiresAt` < now) or older than `maxEvidenceAgeSeconds` (from
-    `retrievedAt`) → `require_approval`.
+    `retrievedAt`) → block + handoff (`insufficient_evidence`). Stale evidence is not
+    fresh enough to approve.
 11. Otherwise the matched rule's `decision` applies (`auto_execute` or
     `require_approval`).
 12. **`NEVER_AUTO_EXECUTE`** — the actionType is in the never-auto-execute set

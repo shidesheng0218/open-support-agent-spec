@@ -84,13 +84,13 @@ export function registerPolicyMatrix(collector: ReportCollector): void {
         );
       }));
 
-    test("stale evidence -> require_approval (EVIDENCE_STALE)", () =>
-      runCase(collector, SUITE, "stale evidence -> require_approval", () => {
+    test("stale evidence -> block (EVIDENCE_STALE)", () =>
+      runCase(collector, SUITE, "stale evidence -> block", () => {
         const stale = expiredEvidence(demo);
         const d = evaluate(demo, baseRefund(demo, { evidenceIds: [stale.id as string] }), {
           evidence: [stale],
         });
-        expect(d.decision).toBe("require_approval");
+        expect(d.decision).toBe("block");
         expect(reasonCodes(d)).toContain("EVIDENCE_STALE");
       }));
 

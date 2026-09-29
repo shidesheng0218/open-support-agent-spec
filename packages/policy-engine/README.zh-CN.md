@@ -123,11 +123,11 @@ node examples/embed-policy-engine/dist/main.js
 3. `PROFILE_MISMATCH`——`actionType` 不属于 `proposal.profile` → block
 4. `NO_RULE`——没有匹配该 `actionType` 的策略规则 → block（默认拒绝）
 5. `REASON_CODE_NOT_ALLOWED` → block
-6. `DUPLICATE_REQUEST`——`duplicateWindowSeconds` 内参数深度相等 → block
-7. `OVER_THRESHOLD` / `CURRENCY_MISMATCH`（对比 `rule.maxAmount`）→ require_approval
+6. `DUPLICATE_REQUEST`——`duplicateWindowSeconds` 内参数深度相等 → block；`recentProposals` 未加载 → `DUPLICATE_WINDOW_UNAVAILABLE` block
+7. `OVER_THRESHOLD` / `CURRENCY_MISMATCH`（对比 `rule.maxAmount`）→ require_approval；`refund` / `reshipment` / `credit_apply` 缺金额或规则无 `maxAmount` → `AMOUNT_REQUIRED` block
 8. `IDENTITY_REQUIRED` / `IDENTITY_UNVERIFIED` → block
 9. `REGION_BLOCKED` / `REGION_UNLISTED` → block / require_approval
-10. `INSUFFICIENT_EVIDENCE` / `EVIDENCE_STALE` → block / require_approval
+10. `INSUFFICIENT_EVIDENCE` / `EVIDENCE_STALE` → block / block
 11. 否则取命中规则的基准 `decision`
 
 引擎是**纯函数式的**：它不修改 proposal、不写审计事件、不调用适配器。副作用（状态迁移、审批、转人工、审计落盘）由你的嵌入层负责——如果你跑 OSAS 全栈，则由 OSAS API Server 负责。
