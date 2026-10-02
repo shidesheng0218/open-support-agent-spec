@@ -56,6 +56,21 @@ jobs:
           path: tests/compat/report/latest.json
           if-no-files-found: warn
 
+  publish-dry-run:
+    # The four public packages must always be publishable: rebuild, pack, and
+    # inspect the tarballs (workspace:* specifiers rewritten; dist, README,
+    # LICENSE, NOTICE present). Publishing itself stays a manual action.
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: node scripts/check-publish-readiness.mjs
+
   python-compat:
     # The Python candidate implementation (implementations/python-reference)
     # must pass the same black-box suites as the TypeScript reference — this
@@ -131,6 +146,8 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - run: pnpm build
       - run: docker compose build
+      - name: Statically validate the production compose example
+        run: docker compose -f docker-compose.prod.yml.example config --quiet
       - run: docker compose up -d
       - name: Wait for API health
         run: |

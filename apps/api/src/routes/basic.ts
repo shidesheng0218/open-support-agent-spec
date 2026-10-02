@@ -17,6 +17,7 @@ import {
 } from "../plugins.js";
 import { REPO_ROOT } from "../paths.js";
 import { assertTenantAccess } from "../auth.js";
+import { buildOpenApiDocument } from "../openapi.js";
 import { collectEvidence, resolveActivePolicy } from "../domain.js";
 
 const PROPOSAL_SCHEMA = "core/action-proposal";
@@ -61,6 +62,7 @@ export async function basicRoutes(app: FastifyInstance): Promise<void> {
       executionMode: app.executionMode.mode,
       capabilities: manifest,
       endpoints: {
+        openapi: "/v1/openapi.json",
         capabilities: "/v1/capabilities",
         policies: "/v1/policies/:tenantId",
         auditVerify: "/v1/audit/verify",
@@ -160,6 +162,10 @@ export async function basicRoutes(app: FastifyInstance): Promise<void> {
   });
 
   app.get("/v1/meta/tools", async () => TOOL_DEFINITIONS);
+
+  // OpenAPI 3.1 for REST integrators; components come from the authoritative
+  // schemas/ manifest (zero hand-copied schemas).
+  app.get("/v1/openapi.json", async () => buildOpenApiDocument());
 
   app.get("/v1/audit", async (req) => {
     const ctx = ctxFor(req);

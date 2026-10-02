@@ -47,6 +47,9 @@ import {
   type StorageConfig,
 } from "./config.js";
 import { registerRoutes } from "./routes/index.js";
+import { buildGovernance, loadGovernanceEventKey } from "./governance.js";
+import type { GovernanceRuntime } from "@osas/governance";
+import { buildSecurityPosture } from "./posture.js";
 import { conformanceRoutes } from "./routes/conformance.js";
 import { InMemoryAfterSalesStore } from "./routes/after-sales.js";
 
@@ -71,6 +74,8 @@ export interface BuildAppOptions {
   shadowRunStore?: ShadowRunStore;
   /** Env override for config loading (tests); defaults to process.env. */
   env?: NodeJS.ProcessEnv;
+  /** Explicit governance runtime (tests). Default: memory or Postgres wiring. */
+  governance?: GovernanceRuntime;
 }
 
 const utcDayStart = (): string => `${new Date().toISOString().slice(0, 10)}T00:00:00.000Z`;
@@ -114,7 +119,8 @@ export async function buildApp(opts: BuildAppOptions = {}): Promise<FastifyInsta
   const storage = opts.storage ?? loadStorageConfig(env);
   const llm = opts.llm ?? loadLlmConfig(env);
   // v0.3 Draft: proposal_only/shadow/sandbox are non-live modes; live aborts
-  // startup with LIVE_EXECUTION_NOT_AVAILABLE_IN_V0_3_DRAFT.
+  // startup with LIVE_EXECUTION_NOT_AVAILABLE_IN_V0_1_1 (a historical stable
+  // error-code name retained for compatibility).
   const executionMode = opts.executionMode ?? loadExecutionMode(env);
   // Milestone 4: conformance mode — enabled only via explicit env, never in
   // production, and only with a test-only key (loadConformanceConfig throws).
@@ -122,13 +128,27 @@ export async function buildApp(opts: BuildAppOptions = {}): Promise<FastifyInsta
   const adapter =
     opts.adapter ?? (executionMode.mode === "sandbox" ? createSandboxAdapter() : createSeededAdapter());
   const app = Fastify({ logger: opts.logger === false ? false : loggerOptions });
+  // Security posture summary: one structured line + one WARN per weak
+  // combination. Observability only — the fail-closed loaders above already
+  // enforced the hard rules. Never includes secrets (see posture.ts).
+  const postureReport = buildSecurityPosture({ auth, storage, llm, executionMode, conformance, env });
+  app.log.info({ posture: postureReport.posture }, "security posture summary");
+  for (const warning of postureReport.warnings) app.log.warn(warning);
   await app.register(cors, { origin: true });
   app.decorate("adapter", adapter);
   app.decorate("executionMode", executionMode);
-  app.decorate("executionAttemptStore", new InMemoryExecutionAttemptStore());
-  app.decorate("executionReceiptStore", new InMemoryExecutionReceiptStore());
-  app.decorate("reconciliationStore", new InMemoryReconciliationStore());
-  app.decorate("providerEventStore", new InMemoryProviderEventStore());
+  // In-memory stores are the fallback ONLY when PostgreSQL does not supply
+  // them. Fastify 5 refuses to re-decorate, so decorating here unconditionally
+  // made "OSAS_STORAGE=postgres" fail at boot with
+  // "The decorator 'executionAttemptStore' has already been added!" — the
+  // unreachable-database tests never reached this line, so the successful
+  // postgres path was the one that broke.
+  if (storage.mode !== "postgres") {
+    app.decorate("executionAttemptStore", new InMemoryExecutionAttemptStore());
+    app.decorate("executionReceiptStore", new InMemoryExecutionReceiptStore());
+    app.decorate("reconciliationStore", new InMemoryReconciliationStore());
+    app.decorate("providerEventStore", new InMemoryProviderEventStore());
+  }
   app.decorate("providerEventKey", loadProviderEventKey(env));
   app.decorate("afterSalesStore", new InMemoryAfterSalesStore());
 
@@ -157,6 +177,29 @@ export async function buildApp(opts: BuildAppOptions = {}): Promise<FastifyInsta
   }
   app.decorate("usageStore", usageStore);
   app.decorate("shadowRunStore", shadowRunStore);
+
+  // M1 governance control plane. Provider-neutral: the only extension point is
+  // an injected job handler, and nothing here knows about a specific vendor.
+  if (opts.governance) {
+    app.decorate("governance", opts.governance);
+    app.decorate("governanceEventKey", loadGovernanceEventKey(env));
+  } else {
+    const governance = buildGovernance({
+      ...(app.pgPool ? { pool: app.pgPool } : {}),
+      storage,
+      env,
+    });
+    app.decorate("governance", governance.runtime);
+    app.decorate("governanceEventKey", governance.eventKey);
+    app.log.info(
+      {
+        consumer: governance.consumer,
+        eventIngest: governance.eventKey ? "enabled" : "disabled",
+        storage: storage.mode,
+      },
+      "governance control plane ready",
+    );
+  }
 
   const onBudgetWarning = createBudgetWarningAuditor(adapter, app.log);
 

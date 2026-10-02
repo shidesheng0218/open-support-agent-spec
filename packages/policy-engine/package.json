@@ -3,6 +3,9 @@
   "version": "0.2.1",
   "description": "Deterministic policy engine for customer-support agent writes: tenant policy evaluation, permission ladder, idempotent execution, and audit hash chains.",
   "license": "Apache-2.0",
+  "engines": {
+    "node": ">=20"
+  },
   "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
@@ -13,7 +16,8 @@
     }
   },
   "files": [
-    "dist"
+    "dist",
+    "NOTICE"
   ],
   "repository": {
     "type": "git",
@@ -24,6 +28,7 @@
     "access": "public"
   },
   "scripts": {
+    "prepublishOnly": "pnpm run build && pnpm run test",
     "build": "tsc -p tsconfig.json",
     "typecheck": "tsc --noEmit -p tsconfig.json",
     "test": "vitest run",

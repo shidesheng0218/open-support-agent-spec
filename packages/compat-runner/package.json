@@ -32,7 +32,8 @@
     "osas-compat": "./dist/cli.js"
   },
   "files": [
-    "dist"
+    "dist",
+    "NOTICE"
   ],
   "publishConfig": {
     "access": "public"

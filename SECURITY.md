@@ -32,7 +32,10 @@ unless you prefer otherwise.
   model provider, and a demo auth mode (`OSAS_AUTH_MODE=demo`), and it has
   never been hardened or audited for production. Authentication (demo headers
   or JWT/OIDC) and per-tenant isolation do exist and are covered by tests, but
-  they are reference-grade, not production-grade.
+  they are reference-grade, not production-grade. The staged path from this
+  demo to a production posture — configuration matrix, never-list, and
+  pre-launch checklist — lives in
+  [docs/production-hardening.md](docs/production-hardening.md).
 - **Never feed real customer data** into this repository, its demos, its issues,
   or its fixtures. All fixtures under `packages/mock-backend/` are synthetic.
 - **Logs redact PII.** The reference API logs no request/response bodies by

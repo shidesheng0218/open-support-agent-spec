@@ -32,6 +32,9 @@ importers:
       '@osas/ecommerce-shadow':
         specifier: workspace:*
         version: link:../../packages/ecommerce-shadow
+      '@osas/governance':
+        specifier: workspace:*
+        version: link:../../packages/governance
       '@osas/mcp-server':
         specifier: workspace:*
         version: link:../../packages/mcp-server
@@ -174,6 +177,19 @@ importers:
         specifier: ^2.1.8
         version: 2.1.9(@types/node@22.20.1)
 
+  packages/governance:
+    dependencies:
+      '@osas/adapter':
+        specifier: workspace:*
+        version: link:../adapter
+      '@osas/core':
+        specifier: workspace:*
+        version: link:../core
+    devDependencies:
+      vitest:
+        specifier: ^2.1.8
+        version: 2.1.9(@types/node@22.20.1)
+
   packages/mcp-server:
     dependencies:
       '@modelcontextprotocol/sdk':
@@ -246,6 +262,9 @@ importers:
       '@osas/ecommerce-shadow':
         specifier: workspace:*
         version: link:../ecommerce-shadow
+      '@osas/governance':
+        specifier: workspace:*
+        version: link:../governance
       '@osas/model-gateway':
         specifier: workspace:*
         version: link:../model-gateway

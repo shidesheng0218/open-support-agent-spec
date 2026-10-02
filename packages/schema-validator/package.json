@@ -3,6 +3,9 @@
   "version": "0.2.1",
   "description": "Ajv 2020-12 based JSON Schema validation for OSAS objects against the schemas/ manifest.",
   "license": "Apache-2.0",
+  "engines": {
+    "node": ">=20"
+  },
   "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
@@ -13,7 +16,8 @@
     }
   },
   "files": [
-    "dist"
+    "dist",
+    "NOTICE"
   ],
   "repository": {
     "type": "git",
@@ -24,6 +28,7 @@
     "access": "public"
   },
   "scripts": {
+    "prepublishOnly": "pnpm run build && pnpm run test",
     "build": "tsc -p tsconfig.json && node scripts/copy-schemas.mjs",
     "typecheck": "tsc --noEmit -p tsconfig.json",
     "test": "vitest run"

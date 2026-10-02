@@ -25,10 +25,11 @@
   },
   "dependencies": {
     "@osas/core": "workspace:*",
-    "@osas/policy-engine": "workspace:*",
-    "pg": "^8.13.1",
+    "@osas/ecommerce-shadow": "workspace:*",
+    "@osas/governance": "workspace:*",
     "@osas/model-gateway": "workspace:*",
-    "@osas/ecommerce-shadow": "workspace:*"
+    "@osas/policy-engine": "workspace:*",
+    "pg": "^8.13.1"
   },
   "devDependencies": {
     "@types/pg": "^8.11.10",

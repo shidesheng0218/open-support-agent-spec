@@ -8,6 +8,17 @@ import {
   AdapterPermissionError,
 } from "@osas/adapter";
 import { IllegalTransitionError } from "@osas/core";
+import {
+  GovernanceConflictError,
+  GovernanceForbiddenError,
+  GovernanceNotFoundError,
+  GovernanceSecretRefusedError,
+  GovernanceTenantError,
+  GovernanceTransitionError,
+  GovernanceValidationError,
+  IntegrationSignatureError,
+  type GovernanceRuntime,
+} from "@osas/governance";
 import type { ExecutionStore, PolicyStore } from "@osas/policy-engine";
 import type { ModelGateway } from "@osas/model-gateway";
 import type { UsageStore } from "@osas/model-gateway";
@@ -75,6 +86,10 @@ declare module "fastify" {
     conformanceConfig: import("./config.js").ConformanceConfig;
     compatReportPath?: string;
     afterSalesStore: import("./routes/after-sales.js").AfterSalesStore;
+    /** M1 governance control plane (provider-neutral). */
+    governance: GovernanceRuntime;
+    /** Absent = integration-event ingestion disabled (fail closed). */
+    governanceEventKey?: string;
   }
 }
 
@@ -145,6 +160,33 @@ export function errorHandler(err: FastifyError, req: FastifyRequest, reply: Fast
   }
   if (err instanceof PolicyAdminRequiredError || err.name === "PolicyAdminRequiredError") {
     return send(403, "POLICY_ADMIN_REQUIRED", err.message);
+  }
+  if (err instanceof GovernanceForbiddenError || err.name === "GovernanceForbiddenError") {
+    return send(403, "FORBIDDEN", err.message);
+  }
+  if (err instanceof GovernanceTenantError || err.name === "GovernanceTenantError") {
+    return send(403, "TENANT_MISMATCH", err.message);
+  }
+  if (err instanceof IntegrationSignatureError || err.name === "IntegrationSignatureError") {
+    // The delivery itself is untrusted; it is rejected before touching state.
+    return send(401, "SIGNATURE_UNVERIFIED", err.message);
+  }
+  if (err instanceof GovernanceNotFoundError || err.name === "GovernanceNotFoundError") {
+    return send(404, "NOT_FOUND", err.message);
+  }
+  if (err instanceof GovernanceSecretRefusedError || err.name === "GovernanceSecretRefusedError") {
+    // Distinct code on purpose: a caller tried to store something that looks
+    // like a credential, and that must be visible in logs and metrics.
+    return send(400, "SECRET_REFUSED", err.message);
+  }
+  if (err instanceof GovernanceValidationError || err.name === "GovernanceValidationError") {
+    return send(400, "VALIDATION_ERROR", err.message);
+  }
+  if (err instanceof GovernanceTransitionError || err.name === "GovernanceTransitionError") {
+    return send(409, "ILLEGAL_TRANSITION", err.message);
+  }
+  if (err instanceof GovernanceConflictError || err.name === "GovernanceConflictError") {
+    return send(409, "CONFLICT", err.message);
   }
   if (err instanceof SchemaInvalidError || err.name === "SchemaInvalidError") {
     return send(422, "SCHEMA_INVALID", err.message, (err as unknown as SchemaInvalidError).details);

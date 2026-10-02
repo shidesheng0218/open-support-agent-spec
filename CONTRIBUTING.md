@@ -98,8 +98,14 @@ implementation, tests, and bilingual docs have all merged, its status is marked
 ## Versioning
 
 The specification, schemas, and all `@osas/*` packages share one semantic version
-(currently `0.2.0`). While v0.x, minor bumps may be breaking; from v1.0, breaking changes
+(currently `0.2.1`). While v0.x, minor bumps may be breaking; from v1.0, breaking changes
 require a major bump. Details in [GOVERNANCE.md](GOVERNANCE.md#versioning).
+
+## Becoming a maintainer
+
+New maintainers and reviewers: read [docs/maintainer-onboarding.md](docs/maintainer-onboarding.md)
+for the architecture map, the invariants you protect, and how to run every CI
+gate locally.
 
 ## Reporting security issues
 

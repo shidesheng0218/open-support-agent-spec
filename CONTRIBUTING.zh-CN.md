@@ -88,9 +88,14 @@ pnpm docker:up      # docker compose up --build（控制台 :8080，API :3001）
 
 ## 版本管理
 
-规范、Schema 与全部 `@osas/*` 包共用一个语义化版本（当前为 `0.2.0`）。v0.x 期间次
+规范、Schema 与全部 `@osas/*` 包共用一个语义化版本（当前为 `0.2.1`）。v0.x 期间次
 版本可能包含破坏性变更；自 v1.0 起，破坏性变更需要主版本号递增。
 详见 [GOVERNANCE.md](GOVERNANCE.md#versioning)。
+
+## 成为维护者
+
+新任维护者与评审者：请阅读 [docs/maintainer-onboarding.zh-CN.md](docs/maintainer-onboarding.zh-CN.md)，
+了解架构地图、你守护的不变量，以及如何在本地运行每一道 CI 门。
 
 ## 报告安全问题
 

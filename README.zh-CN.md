@@ -108,7 +108,7 @@ flowchart LR
   正确性。售后用例集自己的覆盖记账在报告中公开：100 个场景中 20 个能到达真实
   沙箱结果，其余为 `shadow_only` / `proposal_only` / 缺领域对象或适配器。
 - **每种威胁都有对应测试**——[威胁模型](docs/threat-model.zh-CN.md)把
-  十三类攻击逐条映射到证明其防御的具体测试。
+  十四类攻击逐条映射到证明其防御的具体测试。
 
 ## 深入了解
 
@@ -117,7 +117,8 @@ flowchart LR
 
 <br />
 所有旋钮都是环境变量——带注释的模板见 [.env.example](.env.example)。
-全部失败即关闭。
+全部失败即关闭。要从演示走向生产？[生产加固指南](docs/production-hardening.zh-CN.md)
+给出了分阶段路径（演示 → 预发 → 生产），含"绝不能"清单与上线前检查清单。
 
 - **认证**（`OSAS_AUTH_MODE`）：`demo`（默认；`x-osas-role` /
   `x-osas-actor-id` / `x-tenant-id` 请求头）或 `jwt`（OIDC Bearer，经
@@ -243,10 +244,11 @@ docs/  rfcs/  .github/workflows/  docker-compose.yml
 即关闭。见[适配器开发指南](docs/adapter-guide.zh-CN.md)；Zendesk、Shopify
 与 Chatwoot 适配器是完整参考。
 
-只有 `@osas/core`、`@osas/schema-validator`、`@osas/policy-engine` 发布到
-npm；其余包均为私有参考实现——请从仓库检出构建。如果只想在既有系统中采用
-治理层，直接嵌入 `@osas/policy-engine`——见可运行的
-[examples/embed-policy-engine](examples/embed-policy-engine)。
+只有 `@osas/core`、`@osas/schema-validator`、`@osas/policy-engine` 与
+`@osas/compat-runner` 发布到 npm；其余包均为私有参考实现——请从仓库检出构建。
+如果只想在既有系统中采用治理层，直接嵌入 `@osas/policy-engine`——见可运行的
+[examples/embed-policy-engine](examples/embed-policy-engine) 与
+[10 分钟教程](docs/tutorials/embed-policy-engine-10min.zh-CN.md)。
 
 </details>
 
@@ -311,6 +313,10 @@ v1.0 之前，次版本之间可能出现不兼容变更——见 [CHANGELOG.md]
 - 商业协议售后事件互操作：[docs/commerce-protocol-interop.md](docs/commerce-protocol-interop.md) · [中文](docs/commerce-protocol-interop.zh-CN.md)
 - v0.3 合规 Profile：[docs/conformance-v0.3.md](docs/conformance-v0.3.md) · [中文](docs/conformance-v0.3.zh-CN.md)
 - 威胁模型：[docs/threat-model.md](docs/threat-model.md) · [中文](docs/threat-model.zh-CN.md)
+- 生产加固：[docs/production-hardening.md](docs/production-hardening.md) · [中文](docs/production-hardening.zh-CN.md)
+- REST 集成（`/v1/openapi.json` 提供 OpenAPI 3.1）：[docs/rest-integration.md](docs/rest-integration.md) · [中文](docs/rest-integration.zh-CN.md)
+- 治理运行时（组织、连接、可靠摄入、对账）：[docs/governance-runtime.md](docs/governance-runtime.md) · [中文](docs/governance-runtime.zh-CN.md)
+- ADR 0001，平台边界（厂商中立而非单一厂商）：[docs/adr/0001-platform-scope.md](docs/adr/0001-platform-scope.md) · [中文](docs/adr/0001-platform-scope.zh-CN.md)
 - 竞品格局：[docs/competitive-landscape.md](docs/competitive-landscape.md) · [中文](docs/competitive-landscape.zh-CN.md)
 - 工程契约：[CONTRACTS.md](CONTRACTS.md)
 - 贡献：[CONTRIBUTING.md](CONTRIBUTING.md) · [中文](CONTRIBUTING.zh-CN.md)

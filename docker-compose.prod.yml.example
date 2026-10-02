@@ -1,0 +1,94 @@
+# EXAMPLE production-shaped deployment for the OSAS reference API + console.
+# This is a STARTING POINT for docs/production-hardening.md Stage 3 — read that
+# guide before using it. It is named .example on purpose: copy it, fill in the
+# placeholders from your secret store, and review every line.
+#
+#   cp docker-compose.prod.yml.example docker-compose.prod.yml
+#   # edit placeholders, then: docker compose -f docker-compose.prod.yml up -d
+#
+# Hard guarantees that remain even here: OSAS_EXECUTION_MODE=live refuses to
+# start (spec-level), and conformance mode refuses NODE_ENV=production.
+
+services:
+  api:
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
+    environment:
+      NODE_ENV: production
+      PORT: 3001
+      # Demo fixtures are for demos. Real deployments load their own data.
+      SEED_DEMO: "false"
+      # Auth: OIDC Bearer via your IdP. All three are required (fail closed).
+      OSAS_AUTH_MODE: jwt
+      OSAS_JWKS_URL: https://YOUR_IDP/.well-known/jwks.json
+      OSAS_JWT_ISSUER: https://YOUR_IDP/
+      OSAS_JWT_AUDIENCE: osas-api
+      # Storage: PostgreSQL with migrations applied (see the migrate service).
+      OSAS_STORAGE: postgres
+      DATABASE_URL: postgres://osas:CHANGE_ME@db:5432/osas
+      # LLM: real provider, explicit prices (else costs record as unknown),
+      # and budget caps that block calls before the provider is touched.
+      OSAS_LLM_PROVIDER: openai-compatible
+      OSAS_LLM_BASE_URL: https://YOUR_LLM_ENDPOINT/v1
+      OSAS_LLM_API_KEY: CHANGE_ME_FROM_SECRET_STORE
+      OSAS_LLM_MODEL_FAST: CHANGE_ME
+      OSAS_LLM_MODEL_STANDARD: CHANGE_ME
+      OSAS_LLM_INPUT_USD_PER_MTOKEN: "0.15"
+      OSAS_LLM_OUTPUT_USD_PER_MTOKEN: "0.60"
+      OSAS_LLM_DAILY_BUDGET_USD: "25"
+      OSAS_LLM_CASE_BUDGET_USD: "0.50"
+      # Execution: shadow (record-only) or sandbox (synthetic). Never live.
+      OSAS_EXECUTION_MODE: shadow
+      # Conformance mode stays OFF. It refuses to boot in production anyway.
+      OSAS_CONFORMANCE_MODE: "false"
+    depends_on:
+      db:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+    # Do not publish the API directly in real deployments: front it with a
+    # TLS-terminating, rate-limiting reverse proxy (see the hardening guide).
+    ports:
+      - "3001:3001"
+    restart: unless-stopped
+
+  web:
+    build:
+      context: .
+      dockerfile: apps/web/Dockerfile
+    depends_on:
+      - api
+    ports:
+      - "8080:80"
+    restart: unless-stopped
+
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: osas
+      POSTGRES_PASSWORD: CHANGE_ME_FROM_SECRET_STORE
+      POSTGRES_DB: osas
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U osas -d osas"]
+      interval: 2s
+      timeout: 3s
+      retries: 30
+    volumes:
+      - osas-pgdata:/var/lib/postgresql/data
+    # No host port: the API reaches db over the compose network only.
+    restart: unless-stopped
+
+  migrate:
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
+    command: pnpm --filter @osas/store-postgres run db:migrate
+    environment:
+      DATABASE_URL: postgres://osas:CHANGE_ME@db:5432/osas
+    depends_on:
+      db:
+        condition: service_healthy
+
+volumes:
+  osas-pgdata:

@@ -7,6 +7,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added (hardening and adoption readiness)
+
+- **Publish readiness gate**: `scripts/check-publish-readiness.mjs` (`pnpm check:publish`, CI job `publish-dry-run`) rebuilds and packs the four public packages (@osas/core, schema-validator, policy-engine, compat-runner), asserting the tarballs carry `dist`, README, LICENSE, NOTICE, and no `workspace:*` specifiers. The three libraries gain `prepublishOnly` (build + test) and `engines`; all four ship the root LICENSE/NOTICE. Publishing itself stays manual — see `docs/release-checklist.md`.
+- **Production hardening guide** (`docs/production-hardening.md`, EN+ZH): the staged demo → staging → production path, the never-list, WORM pairing for the audit hash chain, and a pre-launch checklist. SECURITY.md and both READMEs link it.
+- **Startup security-posture log**: after the fail-closed config loaders run, the API logs one structured posture line (auth/storage/execution/conformance/LLM — enums only, never secrets) plus one WARN per weak combination (`apps/api/src/posture.ts`, covered by `config-posture.test.ts`). A copy-and-edit `docker-compose.prod.yml.example` ships at the repo root, statically validated in CI.
+- **OpenAPI 3.1 export**: `GET /v1/openapi.json` describes the stable v1 HTTP surface with `components.schemas` loaded from the authoritative schemas/ manifest at request time (file-relative refs rewritten to component refs) — zero hand-copied schemas. New integrator guide `docs/rest-integration.md` (EN+ZH); the discovery document lists the endpoint.
+- **Maintainer onboarding** (`docs/maintainer-onboarding.md`, EN+ZH): architecture map, the protected invariants, every CI gate with its local command, and the RFC lifecycle. Linked from CONTRIBUTING (EN+ZH).
+- **First tutorial** (`docs/tutorials/embed-policy-engine-10min.md`, EN+ZH): the runnable embed-policy-engine example walked end to end.
+- **Governance control plane, M0/M1** (`@osas/governance`): a provider-neutral runtime for organizations, workspaces, connections, reliable event ingest, a leased job queue, reconciliation, and governed cases. Two invariants are enforced structurally rather than by convention — a connection stores only an opaque `credentialRef` (values shaped like provider tokens, JWTs, or `Bearer` strings are refused with `SECRET_REFUSED`), and no governance role can widen the adapter permission ladder. New HTTP surface `/v1/governance/*` (documented in OpenAPI), migration `0003_governance_control_plane.sql`, and guides `docs/governance-runtime.md` + `docs/adr/0001-platform-scope.md` (EN+ZH). **M1 does not execute anything**: the control plane provisions connections and routes work; the only extension point is an injected job handler.
+- **Reliable-event semantics, pinned by tests**: unverified deliveries are rejected *before* they can occupy a dedupe key (so a forged event cannot suppress a genuine later one); duplicates are recorded without enqueuing; an event behind the accepted watermark is parked as `stale_ignored` and produces a *read-only* refetch job instead of being applied; a `side_effecting` job is never retried automatically — a failure or an expired worker lease dead-letters it and opens a reconciliation.
+
+### Fixed
+
+- **`OSAS_STORAGE=postgres` could not boot.** `buildApp` decorated `executionAttemptStore`, `executionReceiptStore`, `reconciliationStore`, and `providerEventStore` with in-memory defaults *and* again with their PostgreSQL implementations; Fastify 5 rejects the second decoration, so startup aborted with "The decorator ... has already been added!". The existing postgres tests only covered the *unreachable database* path (which throws earlier), so the working path was the broken one. The in-memory defaults now apply only when PostgreSQL does not supply the store, and `apps/api/src/governance-postgres.test.ts` boots the API against a real database end to end.
+- **`migrate()` was not safe under concurrent invocation.** Two migrators racing on `CREATE TABLE IF NOT EXISTS schema_migrations` made one die with a duplicate `pg_type` error — exactly what a rolling deploy, or two parallel test files, does. The whole run now serializes behind a session-level advisory lock, so "migrate at boot" is safe to run from every replica.
+
+### Fixed (documentation drift)
+
+- README (EN+ZH) claimed "thirteen attack classes"; the threat model has listed fourteen since RFC 0008 (T14).
+- CONTRIBUTING (EN+ZH) still named 0.2.0 as the current version.
+- The publish-policy prose (README EN+ZH, CONTRACTS §0) said three public packages; the enforced gate has covered four since @osas/compat-runner became public.
+- A stale comment in `apps/api/src/app.ts` cited the wrong live-execution error code.
+
 ### Changed
 
 - **Fail-closed policy defaults (breaking while v0.2 is Draft).** `EVIDENCE_STALE` now blocks and hands off as `insufficient_evidence` instead of `require_approval`. `refund`, `reshipment`, and `credit_apply` block with `AMOUNT_REQUIRED` when the proposal has no `amount` or the matched rule has no `maxAmount`. A referenced evidence id that was not loaded blocks with `INSUFFICIENT_EVIDENCE`. `recentProposals === undefined` blocks with `DUPLICATE_WINDOW_UNAVAILABLE`; an empty array still means the window was loaded and empty. The chat path screens the customer message together with proposal params. `exchange_request` stays amount-optional and human-only. `specVersion` stays `0.2`. Shadow and sandbox modes are unchanged; `live` stays disabled.

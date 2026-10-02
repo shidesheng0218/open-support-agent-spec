@@ -115,7 +115,7 @@ A model proposal requesting `execute` is a policy violation
   rest are `shadow_only` / `proposal_only` / missing a domain object or
   adapter.
 - **Every threat has a test** — the [threat model](docs/threat-model.md) maps
-  thirteen attack classes to the exact test that proves the defense.
+  fourteen attack classes to the exact test that proves the defense.
 
 ## Deep dive
 
@@ -124,7 +124,9 @@ A model proposal requesting `execute` is a policy violation
 
 <br />
 All knobs are env vars — see [.env.example](.env.example) for the annotated
-template. Everything fails closed.
+template. Everything fails closed. Moving past the demo? The
+[production hardening guide](docs/production-hardening.md) is the staged path
+(demo → staging → production), with the never-list and the pre-launch checklist.
 
 - **Auth** (`OSAS_AUTH_MODE`): `demo` (default; `x-osas-role` /
   `x-osas-actor-id` / `x-tenant-id` headers) or `jwt` (OIDC Bearer via
@@ -253,11 +255,13 @@ the `SupportAdapter` interface from `@osas/adapter` — start from
 closed. See the [adapter guide](docs/adapter-guide.md); the Zendesk, Shopify,
 and Chatwoot adapters are complete references.
 
-Only `@osas/core`, `@osas/schema-validator`, and `@osas/policy-engine` are
-published to npm; the other packages are private reference implementations —
-build them from a repo checkout. To adopt only the governance layer inside an
-existing system, embed `@osas/policy-engine` directly — see the runnable
-[examples/embed-policy-engine](examples/embed-policy-engine).
+Only `@osas/core`, `@osas/schema-validator`, `@osas/policy-engine`, and
+`@osas/compat-runner` are published to npm; the other packages are private
+reference implementations — build them from a repo checkout. To adopt only the
+governance layer inside an existing system, embed `@osas/policy-engine`
+directly — see the runnable
+[examples/embed-policy-engine](examples/embed-policy-engine) and the
+[10-minute tutorial](docs/tutorials/embed-policy-engine-10min.md).
 
 </details>
 
@@ -324,6 +328,10 @@ Until v1.0, expect breaking changes between minor versions — see
 - Commerce protocol post-purchase interop: [docs/commerce-protocol-interop.md](docs/commerce-protocol-interop.md) · [中文](docs/commerce-protocol-interop.zh-CN.md)
 - v0.3 Conformance Profiles: [docs/conformance-v0.3.md](docs/conformance-v0.3.md) · [中文](docs/conformance-v0.3.zh-CN.md)
 - Threat model: [docs/threat-model.md](docs/threat-model.md) · [中文](docs/threat-model.zh-CN.md)
+- Production hardening: [docs/production-hardening.md](docs/production-hardening.md) · [中文](docs/production-hardening.zh-CN.md)
+- REST integration (OpenAPI 3.1 at `/v1/openapi.json`): [docs/rest-integration.md](docs/rest-integration.md) · [中文](docs/rest-integration.zh-CN.md)
+- Governance runtime (organizations, connections, reliable ingest, reconciliation): [docs/governance-runtime.md](docs/governance-runtime.md) · [中文](docs/governance-runtime.zh-CN.md)
+- ADR 0001, platform scope (provider-neutral, not single-vendor): [docs/adr/0001-platform-scope.md](docs/adr/0001-platform-scope.md) · [中文](docs/adr/0001-platform-scope.zh-CN.md)
 - Competitive landscape: [docs/competitive-landscape.md](docs/competitive-landscape.md) · [中文](docs/competitive-landscape.zh-CN.md)
 - Engineering contracts: [CONTRACTS.md](CONTRACTS.md)
 - Contributing: [CONTRIBUTING.md](CONTRIBUTING.md) · [中文](CONTRIBUTING.zh-CN.md)
