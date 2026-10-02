@@ -83,6 +83,18 @@ for (const pkg of PUBLIC_PACKAGES) {
       if (!members.includes(want)) fail(`${pkg.name}: tarball is missing ${want}`);
     }
 
+    // Tests must not ship to npm. Compiling them was also what made this gate
+    // depend on prebuilt private workspace packages (compat-runner's test
+    // imports @osas/api/app), so it passed locally only when apps/api/dist
+    // happened to exist — and failed on a clean CI checkout. Regression guard.
+    const shippedTests = members.filter((m) => /\.test\.(js|d\.ts|js\.map)$/.test(m));
+    if (shippedTests.length > 0) {
+      fail(
+        `${pkg.name}: tarball ships compiled tests (${shippedTests.join(", ")}); ` +
+          "build with tsconfig.build.json, which excludes src/**/*.test.ts",
+      );
+    }
+
     execFileSync("tar", ["-xzf", tgz, "-C", tmp, "package/package.json"]);
     const packed = readJson(join(tmp, "package/package.json"));
     if (packed.version !== EXPECTED_VERSION) {

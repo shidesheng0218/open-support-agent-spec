@@ -29,7 +29,7 @@
   },
   "scripts": {
     "prepublishOnly": "pnpm run build && pnpm run test",
-    "build": "tsc -p tsconfig.json",
+    "build": "tsc -p tsconfig.build.json",
     "typecheck": "tsc --noEmit -p tsconfig.json",
     "test": "vitest run",
     "demo": "pnpm --filter @osas-examples/embed-policy-engine run demo"

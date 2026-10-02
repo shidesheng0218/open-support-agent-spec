@@ -29,7 +29,7 @@
   },
   "scripts": {
     "prepublishOnly": "pnpm run build && pnpm run test",
-    "build": "tsc -p tsconfig.json && node scripts/copy-schemas.mjs",
+    "build": "tsc -p tsconfig.build.json && node scripts/copy-schemas.mjs",
     "typecheck": "tsc --noEmit -p tsconfig.json",
     "test": "vitest run"
   },
