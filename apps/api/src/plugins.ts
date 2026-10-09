@@ -198,6 +198,11 @@ export function errorHandler(err: FastifyError, req: FastifyRequest, reply: Fast
     // RFC 0008: the proposal no longer matches its approved action digest.
     return send(409, "ACTION_BINDING_MISMATCH", err.message);
   }
+  if (err.name === "ExecutionInFlightError") {
+    // §5 claimed slot: a concurrent attempt (or a retry after a crash or a
+    // failed terminal write) MUST NOT reach the provider again.
+    return send(409, "EXECUTION_IN_FLIGHT", err.message);
+  }
   if (
     err instanceof IllegalTransitionError ||
     err instanceof ConflictError ||

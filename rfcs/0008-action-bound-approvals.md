@@ -144,8 +144,12 @@ evaluated at execute time. An approval must pass both.
 
 ## Open questions
 
-- Should the canonical input include top-level `amount` explicitly (it is currently
-  evaluated from the top level while the digest covers `params`)? If a future schema
-  version moves money into `params`, the digest definition stays unchanged.
+- ~~Should the canonical input include top-level `amount` explicitly?~~
+  **Resolved (v0.2 hardening):** yes — the canonical input is
+  `{ actionType, params, amount? }`; a changed top-level amount now invalidates
+  the approval. Spec §6 rule 4, `computeActionDigest`, and the tests follow this
+  definition. Proposals without a top-level `amount` keep the pre-amount digest
+  shape. If a future schema version moves money into `params`, the digest
+  definition stays unchanged.
 - Should `actionDigest` become REQUIRED for new approvals at v1.0? (Recommended yes;
   optional in v0.x for compatibility.)

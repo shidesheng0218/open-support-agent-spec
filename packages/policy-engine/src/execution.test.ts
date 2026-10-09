@@ -7,6 +7,7 @@ import {
   executeProposal,
   reconcile,
   type ActionExecutor,
+  type StoredExecution,
 } from "./execution.js";
 import type { ActionProposal, ExecutionResult } from "./types.js";
 import { makeProposal } from "./fixtures.js";
@@ -165,5 +166,68 @@ describe("reconcile — §5", () => {
     expect(() =>
       reconcile(approvedProposal({ status: "executed" }), "failed"),
     ).toThrow(ReconcileStatusError);
+  });
+});
+
+describe("executeProposal — claimed slots (§5 hardening)", () => {
+  it("two concurrent attempts with the same key call the adapter exactly once", async () => {
+    const store = new InMemoryExecutionStore();
+    let release!: () => void;
+    const gate = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    const entered = vi.fn();
+    const adapter = {
+      executeAction: vi.fn(async () => {
+        entered();
+        await gate;
+        return { status: "succeeded" as const, externalRef: "ext_claim" };
+      }),
+    };
+    const first = executeProposal(approvedProposal(), adapter, store);
+    await vi.waitFor(() => expect(entered).toHaveBeenCalledTimes(1));
+    await expect(executeProposal(approvedProposal(), adapter, store)).rejects.toMatchObject({
+      code: "EXECUTION_IN_FLIGHT",
+    });
+    release();
+    const out = await first;
+    expect(out.proposal.status).toBe("executed");
+    expect(out.replayed).toBe(false);
+    expect(adapter.executeAction).toHaveBeenCalledTimes(1);
+  });
+
+  it("a retry after a failed terminal write is refused, not re-executed", async () => {
+    class FlakyFinalizeStore extends InMemoryExecutionStore {
+      failures = 1;
+      override async finalize(record: StoredExecution): Promise<void> {
+        if (this.failures > 0) {
+          this.failures -= 1;
+          throw new Error("simulated ledger write failure");
+        }
+        return super.finalize(record);
+      }
+    }
+    const store = new FlakyFinalizeStore();
+    const adapter = executor({ status: "succeeded", externalRef: "ext_1" });
+    await expect(executeProposal(approvedProposal(), adapter, store)).rejects.toThrow(
+      "simulated ledger write failure",
+    );
+    expect(adapter.executeAction).toHaveBeenCalledTimes(1);
+    // The slot stays claimed: the provider is never reached again.
+    await expect(executeProposal(approvedProposal(), adapter, store)).rejects.toMatchObject({
+      code: "EXECUTION_IN_FLIGHT",
+    });
+    expect(adapter.executeAction).toHaveBeenCalledTimes(1);
+  });
+
+  it("an uncertain outcome leaves the slot claimed (same-key re-attempt refused)", async () => {
+    const store = new InMemoryExecutionStore();
+    const adapter = executor({ status: "uncertain", detail: "timeout" });
+    const out = await executeProposal(approvedProposal(), adapter, store);
+    expect(out.proposal.status).toBe("reconciliation_required");
+    await expect(executeProposal(approvedProposal(), adapter, store)).rejects.toMatchObject({
+      code: "EXECUTION_IN_FLIGHT",
+    });
+    expect(adapter.executeAction).toHaveBeenCalledTimes(1);
   });
 });

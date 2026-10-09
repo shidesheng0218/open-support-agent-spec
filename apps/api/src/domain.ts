@@ -485,7 +485,10 @@ export async function runExecution(
 
   if (opts.pgPool) {
     const transactionResult = await withTransaction(opts.pgPool, async (client) => {
-      const out = await executeProposal(effectiveProposal, executor, new PostgresExecutionStore(client));
+      // The claim runs on the POOL (its own auto-commit statement), so the
+      // reservation is durable before the adapter call; the terminal record
+      // and mirrored audit events still commit in this one transaction.
+      const out = await executeProposal(effectiveProposal, executor, new PostgresExecutionStore(client, opts.pgPool));
       const finished = await finish(out, {
         append: (event) => new PostgresAuditStore(client).append(event),
       });

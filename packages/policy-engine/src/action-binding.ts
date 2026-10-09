@@ -6,17 +6,22 @@ import { stableStringify } from "./stable-stringify.js";
  * RFC 0008 — action-bound approvals.
  *
  * An approval carries `actionDigest`: SHA-256 over the canonical stable-JSON
- * serialization of `{ actionType, params }` of the proposal it approves —
- * exactly what the human saw and decided on. The execution boundary recomputes
- * the digest from the proposal it is about to execute and refuses on mismatch,
- * closing the decide/execute TOCTOU gap. The canonicalization is the same
- * stable JSON the audit hash chain uses (spec §12.3), so the digest is
- * reproducible across implementations.
+ * serialization of the proposal's action input — `{ actionType, params, amount? }`.
+ * The top-level `amount` is included whenever present, so a changed amount
+ * invalidates the approval (RFC 0008 open question, resolved in the v0.2
+ * hardening pass). The execution boundary recomputes the digest from the
+ * proposal it is about to execute and refuses on mismatch, closing the
+ * decide/execute TOCTOU gap. The canonicalization is the same stable JSON the
+ * audit hash chain uses (spec §12.3), so the digest is reproducible across
+ * implementations.
  */
 export const ACTION_BINDING_MISMATCH = "ACTION_BINDING_MISMATCH";
 
 /** The canonical action input an approval binds to. */
-export type ActionBindingInput = Pick<ActionProposal, "actionType" | "params">;
+export type ActionBindingInput = Pick<
+  ActionProposal,
+  "actionType" | "params" | "amount"
+>;
 
 /** What a caller supplies to executeProposal to enforce the binding. */
 export interface ActionBinding {
@@ -38,10 +43,19 @@ export class ActionBindingMismatchError extends Error {
 /**
  * Compute the digest stamped on approvals and re-verified at execution.
  * Deterministic and key-order independent (stableStringify sorts keys).
+ * `amount` participates only when present, so proposals without a top-level
+ * amount keep the pre-amount digest shape.
  */
 export function computeActionDigest(input: ActionBindingInput): string {
   return createHash("sha256")
-    .update(stableStringify({ actionType: input.actionType, params: input.params }), "utf8")
+    .update(
+      stableStringify({
+        actionType: input.actionType,
+        params: input.params,
+        ...(input.amount === undefined ? {} : { amount: input.amount }),
+      }),
+      "utf8",
+    )
     .digest("hex");
 }
 

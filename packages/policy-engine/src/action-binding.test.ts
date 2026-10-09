@@ -22,6 +22,38 @@ describe("action binding (RFC 0008)", () => {
     expect(computeActionDigest({ actionType: "reshipment", params: { orderId: "ord_1" } })).not.toBe(base);
   });
 
+  it("changes when the top-level amount changes (stale approval cannot execute)", async () => {
+    const usd = (minorUnits: number) => ({ currency: "USD", minorUnits });
+    const base = computeActionDigest({
+      actionType: "refund",
+      params: { orderId: "ord_1" },
+      amount: usd(2500),
+    });
+    expect(
+      computeActionDigest({ actionType: "refund", params: { orderId: "ord_1" }, amount: usd(12000) }),
+    ).not.toBe(base);
+    // Absent amount keeps the legacy digest shape (pre-amount proposals).
+    expect(computeActionDigest({ actionType: "refund", params: { orderId: "ord_1" } })).toBe(
+      computeActionDigest({ actionType: "refund", params: { orderId: "ord_1" }, amount: undefined }),
+    );
+
+    // End to end: an approval stamped for $25 refuses to execute a $120 action.
+    const store = new InMemoryExecutionStore();
+    const adapter = { executeAction: vi.fn(async () => ({ status: "succeeded" as const })) };
+    const approved = makeProposal({ status: "approved" });
+    const stamped = computeActionDigest(approved);
+    await expect(
+      executeProposal(
+        { ...approved, amount: usd(12000) },
+        adapter,
+        store,
+        new Date(),
+        { actionDigest: stamped },
+      ),
+    ).rejects.toBeInstanceOf(ActionBindingMismatchError);
+    expect(adapter.executeAction).not.toHaveBeenCalled();
+  });
+
   it("passes when the supplied digest matches the proposal", () => {
     const proposal = makeProposal({ status: "approved" });
     expect(() =>

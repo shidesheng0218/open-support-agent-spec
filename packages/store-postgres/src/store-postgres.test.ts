@@ -95,6 +95,40 @@ run("store-postgres (requires DATABASE_URL)", () => {
     }
   });
 
+  it("execution claims: one winner per key, pending is in_flight, finalize completes", async () => {
+    const store = new PostgresExecutionStore(pool);
+    const key = `idem_claim_${randomUUID().slice(0, 8)}`;
+    const first = await store.claim(tenant, key, "prop_claim");
+    expect(first.outcome).toBe("claimed");
+    // A second attempt for the same key cannot claim the slot.
+    expect((await store.claim(tenant, key, "prop_claim")).outcome).toBe("in_flight");
+    // Pending rows are invisible to get(): replay serves terminal records only.
+    expect(await store.get(tenant, key)).toBeUndefined();
+    await store.finalize({
+      tenantId: tenant,
+      idempotencyKey: key,
+      proposalId: "prop_claim",
+      status: "executed",
+      result: { status: "succeeded", externalRef: "ext_claim" },
+      completedAt: new Date().toISOString(),
+    });
+    expect((await store.get(tenant, key))?.status).toBe("executed");
+    const replay = await store.claim(tenant, key, "prop_claim");
+    expect(replay.outcome).toBe("completed");
+    if (replay.outcome === "completed") {
+      expect(replay.record.result.externalRef).toBe("ext_claim");
+    }
+    // The claim is durable across connections (its own statement, not a transaction).
+    const pool2 = createPool(DATABASE_URL!);
+    try {
+      expect(
+        (await new PostgresExecutionStore(pool2).claim(tenant, key, "prop_claim")).outcome,
+      ).toBe("completed");
+    } finally {
+      await pool2.end();
+    }
+  });
+
   it("execution state + audit write are atomic under withTransaction", async () => {
     const key = `idem_${randomUUID()}`;
     const eventId = `evt_${randomUUID()}`;

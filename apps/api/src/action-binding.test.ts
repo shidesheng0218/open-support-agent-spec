@@ -88,7 +88,11 @@ describe("action-bound approvals (RFC 0008)", () => {
     // The approval binds to the exact action the approver saw.
     expect(approval.actionDigest).toMatch(/^[0-9a-f]{64}$/);
     expect(approval.actionDigest).toBe(
-      computeActionDigest({ actionType: proposal.actionType, params: proposal.params }),
+      computeActionDigest({
+        actionType: proposal.actionType,
+        params: proposal.params,
+        amount: proposal.amount,
+      }),
     );
 
     const decide = await app.inject({

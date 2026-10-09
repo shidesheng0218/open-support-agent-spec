@@ -421,12 +421,22 @@ Rules:
    Reconciliation is a human-driven recovery path, not an automatic retry.
 4. **Action binding (RFC 0008).** When an approval authorized the execution, the
    executing implementation MUST recompute the approval's `actionDigest` from the
-   proposal's `{ actionType, params }` and MUST refuse the execution — before any
-   state transition or adapter call — when the digests differ (409
+   proposal's canonical action input `{ actionType, params, amount? }` — the
+   top-level `amount` is included whenever present — and MUST refuse the execution
+   — before any state transition or adapter call — when the digests differ (409
    `ACTION_BINDING_MISMATCH`, audited exactly once as
    `action_binding_mismatch_blocked`; the proposal is not transitioned). The digest
-   covers the pre-transform params: what the approver saw. Approvals created before
+   covers the pre-transform input: what the approver saw. Approvals created before
    this field existed carry no digest and skip the check.
+5. **Claimed slots (v0.2 hardening).** When the ExecutionStore can reserve the slot
+   atomically, `executeProposal` MUST claim `(tenantId, idempotencyKey)` before
+   calling `adapter.executeAction`. A concurrent attempt for a claimed slot — or a
+   retry after a crash or a failed terminal write — MUST be refused (409
+   `EXECUTION_IN_FLIGHT`) instead of re-reaching the backend. An `uncertain` outcome
+   leaves the slot claimed: recovery is reconciliation (rule 3), and a retry means a
+   new proposal with a new `idempotencyKey`. The claim is durable when the store
+   commits it before the adapter call (reference: `@osas/store-postgres`, on its
+   own connection).
 
 ## 7. Tool profiles (MCP)
 

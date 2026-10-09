@@ -404,11 +404,18 @@ transforms（被阻断的动作不会被部分执行）。
 3. `reconcile(proposalId, outcome)` 仅允许从 `reconciliation_required` 发起，把建议
    推进到 `executed` 或 `failed`，并产生 `reconciliation_resolved`。对账是人工驱动
    的恢复路径，不是自动重试。
-4. **动作绑定（RFC 0008）。** 当执行由审批授权时，执行实现**必须**用建议的
-   `{ actionType, params }` 重新计算该审批的 `actionDigest`，两者不一致时**必须**拒绝
-   执行——且在任何状态迁移或适配器调用之前（409 `ACTION_BINDING_MISMATCH`，并恰好
-   审计一次 `action_binding_mismatch_blocked`；建议不做状态迁移）。摘要覆盖的是
-   转换前的 params：即审批人所见。该字段出现之前创建的审批没有摘要，跳过校验。
+4. **动作绑定（RFC 0008）。** 当执行由审批授权时，执行实现**必须**用建议的规范动作输入
+   `{ actionType, params, amount? }`（存在顶层 `amount` 时即包含它）重新计算该审批的
+   `actionDigest`，两者不一致时**必须**拒绝执行——且在任何状态迁移或适配器调用之前
+   （409 `ACTION_BINDING_MISMATCH`，并恰好审计一次 `action_binding_mismatch_blocked`；
+   建议不做状态迁移）。摘要覆盖的是转换前的输入：即审批人所见。该字段出现之前创建的审批
+   没有摘要，跳过校验。
+5. **占位声明（v0.2 加固）。** 当 ExecutionStore 能原子占位时，`executeProposal`
+   **必须**在调用 `adapter.executeAction` 之前先占位 `(tenantId, idempotencyKey)`。
+   对已占位槽位的并发尝试——或崩溃后、终态写入失败后的重试——**必须**被拒绝（409
+   `EXECUTION_IN_FLIGHT`），不得再次触达后端。`uncertain` 结果会保留占位：恢复路径是对账
+   （规则 3），重试意味着新建议 + 新 `idempotencyKey`。当存储在适配器调用前提交占位（参考
+   实现 `@osas/store-postgres` 使用独立连接）时，占位是持久的。
 
 ## 7. 工具 Profile（MCP）
 

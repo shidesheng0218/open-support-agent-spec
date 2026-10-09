@@ -34,14 +34,37 @@ export interface StoredExecution {
   completedAt: string;
 }
 
+/** Outcome of atomically reserving an execution slot (see ExecutionStore.claim). */
+export type ExecutionClaim =
+  | { outcome: "claimed" }
+  | { outcome: "in_flight" }
+  | { outcome: "completed"; record: StoredExecution };
+
 /** §5: executions keyed by (tenantId, idempotencyKey). Async since Milestone 2 (Postgres backends). */
 export interface ExecutionStore {
   get(tenantId: string, idempotencyKey: string): Promise<StoredExecution | undefined>;
   put(record: StoredExecution): Promise<void>;
+  /**
+   * Atomically reserve the (tenantId, idempotencyKey) slot BEFORE the adapter
+   * call, so two concurrent attempts — or a retry after a crash or a failed
+   * terminal write — cannot both reach the provider. Implement together with
+   * `finalize`; durable backends (e.g. a primary-keyed row committed on its
+   * own connection) are the point of the hook. Stores without it keep the
+   * legacy replay-guarded behaviour.
+   */
+  claim?(tenantId: string, idempotencyKey: string, proposalId: string): Promise<ExecutionClaim>;
+  /**
+   * Write the terminal record for a slot reserved with `claim`: updates the
+   * pending row in place so the store's own uniqueness constraint cannot
+   * suppress the outcome. Falls back to `put` when absent.
+   */
+  finalize?(record: StoredExecution): Promise<void>;
 }
 
 export class InMemoryExecutionStore implements ExecutionStore {
   private readonly map = new Map<string, StoredExecution>();
+  /** Slots claimed but not yet finalized (in flight or parked uncertain). */
+  private readonly inFlight = new Set<string>();
 
   private static key(tenantId: string, idempotencyKey: string): string {
     return `${tenantId} ${idempotencyKey}`;
@@ -51,16 +74,29 @@ export class InMemoryExecutionStore implements ExecutionStore {
     return this.map.get(InMemoryExecutionStore.key(tenantId, idempotencyKey));
   }
 
+  async claim(tenantId: string, idempotencyKey: string): Promise<ExecutionClaim> {
+    const key = InMemoryExecutionStore.key(tenantId, idempotencyKey);
+    const done = this.map.get(key);
+    if (done) return { outcome: "completed", record: done };
+    if (this.inFlight.has(key)) return { outcome: "in_flight" };
+    this.inFlight.add(key);
+    return { outcome: "claimed" };
+  }
+
   async put(record: StoredExecution): Promise<void> {
-    this.map.set(
-      InMemoryExecutionStore.key(record.tenantId, record.idempotencyKey),
-      record,
-    );
+    const key = InMemoryExecutionStore.key(record.tenantId, record.idempotencyKey);
+    this.map.set(key, record);
+    this.inFlight.delete(key);
+  }
+
+  async finalize(record: StoredExecution): Promise<void> {
+    await this.put(record);
   }
 
   /** Conformance Mode (Milestone 4, test-only): wipe all execution records. */
   reset(): void {
     this.map.clear();
+    this.inFlight.clear();
   }
 }
 
@@ -97,6 +133,22 @@ export class ReconcileStatusError extends Error {
   }
 }
 
+/**
+ * Thrown when a concurrent attempt for the same (tenantId, idempotencyKey)
+ * finds the slot already claimed. Fail closed: the holder may already have a
+ * provider side effect, so a second attempt must not start.
+ */
+export class ExecutionInFlightError extends Error {
+  readonly code = "EXECUTION_IN_FLIGHT";
+  constructor(tenantId: string, idempotencyKey: string) {
+    super(
+      `execution (${tenantId}, ${idempotencyKey}) is already in flight; ` +
+        "refusing a concurrent attempt — reconcile the parked proposal instead of retrying",
+    );
+    this.name = "ExecutionInFlightError";
+  }
+}
+
 export interface ExecuteOutcome {
   proposal: ActionProposal;
   execution: ExecutionResult;
@@ -109,13 +161,20 @@ export interface ExecuteOutcome {
  *
  * - Replay: if (tenantId, idempotencyKey) already completed, returns the
  *   stored result with `replayed: true` and never calls the adapter.
+ * - Claimed slot: when the store supports `claim`/`finalize`, the engine
+ *   atomically reserves (tenantId, idempotencyKey) BEFORE the adapter call.
+ *   A concurrent attempt — or a retry after a crash or a failed terminal
+ *   write — is refused with {@link ExecutionInFlightError} (409
+ *   `EXECUTION_IN_FLIGHT`) instead of reaching the provider again.
  * - Status guard: proposal must be `approved`, otherwise throws
  *   {@link ExecutionStatusError} (API maps to 409).
  * - Action binding (RFC 0008): when `binding.actionDigest` is supplied, the
- *   proposal's `{ actionType, params }` must hash to it, otherwise throws
- *   {@link ActionBindingMismatchError} before any transition or adapter call.
+ *   proposal's `{ actionType, params, amount? }` must hash to it, otherwise
+ *   throws {@link ActionBindingMismatchError} before any transition or adapter
+ *   call.
  * - Transitions: approved → executing → executed | failed |
- *   reconciliation_required. Uncertain outcomes are NEVER auto-retried.
+ *   reconciliation_required. Uncertain outcomes are NEVER auto-retried and
+ *   leave the claimed slot in place.
  * - §4 step 11: `proposal.policyDecision.transforms` (e.g. redaction) are
  *   applied to a deep clone of params before the adapter call, so policy-
  *   decided rewrites are enforced at the execution boundary for every
@@ -144,8 +203,26 @@ export async function executeProposal(
   }
 
   // RFC 0008: an approval authorizes an exact action, not a proposal reference.
-  // The digest covers the pre-transform params — what the approver saw.
+  // The digest covers the pre-transform input — what the approver saw.
   assertActionBinding(proposal, binding);
+
+  // §5 atomic slot: reserve (tenantId, idempotencyKey) BEFORE the adapter call
+  // so a concurrent or post-crash attempt cannot reach the provider twice.
+  // Stores without `claim` keep the legacy replay-guarded behaviour.
+  if (store.claim) {
+    const claim = await store.claim(
+      proposal.tenantId,
+      proposal.idempotencyKey,
+      proposal.id,
+    );
+    if (claim.outcome === "completed") {
+      // Lost the race to a finished execution: replay it, zero side effects.
+      return { proposal, execution: claim.record.result, replayed: true };
+    }
+    if (claim.outcome === "in_flight") {
+      throw new ExecutionInFlightError(proposal.tenantId, proposal.idempotencyKey);
+    }
+  }
 
   const executing = transitionProposal(proposal, "executing");
   // §4 step 11: the decision's transforms (e.g. PII redaction) are applied by
@@ -161,10 +238,13 @@ export async function executeProposal(
     { ...executing, params },
   );
 
+  // Terminal writes finalize the claimed slot in place when the store supports
+  // it; `put` keeps claim-less stores working.
+  const settle = store.finalize ? store.finalize.bind(store) : store.put.bind(store);
   switch (result.status) {
     case "succeeded": {
       const executed = transitionProposal(executing, "executed");
-      await store.put({
+      await settle({
         tenantId: proposal.tenantId,
         idempotencyKey: proposal.idempotencyKey,
         proposalId: proposal.id,
@@ -176,7 +256,7 @@ export async function executeProposal(
     }
     case "failed": {
       const failed = transitionProposal(executing, "failed");
-      await store.put({
+      await settle({
         tenantId: proposal.tenantId,
         idempotencyKey: proposal.idempotencyKey,
         proposalId: proposal.id,
@@ -187,9 +267,10 @@ export async function executeProposal(
       return { proposal: failed, execution: result, replayed: false };
     }
     case "uncertain": {
-      // Never auto-retry: park in reconciliation_required and do NOT store a
-      // completed execution (a later reconcile() resolves the proposal; the
-      // idempotency key only guards terminal adapter outcomes).
+      // Never auto-retry: park in reconciliation_required and leave the slot
+      // claimed, so a same-key re-attempt is refused (EXECUTION_IN_FLIGHT)
+      // rather than re-reaching the provider. Retries are new proposals with
+      // new idempotency keys (spec §3.2); reconciliation resolves this one.
       const parked = transitionProposal(executing, "reconciliation_required");
       return { proposal: parked, execution: result, replayed: false };
     }

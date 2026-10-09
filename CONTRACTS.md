@@ -126,6 +126,8 @@ Side effects (engine or API layer): block → proposal `policy_rejected` (+hando
   - failed → `failed` + `execution_failed`, store result.
   - uncertain (e.g. timeout) → `reconciliation_required` + `execution_uncertain` + `reconciliation_opened` + HumanHandoff(external_uncertain). **Never auto-retry.**
 - `reconcile(proposalId, outcome)`: only from `reconciliation_required` → `executed|failed` + `reconciliation_resolved`.
+- **Claimed slots (v0.2 hardening).** When the ExecutionStore exposes `claim`/`finalize`, `executeProposal` reserves `(tenantId, idempotencyKey)` **before** the adapter call. A concurrent attempt — or a retry after a crash or a failed terminal write — is refused with 409 `EXECUTION_IN_FLIGHT` instead of reaching the provider. An `uncertain` outcome leaves the slot claimed: recovery is reconciliation, and a retry is a new proposal with a new key. `@osas/store-postgres` commits the claim on its own connection (`claimDb`) before the adapter call; `InMemoryExecutionStore` mirrors the semantics.
+- **Action digest (RFC 0008).** `actionDigest` covers the canonical input `{ actionType, params, amount? }` — the top-level `amount` participates whenever present, so a changed amount invalidates the approval. Approvals created before the field existed carry no digest and skip the check.
 
 ## 6. SupportAdapter interface (@osas/adapter)
 
