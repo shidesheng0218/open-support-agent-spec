@@ -45,6 +45,13 @@
 
 ## 六十秒跑通
 
+**什么都不用装：** 下载
+[`examples/policy-sandbox/policy-sandbox.html`](examples/policy-sandbox/policy-sandbox.html)
+——一个自包含的单文件，在浏览器里直接运行真实的策略引擎。把退款金额拖过 $50，看闸门合上；
+勾选"客户消息里含有指令"，看它拒绝。不需要 Docker、不需要 clone、不联网。
+
+想跑完整栈：
+
 ```bash
 git clone https://github.com/shidesheng0218/open-support-agent-spec.git
 cd open-support-agent-spec
@@ -245,7 +252,8 @@ docs/  rfcs/  .github/workflows/  docker-compose.yml
 与 Chatwoot 适配器是完整参考。
 
 只有 `@osas/core`、`@osas/schema-validator`、`@osas/policy-engine` 与
-`@osas/compat-runner` 发布到 npm；其余包均为私有参考实现——请从仓库检出构建。
+`@osas/compat-runner` 计划发布到 npm——它们已具备发布条件但**尚未发布**，其余包均为
+私有参考实现，因此目前请一律从仓库检出构建。
 如果只想在既有系统中采用治理层，直接嵌入 `@osas/policy-engine`——见可运行的
 [examples/embed-policy-engine](examples/embed-policy-engine) 与
 [10 分钟教程](docs/tutorials/embed-policy-engine-10min.zh-CN.md)。

@@ -34,9 +34,14 @@ dependency is [`@osas/core`](../core) (pure types, enums, and state machines).
 
 ## Install
 
+> **Not yet published to npm** — `npm install @osas/policy-engine` returns 404 today.
+> Build it from a checkout until publication lands:
+
 ```bash
-npm install @osas/policy-engine   # brings in @osas/core
-```
+git clone https://github.com/shidesheng0218/open-support-agent-spec.git
+cd open-support-agent-spec
+pnpm install && pnpm build
+``
 
 Requires Node.js >= 20. The package is ESM-only with bundled TypeScript
 declarations.

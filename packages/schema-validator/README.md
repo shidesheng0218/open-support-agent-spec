@@ -9,9 +9,14 @@ objects, built on [Ajv](https://ajv.js.org) (2020-12 dialect) with
 
 ## Install
 
+> **Not yet published to npm** — `npm install @osas/schema-validator` returns 404 today.
+> Build it from a checkout until publication lands:
+
 ```bash
-npm install @osas/schema-validator
-```
+git clone https://github.com/shidesheng0218/open-support-agent-spec.git
+cd open-support-agent-spec
+pnpm install && pnpm build
+``
 
 Requires Node.js >= 20. ESM-only with bundled TypeScript declarations.
 

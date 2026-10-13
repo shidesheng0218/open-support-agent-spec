@@ -14,7 +14,9 @@ execution path — Shadow Mode only.
 > `npm install @osas/chatwoot-adapter` does not work. Build it from a checkout
 > of this repo (`pnpm --filter @osas/chatwoot-adapter build`) or copy it as the
 > starting point for your own adapter. Only `@osas/core`,
-> `@osas/schema-validator`, and `@osas/policy-engine` are public npm packages.
+> `@osas/schema-validator`, `@osas/policy-engine`, and `@osas/compat-runner` are
+> intended for public npm distribution — none of them are published yet either,
+> so build those from a checkout too.
 
 ## What it maps
 

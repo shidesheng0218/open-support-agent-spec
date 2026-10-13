@@ -127,6 +127,25 @@ importers:
         specifier: ^5.6.3
         version: 5.9.3
 
+  examples/policy-sandbox:
+    dependencies:
+      '@osas/core':
+        specifier: workspace:*
+        version: link:../../packages/core
+      '@osas/policy-engine':
+        specifier: workspace:*
+        version: link:../../packages/policy-engine
+    devDependencies:
+      esbuild:
+        specifier: ^0.28.2
+        version: 0.28.2
+      typescript:
+        specifier: ^5.6.3
+        version: 5.9.3
+      vitest:
+        specifier: ^2.1.8
+        version: 2.1.9(@types/node@22.20.1)
+
   packages/adapter:
     dependencies:
       '@osas/core':

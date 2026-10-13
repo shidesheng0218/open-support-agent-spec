@@ -1,0 +1,107 @@
+<!doctype html>
+<html lang="zh">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>OSAS policy sandbox — the model proposes, the policy decides</title>
+<style>
+  :root {
+    --bg:#0f1115; --panel:#171a21; --line:#262b36; --ink:#e8eaf0; --dim:#9aa3b2;
+    --auto:#2ea043; --approve:#d29922; --block:#da3633; --accent:#4c8dff;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);
+    font:15px/1.55 -apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif}
+  .wrap{max-width:860px;margin:0 auto;padding:28px 20px 64px}
+  header{display:flex;align-items:baseline;gap:12px;margin-bottom:6px}
+  .brand{font-weight:700;letter-spacing:.02em;font-size:19px}
+  .brand span{color:var(--dim);font-weight:500}
+  header .sp{flex:1}
+  button{font:inherit;cursor:pointer;border-radius:8px;border:1px solid var(--line);
+    background:var(--panel);color:var(--ink);padding:6px 12px}
+  button:hover{border-color:#3a4252}
+  .lede{color:var(--dim);margin:0 0 24px}
+  .lede b{color:var(--ink);font-weight:600}
+  .panel{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:20px;margin-bottom:16px}
+  .row{display:flex;align-items:baseline;justify-content:space-between;gap:12px}
+  .label{color:var(--dim);font-size:13px;text-transform:uppercase;letter-spacing:.06em}
+  .amount{font-size:30px;font-weight:700;font-variant-numeric:tabular-nums}
+  input[type=range]{width:100%;margin:14px 0 6px;accent-color:var(--accent);height:22px}
+  .scale{display:flex;justify-content:space-between;color:var(--dim);font-size:12px}
+  .scale .mid{color:var(--approve)}
+  .toggles{display:grid;gap:9px;margin-top:18px;padding-top:16px;border-top:1px solid var(--line)}
+  .toggles label{display:flex;gap:9px;align-items:flex-start;color:var(--dim);font-size:14px;cursor:pointer}
+  .toggles input{margin-top:3px;accent-color:var(--accent)}
+  .toggles label:hover{color:var(--ink)}
+  .verdict{display:flex;flex-direction:column;gap:12px}
+  .badge{align-self:flex-start;font-weight:700;font-size:20px;padding:8px 16px;border-radius:10px;
+    border:1px solid transparent;letter-spacing:.01em}
+  .badge.auto_execute{background:rgba(46,160,67,.14);border-color:rgba(46,160,67,.5);color:#57d06f}
+  .badge.require_approval{background:rgba(210,153,34,.14);border-color:rgba(210,153,34,.5);color:#e3b341}
+  .badge.block{background:rgba(218,54,51,.14);border-color:rgba(218,54,51,.5);color:#ff7b72}
+  .note{margin:0;color:var(--dim)}
+  ul.reasons{list-style:none;margin:0;padding:0;display:grid;gap:8px}
+  ul.reasons li{display:grid;gap:2px;padding-left:14px;border-left:2px solid var(--line)}
+  ul.reasons li.err{border-left-color:var(--block)}
+  ul.reasons li.ok{border-left-color:var(--auto)}
+  ul.reasons .code{font:12px/1.4 ui-monospace,SFMono-Regular,Menlo,monospace;color:var(--dim)}
+  ul.reasons .why{color:var(--ink)}
+  ul.reasons .raw-msg{color:var(--dim);font-size:13px}
+  .presets{display:flex;flex-wrap:wrap;gap:8px}
+  .presets button.on{border-color:var(--accent);color:#bcd3ff}
+  details.raw summary{cursor:pointer;color:var(--dim);font-size:13px}
+  pre{background:#0b0d11;border:1px solid var(--line);border-radius:10px;padding:14px;
+    overflow:auto;font:12px/1.5 ui-monospace,SFMono-Regular,Menlo,monospace;color:#c9d1d9;max-height:320px}
+  footer{margin-top:28px;color:var(--dim);font-size:13px;border-top:1px solid var(--line);padding-top:18px}
+  footer code{background:#0b0d11;border:1px solid var(--line);border-radius:5px;padding:1px 5px;
+    font:12px ui-monospace,SFMono-Regular,Menlo,monospace}
+  a{color:var(--accent)}
+  .gate{display:inline-flex;align-items:center;gap:6px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="brand">OSAS <span id="brand-sub">策略沙箱</span></div>
+    <div class="sp"></div>
+    <button id="lang" type="button">EN</button>
+  </header>
+  <p class="lede" id="lede"></p>
+
+  <section class="panel">
+    <div class="row">
+      <span class="label" id="lbl-amount"></span>
+      <span class="amount" id="amount-out">$25.00</span>
+    </div>
+    <input id="amount" type="range" min="0" max="30000" step="100" value="2500" aria-labelledby="lbl-amount">
+    <div class="scale">
+      <span>$0</span><span class="mid" id="lbl-limit"></span><span>$300</span>
+    </div>
+    <div class="toggles">
+      <label><input type="checkbox" id="injection"><span id="lbl-injection"></span></label>
+      <label><input type="checkbox" id="overreach"><span id="lbl-overreach"></span></label>
+      <label><input type="checkbox" id="stale"><span id="lbl-stale"></span></label>
+    </div>
+  </section>
+
+  <section class="panel verdict">
+    <div class="badge" id="badge">—</div>
+    <p class="note" id="note"></p>
+    <ul class="reasons" id="reasons"></ul>
+  </section>
+
+  <section class="panel">
+    <div class="label" id="lbl-presets" style="margin-bottom:10px"></div>
+    <div class="presets" id="presets"></div>
+  </section>
+
+  <details class="panel raw">
+    <summary id="raw-summary"></summary>
+    <pre id="raw"></pre>
+  </details>
+
+  <footer id="footer"></footer>
+</div>
+<script>/*__BUNDLE__*/</script>
+</body>
+</html>

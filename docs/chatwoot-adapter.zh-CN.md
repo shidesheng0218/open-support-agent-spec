@@ -12,7 +12,8 @@ Shadow Mode。
 > （`"private": true`）——**未发布到 npm**，`npm install @osas/chatwoot-adapter`
 > 不可行。请从本仓库源码构建（`pnpm --filter @osas/chatwoot-adapter build`），
 > 或将其复制为自有 Adapter 的起点。仅 `@osas/core`、`@osas/schema-validator`、
-> `@osas/policy-engine` 为公开 npm 包。
+> `@osas/policy-engine`、`@osas/compat-runner` 计划发布到 npm——但它们目前同样
+> **尚未发布**，也请从检出构建。
 
 ## 语义映射
 

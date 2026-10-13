@@ -30,7 +30,8 @@
     "eval:policy": "pnpm --filter @osas/evals run eval:policy",
     "eval:after-sales": "pnpm --filter @osas/evals run eval:after-sales",
     "eval:controlled": "pnpm --filter @osas/evals run eval:controlled",
-    "eval:model": "pnpm --filter @osas/evals run eval:model"
+    "eval:model": "pnpm --filter @osas/evals run eval:model",
+    "demo:sandbox": "pnpm --filter @osas-examples/policy-sandbox run build"
   },
   "devDependencies": {
     "@types/node": "^22.9.0",

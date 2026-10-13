@@ -11,16 +11,19 @@ grading it.
 
 ## Usage
 
+**Not yet published to npm**, so there is no `npx @osas/compat-runner` yet.
+Run it from a checkout of this repo:
+
 ```bash
 # against any OSAS implementation
-npx @osas/compat-runner --target http://localhost:3001
+pnpm osas:compat -- --target http://localhost:3001
 
 # include the stateful suite (required for a registry claim)
-npx @osas/compat-runner --target http://localhost:3001 \
+pnpm osas:compat -- --target http://localhost:3001 \
   --conformance-key <test-only-key>
 
 # the v0.3 controlled-execution profile
-npx @osas/compat-runner --target http://localhost:3001 \
+pnpm osas:compat -- --target http://localhost:3001 \
   --profile controlled-execution \
   --conformance-key <test-only-key> \
   --provider-event-key <test-only-key>
@@ -81,7 +84,7 @@ checking out the spec repo. Release checklist:
    the real version on publish).
 3. `pnpm --filter @osas/compat-runner publish` (`prepublishOnly` rebuilds and
    re-runs the tests).
-4. Verify: `npx @osas/compat-runner@latest --help`.
+4. Verify once it is published: `npx @osas/compat-runner@latest --help`.
 
 ---
 
@@ -94,10 +97,12 @@ checking out the spec repo. Release checklist:
 
 ### 用法
 
+**尚未发布到 npm**，所以现在还没有 `npx @osas/compat-runner`。请从本仓库检出运行：
+
 ```bash
-npx @osas/compat-runner --target http://localhost:3001
-npx @osas/compat-runner --target http://localhost:3001 --conformance-key <测试专用 key>
-npx @osas/compat-runner --target http://localhost:3001 \
+pnpm osas:compat -- --target http://localhost:3001
+pnpm osas:compat -- --target http://localhost:3001 --conformance-key <测试专用 key>
+pnpm osas:compat -- --target http://localhost:3001 \
   --profile controlled-execution \
   --conformance-key <测试专用 key> --provider-event-key <测试专用 key>
 ```

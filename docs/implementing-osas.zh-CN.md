@@ -112,17 +112,17 @@ HTTP 驱动你的实现——不 import 你的任何代码，并在本地用规�
 
 ### 准备
 
-包发布后无需检出本仓库：
-
-```bash
-npx @osas/compat-runner --target https://your-osas-service.example.com
-```
-
-若从本仓库检出的代码运行：
+runner **尚未发布到 npm**，请从本仓库检出运行：
 
 ```bash
 pnpm install && pnpm build      # 构建 @osas/core、schema-validator 等 runner 依赖
 pnpm osas:compat -- --target https://your-osas-service.example.com
+```
+
+发布到 npm 之后，就不再需要检出本仓库：
+
+```bash
+npx @osas/compat-runner --target https://your-osas-service.example.com
 ```
 
 整个闭环——实现下文的表面、把 runner 指过去、读报告——被设计成能在一个下午内

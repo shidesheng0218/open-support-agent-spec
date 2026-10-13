@@ -47,6 +47,14 @@ passes a deterministic policy gate, and only the server side can execute.
 
 ## Sixty seconds
 
+**Nothing to install:** download
+[`examples/policy-sandbox/policy-sandbox.html`](examples/policy-sandbox/policy-sandbox.html) —
+one self-contained file that runs the real policy engine in your browser. Drag the
+refund amount past $50 and watch the gate close; tick "the customer message contains
+instructions" and watch it refuse. No Docker, no clone, no network.
+
+Prefer the whole stack? Then:
+
 ```bash
 git clone https://github.com/shidesheng0218/open-support-agent-spec.git
 cd open-support-agent-spec
@@ -256,8 +264,9 @@ closed. See the [adapter guide](docs/adapter-guide.md); the Zendesk, Shopify,
 and Chatwoot adapters are complete references.
 
 Only `@osas/core`, `@osas/schema-validator`, `@osas/policy-engine`, and
-`@osas/compat-runner` are published to npm; the other packages are private
-reference implementations — build them from a repo checkout. To adopt only the
+`@osas/compat-runner` are intended for public npm distribution. They are
+publish-ready but **not yet published**, and every other package is a private
+reference implementation — so build everything from a repo checkout for now. To adopt only the
 governance layer inside an existing system, embed `@osas/policy-engine`
 directly — see the runnable
 [examples/embed-policy-engine](examples/embed-policy-engine) and the

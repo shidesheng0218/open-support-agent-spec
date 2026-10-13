@@ -1,0 +1,21 @@
+{
+  "name": "@osas-examples/policy-sandbox",
+  "version": "0.2.1",
+  "private": true,
+  "type": "module",
+  "description": "Zero-install browser sandbox: run the real @osas/policy-engine and watch the decision boundary move.",
+  "scripts": {
+    "build": "node build.mjs",
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@osas/core": "workspace:*",
+    "@osas/policy-engine": "workspace:*"
+  },
+  "devDependencies": {
+    "esbuild": "^0.28.2",
+    "typescript": "^5.6.3",
+    "vitest": "^2.1.8"
+  }
+}

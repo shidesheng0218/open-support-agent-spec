@@ -18,8 +18,13 @@ LLM 擅长提议动作（"给订单 ord_5001 退款 $25"），但不应被信任
 
 ## 安装
 
+> **尚未发布到 npm**——目前 `npm install @osas/policy-engine` 会返回 404。
+> 在发布之前，请从仓库检出构建：
+
 ```bash
-npm install @osas/policy-engine   # 会自动带入 @osas/core
+git clone https://github.com/shidesheng0218/open-support-agent-spec.git
+cd open-support-agent-spec
+pnpm install && pnpm build
 ```
 
 要求 Node.js >= 20。包为纯 ESM，自带 TypeScript 类型声明。

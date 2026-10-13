@@ -121,17 +121,18 @@ package, so the npm install works standalone).
 
 ### Setup
 
-No repository checkout is needed once the package is published:
-
-```bash
-npx @osas/compat-runner --target https://your-osas-service.example.com
-```
-
-From a checkout of this repository instead:
+The runner is **not published to npm yet**, so run it from a checkout of this
+repository:
 
 ```bash
 pnpm install && pnpm build      # builds @osas/core, schema-validator, runner deps
 pnpm osas:compat -- --target https://your-osas-service.example.com
+```
+
+Once it is on npm, no checkout will be needed:
+
+```bash
+npx @osas/compat-runner --target https://your-osas-service.example.com
 ```
 
 The whole loop — implement the surface below, point the runner at it, read the
