@@ -2,9 +2,9 @@
 
 > **Seeking independent maintainer:** This implementation is mature and passes all conformance tests, but currently lives in the OSAS spec repository. We're looking for an individual or organization to adopt it as an independent project, which would count toward the v1.0 multi-party governance gate (≥3 independent implementations required).
 >
-> **What you'd get:** Recognition as a conforming implementation maintainer, a governance seat when OSAS reaches v1.0, and a working codebase (~1566 lines) with full test coverage.
+> **What you'd get:** Recognition as a conforming implementation maintainer, a governance seat when OSAS reaches v1.0 (per [GOVERNANCE.md](../../GOVERNANCE.md)), and a working codebase (~1566 lines) with full test coverage.
 >
-> **Interested?** Open an issue with the `implementation` label or email the maintainers listed in [GOVERNANCE.md](../../GOVERNANCE.md).
+> **Contact:** Open an issue with the `implementation` label in this repository.
 
 ---
 
@@ -46,6 +46,15 @@ Implements:
   sandbox execution or handoff), mirroring the reference API's mock-provider
   flow: deterministic keyword scenario detection, `$amount` and id parsing,
   evidence anchoring, and prompt-injection interception.
+
+**Scope note:** Does **not** implement approvals or shadow-run endpoints (its capability manifest declares only what it serves); the black-box conformance suites do not exercise those surfaces. Handoffs are record-only: `POST /v1/chat` creates them for prompt-injection and policy-blocked conversations, and `GET /v1/handoffs` lists them — there is no claim/resolve workflow.
+
+Intentionally small and safe:
+- No external network calls
+- No real provider credentials
+- Deterministic Sandbox execution for refund success, failure, timeout, idempotency, receipts, reconciliation, and Provider Event deduplication
+- `live` execution refuses startup
+- Conformance Mode is test-only and fail-closed
 
 ## Running
 
@@ -91,34 +100,28 @@ CI runs both suites in the `python-compat` job (`.github/workflows/ci.yml`).
 
 **Path to independence:**
 
-- [ ] Transfer to independent GitHub repository (e.g., `yourorg/osas-python`)
-- [ ] Update `conformance/implementations.json` with new repository URL and maintainer info
-- [ ] Add CI workflow that runs `@osas/compat-runner` against each release
-- [ ] Registry status changes to `independent-conforming` → counts toward v1.0 gate
-- [ ] Maintainer receives governance seat when OSAS reaches v1.0 (≥3 independent implementations)
+1. Transfer to independent GitHub repository (outside `open-support-agent-spec`)
+2. Separate maintainership (different organization or individual from spec maintainers)
+3. Continued conformance (passing `gateOk: true` on each release)
+4. Update `conformance/implementations.json` with new repository URL and maintainer info
+5. Registry status changes to `independent-conforming` → counts toward v1.0 gate
 
 **Why adopt this?**
 
-- **Governance participation:** Independent implementation maintainers get a seat at the table for v1.0+ roadmap decisions
+- **Governance participation:** Independent implementation maintainers gain a formal governance seat at v1.0 (per [GOVERNANCE.md](../../GOVERNANCE.md))
 - **Proven foundation:** No need to build from scratch; this passes all tests today
 - **Community credibility:** Listed as a reference implementation for Python developers evaluating OSAS
-- **Low maintenance:** Stable spec (v0.2 frozen), test suite catches regressions automatically
+- **Low maintenance:** Stable spec surface, test suite catches regressions automatically
 
 ## How to adopt (for potential independent maintainers)
 
-1. **Fork or transfer:** Create `yourorg/osas-python` repository (or similar name)
-2. **Copy these files:**
-   ```bash
-   cp -r implementations/python-reference/* yourorg/osas-python/
-   cp -r schemas yourorg/osas-python/schemas  # authoritative schemas
-   cp -r conformance/fixtures yourorg/osas-python/conformance/fixtures
-   ```
-3. **Add CI:** Set up GitHub Actions to run conformance tests (see `.github/workflows/ci.yml` `python-compat` job as template)
-4. **Submit claim:** File a compatibility claim issue in the OSAS spec repository with:
-   - Your new repository URL
-   - Conformance report JSON (from `@osas/compat-runner --out report.json`)
+1. **Fork or transfer:** Create a separate repository (e.g., `yourorg/osas-python`)
+2. **Set up CI:** Run `@osas/compat-runner` against each release to maintain conformance
+3. **Submit compatibility claim:** File an issue in the OSAS spec repository with:
+   - Your repository URL
+   - Conformance report (from `@osas/compat-runner --out report.json`)
    - Maintainer contact info
    - Statement of independence (different org/individual from spec maintainers)
-5. **Get listed:** Spec maintainers verify and update `conformance/implementations.json` with `status: "independent-conforming"`
+4. **Get listed:** Spec maintainers verify and update `conformance/implementations.json`
 
-**Questions?** Open an issue with the `implementation` label or reach out to the maintainers listed in [GOVERNANCE.md](../../GOVERNANCE.md).
+**Questions?** Open an issue with the `implementation` label in the [spec repository](https://github.com/shidesheng0218/open-support-agent-spec).

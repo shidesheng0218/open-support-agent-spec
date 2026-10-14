@@ -11,6 +11,17 @@ grading it.
 
 ## Installation
 
+> **Note:** This package is not yet published to npm. To use it, clone the repository and run from source:
+> ```bash
+> git clone https://github.com/shidesheng0218/open-support-agent-spec.git
+> cd open-support-agent-spec
+> pnpm install
+> pnpm --filter @osas/compat-runner build
+> pnpm osas:compat -- --target http://localhost:8080
+> ```
+
+Once published:
+
 ```bash
 npm install -g @osas/compat-runner
 

@@ -119,11 +119,11 @@ fn test_policy_evaluation() {
 2. `PROMPT_INJECTION_SUSPECTED`
 3. `PROFILE_MISMATCH` — actionType must belong to the declared profile
 4. `NO_RULE` — no matching rule → block
-5. `REASON_CODE_DISALLOWED`
+5. `REASON_CODE_NOT_ALLOWED`
 6. `DUPLICATE_REQUEST` — same params in recent proposals window
 7. `OVER_THRESHOLD` — amount exceeds rule's `maxAmount`
-8. `IDENTITY_DISALLOWED`
-9. `REGION_DISALLOWED`
+8. `IDENTITY_UNVERIFIED`
+9. `REGION_BLOCKED`
 10. `INSUFFICIENT_EVIDENCE` — financial actions require ≥1 evidence
 11. `EVIDENCE_STALE` — evidence older than `maxEvidenceAgeSeconds`
 

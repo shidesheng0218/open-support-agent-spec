@@ -275,7 +275,7 @@ type MemoryStore struct {
 }
 ```
 
-**`GET /v1/policies/:tenant/history`**
+**`GET /v1/policies/:tenant/versions`**
 
 返回策略版本历史（按版本号降序）：
 
@@ -427,7 +427,7 @@ draft --[simulate]--> simulated --[approve]--> approved --[activate]--> active -
 
 **端点：**
 
-- `POST /v1/policies/:tenant/draft` — 创建 draft 策略
+- `POST /v1/policies/:tenant/drafts` — 创建 draft 策略
 - `POST /v1/policies/:tenant/:policyId/simulate` — draft → simulated
 - `POST /v1/policies/:tenant/:policyId/approve` — simulated → approved
 - `POST /v1/policies/:tenant/:policyId/activate` — approved → active

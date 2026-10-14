@@ -248,255 +248,173 @@ auditChainVectors.forEach(v => {
 
 interface PolicyEvaluationVector {
   name: string;
+  description: string;
   proposal: ActionProposal;
-  context: {
-    policy: TenantPolicy;
-    evidence: any[];
-    recentProposals: ActionProposal[];
-    injectionSuspected: boolean;
-  };
-  expectedDecision: PolicyDecision;
-  description?: string;
+  context: EvaluationContext;
+  expected: PolicyDecision;
 }
 
-const demoPolicy: TenantPolicy = {
-  id: "pol_demo",
+const evalNow = new Date("2026-01-15T10:00:00.000Z");
+
+const basePolicy: TenantPolicy = {
+  id: "pol_test",
   specVersion: "0.2",
   tenantId: "tenant_demo",
-  version: 1,
-  status: "active",
+  version: "1.0.0",
+  effectiveFrom: "2026-01-01T00:00:00.000Z",
   duplicateWindowSeconds: 86400,
   maxEvidenceAgeSeconds: 604800,
+  defaultDecision: "block",
   rules: [
     {
       actionType: "refund",
       decision: "auto_execute",
       maxAmount: { currency: "USD", minorUnits: 5000 },
-      reasonCodes: ["damaged", "wrong_item", "not_received"],
-    },
+      reasonCodes: ["defective_item", "wrong_item"],
+      requireVerifiedIdentity: true,
+      identityMaxAgeSeconds: 7776000,
+      allowedRegions: ["US", "CA", "GB"]
+    }
   ],
-  defaultDecision: "block",
-  createdAt: baseTime,
-  updatedAt: baseTime,
-  createdBy: { actorType: "human", actorId: "admin_1", role: "policy_admin" },
+  createdAt: "2026-01-01T00:00:00.000Z",
+  updatedAt: "2026-01-01T00:00:00.000Z"
 };
 
-const policyEvaluationVectors: PolicyEvaluationVector[] = [
+const baseCustomer = {
+  id: "cust_001",
+  tenantId: "tenant_demo",
+  region: "US",
+  identityVerification: {
+    status: "verified" as const,
+    verifiedAt: "2026-01-01T00:00:00.000Z",
+    method: "government_id"
+  }
+};
+
+const baseEvidence = [
   {
-    name: "auto-execute-small-refund",
-    description: "Small refund within threshold and allowed reason",
-    proposal: {
-      id: "prop_1",
-      specVersion: "0.2",
-      tenantId: "tenant_demo",
-      caseId: "case_1",
-      profile: "ecommerce",
-      actionType: "refund",
-      status: "pending_evaluation",
-      requestedPermission: "request-approval",
-      requestedBy: { actorType: "model", actorId: "model_1", role: "support_agent" },
-      params: {
-        orderId: "ord_123",
-        amount: { currency: "USD", minorUnits: 2500 },
-        reason: "damaged",
-      },
-      evidenceIds: ["ev_1"],
-      createdAt: baseTime,
-      updatedAt: baseTime,
-    },
-    context: {
-      policy: demoPolicy,
-      evidence: [
-        {
-          id: "ev_1",
-          specVersion: "0.2",
-          tenantId: "tenant_demo",
-          caseId: "case_1",
-          evidenceType: "order_details",
-          timestamp: "2026-01-15T09:00:00.000Z",
-          content: { orderId: "ord_123", status: "delivered" },
-          createdAt: "2026-01-15T09:00:00.000Z",
-        },
-      ],
-      recentProposals: [],
-      injectionSuspected: false,
-    },
-    expectedDecision: {
-      decision: "auto_execute",
-      reasons: [],
-    },
-  },
-  {
-    name: "require-approval-over-threshold",
-    description: "Refund exceeds threshold",
-    proposal: {
-      id: "prop_2",
-      specVersion: "0.2",
-      tenantId: "tenant_demo",
-      caseId: "case_2",
-      profile: "ecommerce",
-      actionType: "refund",
-      status: "pending_evaluation",
-      requestedPermission: "request-approval",
-      requestedBy: { actorType: "model", actorId: "model_1", role: "support_agent" },
-      params: {
-        orderId: "ord_456",
-        amount: { currency: "USD", minorUnits: 10000 },
-        reason: "damaged",
-      },
-      evidenceIds: ["ev_2"],
-      createdAt: baseTime,
-      updatedAt: baseTime,
-    },
-    context: {
-      policy: demoPolicy,
-      evidence: [
-        {
-          id: "ev_2",
-          specVersion: "0.2",
-          tenantId: "tenant_demo",
-          caseId: "case_2",
-          evidenceType: "order_details",
-          timestamp: "2026-01-15T09:00:00.000Z",
-          content: { orderId: "ord_456", status: "delivered" },
-          createdAt: "2026-01-15T09:00:00.000Z",
-        },
-      ],
-      recentProposals: [],
-      injectionSuspected: false,
-    },
-    expectedDecision: {
-      decision: "require_approval",
-      reasons: [
-        {
-          code: "OVER_THRESHOLD",
-          message: "amount {\"currency\":\"USD\",\"minorUnits\":10000} exceeds rule maxAmount {\"currency\":\"USD\",\"minorUnits\":5000}",
-        },
-      ],
-    },
-  },
-  {
-    name: "block-permission-overreach",
-    description: "Model requests execute permission",
-    proposal: {
-      id: "prop_3",
-      specVersion: "0.2",
-      tenantId: "tenant_demo",
-      caseId: "case_3",
-      profile: "ecommerce",
-      actionType: "refund",
-      status: "pending_evaluation",
-      requestedPermission: "execute",
-      requestedBy: { actorType: "model", actorId: "model_1", role: "support_agent" },
-      params: {
-        orderId: "ord_789",
-        amount: { currency: "USD", minorUnits: 2500 },
-        reason: "damaged",
-      },
-      evidenceIds: [],
-      createdAt: baseTime,
-      updatedAt: baseTime,
-    },
-    context: {
-      policy: demoPolicy,
-      evidence: [],
-      recentProposals: [],
-      injectionSuspected: false,
-    },
-    expectedDecision: {
-      decision: "block",
-      reasons: [
-        {
-          code: "PERMISSION_OVERREACH",
-          message: "model principals are capped at request-approval; requestedPermission 'execute' is not allowed",
-        },
-      ],
-    },
-  },
-  {
-    name: "block-injection-suspected",
-    description: "Prompt injection detected",
-    proposal: {
-      id: "prop_4",
-      specVersion: "0.2",
-      tenantId: "tenant_demo",
-      caseId: "case_4",
-      profile: "ecommerce",
-      actionType: "refund",
-      status: "pending_evaluation",
-      requestedPermission: "request-approval",
-      requestedBy: { actorType: "model", actorId: "model_1", role: "support_agent" },
-      params: {
-        orderId: "ord_abc",
-        amount: { currency: "USD", minorUnits: 2500 },
-        reason: "damaged",
-      },
-      evidenceIds: [],
-      createdAt: baseTime,
-      updatedAt: baseTime,
-    },
-    context: {
-      policy: demoPolicy,
-      evidence: [],
-      recentProposals: [],
-      injectionSuspected: true,
-    },
-    expectedDecision: {
-      decision: "block",
-      reasons: [
-        {
-          code: "PROMPT_INJECTION_SUSPECTED",
-          message: "prompt injection suspected in the originating conversation",
-        },
-      ],
-    },
-  },
-  {
-    name: "block-no-rule",
-    description: "Action type not in policy rules",
-    proposal: {
-      id: "prop_5",
-      specVersion: "0.2",
-      tenantId: "tenant_demo",
-      caseId: "case_5",
-      profile: "ecommerce",
-      actionType: "cancel_order",
-      status: "pending_evaluation",
-      requestedPermission: "request-approval",
-      requestedBy: { actorType: "model", actorId: "model_1", role: "support_agent" },
-      params: { orderId: "ord_xyz" },
-      evidenceIds: [],
-      createdAt: baseTime,
-      updatedAt: baseTime,
-    },
-    context: {
-      policy: demoPolicy,
-      evidence: [],
-      recentProposals: [],
-      injectionSuspected: false,
-    },
-    expectedDecision: {
-      decision: "block",
-      reasons: [
-        {
-          code: "NO_RULE",
-          message: "no rule matches actionType 'cancel_order'; defaultDecision is 'block'",
-        },
-      ],
-    },
-  },
+    id: "ev_photo_001",
+    tenantId: "tenant_demo",
+    caseId: "case_001",
+    kind: "order",
+    retrievedAt: "2026-01-15T09:00:00.000Z",
+    expiresAt: "2026-01-22T09:00:00.000Z",
+    createdAt: "2026-01-15T09:00:00.000Z"
+  }
 ];
 
-// Run evaluations
-policyEvaluationVectors.forEach(v => {
-  const ctx: EvaluationContext = {
-    policy: v.context.policy,
-    evidence: v.context.evidence,
-    recentProposals: v.context.recentProposals,
-    injectionSuspected: v.context.injectionSuspected,
-    now: new Date(baseTime),
-  };
-  v.expectedDecision = evaluateProposal(v.proposal, ctx);
+const baseProposal = {
+  tenantId: "tenant_demo",
+  caseId: "case_001",
+  profile: "ecommerce" as const,
+  requestedPermission: "request-approval" as const,
+  requestedBy: { actorType: "model" as const, modelId: "gpt-4" },
+  evidenceIds: ["ev_photo_001"],
+  params: { orderId: "ord_001" },
+  specVersion: "0.2" as const
+};
+
+const baseContext: EvaluationContext = {
+  policy: basePolicy,
+  customer: baseCustomer,
+  evidence: baseEvidence,
+  recentProposals: [],
+  injectionSuspected: false,
+  now: evalNow
+};
+
+const policyEvaluationVectors: PolicyEvaluationVector[] = [];
+
+// 1. Small refund - auto_execute
+const p1 = {
+  ...baseProposal,
+  id: "prop_001",
+  actionType: "refund" as const,
+  reasonCode: "defective_item",
+  amount: { currency: "USD", minorUnits: 2000 }
+};
+policyEvaluationVectors.push({
+  name: "small_refund_auto_execute",
+  description: "Small refund within limit, verified identity, allowed region - should auto_execute",
+  proposal: p1,
+  context: baseContext,
+  expected: evaluateProposal(p1, baseContext)
+});
+
+// 2. Large refund - require_approval
+const p2 = {
+  ...baseProposal,
+  id: "prop_002",
+  actionType: "refund" as const,
+  reasonCode: "defective_item",
+  amount: { currency: "USD", minorUnits: 6000 }
+};
+policyEvaluationVectors.push({
+  name: "large_refund_over_threshold",
+  description: "Refund exceeds maxAmount threshold - should require_approval",
+  proposal: p2,
+  context: baseContext,
+  expected: evaluateProposal(p2, baseContext)
+});
+
+// 3. Missing amount - block
+const p3 = {
+  ...baseProposal,
+  id: "prop_003",
+  actionType: "refund" as const,
+  reasonCode: "defective_item"
+};
+policyEvaluationVectors.push({
+  name: "refund_missing_amount",
+  description: "Financial action missing required amount field - should block",
+  proposal: p3,
+  context: baseContext,
+  expected: evaluateProposal(p3, baseContext)
+});
+
+// 4. Disallowed reason code - block
+const p4 = {
+  ...baseProposal,
+  id: "prop_004",
+  actionType: "refund" as const,
+  reasonCode: "customer_changed_mind",
+  amount: { currency: "USD", minorUnits: 2000 }
+};
+policyEvaluationVectors.push({
+  name: "refund_disallowed_reason",
+  description: "reasonCode not in rule's allowed list - should block",
+  proposal: p4,
+  context: baseContext,
+  expected: evaluateProposal(p4, baseContext)
+});
+
+// 5. Blocked region - block
+const ctx5: EvaluationContext = {
+  ...baseContext,
+  policy: {
+    ...basePolicy,
+    rules: [
+      {
+        ...basePolicy.rules[0],
+        blockedRegions: ["IR", "KP"]
+      }
+    ]
+  },
+  customer: { ...baseCustomer, region: "IR" }
+};
+const p5 = {
+  ...baseProposal,
+  id: "prop_005",
+  actionType: "refund" as const,
+  reasonCode: "defective_item",
+  amount: { currency: "USD", minorUnits: 2000 }
+};
+policyEvaluationVectors.push({
+  name: "refund_blocked_region",
+  description: "Customer region in blockedRegions list - should block",
+  proposal: p5,
+  context: ctx5,
+  expected: evaluateProposal(p5, ctx5)
 });
 
 // ============================================================================

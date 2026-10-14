@@ -4,45 +4,42 @@
   "note": "Expected decisions computed by the reference implementation",
   "vectors": [
     {
-      "name": "auto-execute-small-refund",
-      "description": "Small refund within threshold and allowed reason",
+      "name": "small_refund_auto_execute",
+      "description": "Small refund within limit, verified identity, allowed region - should auto_execute",
       "proposal": {
-        "id": "prop_1",
-        "specVersion": "0.2",
         "tenantId": "tenant_demo",
-        "caseId": "case_1",
+        "caseId": "case_001",
         "profile": "ecommerce",
-        "actionType": "refund",
-        "status": "pending_evaluation",
         "requestedPermission": "request-approval",
         "requestedBy": {
           "actorType": "model",
-          "actorId": "model_1",
-          "role": "support_agent"
-        },
-        "params": {
-          "orderId": "ord_123",
-          "amount": {
-            "currency": "USD",
-            "minorUnits": 2500
-          },
-          "reason": "damaged"
+          "modelId": "gpt-4"
         },
         "evidenceIds": [
-          "ev_1"
+          "ev_photo_001"
         ],
-        "createdAt": "2026-01-15T10:00:00.000Z",
-        "updatedAt": "2026-01-15T10:00:00.000Z"
+        "params": {
+          "orderId": "ord_001"
+        },
+        "specVersion": "0.2",
+        "id": "prop_001",
+        "actionType": "refund",
+        "reasonCode": "defective_item",
+        "amount": {
+          "currency": "USD",
+          "minorUnits": 2000
+        }
       },
       "context": {
         "policy": {
-          "id": "pol_demo",
+          "id": "pol_test",
           "specVersion": "0.2",
           "tenantId": "tenant_demo",
-          "version": 1,
-          "status": "active",
+          "version": "1.0.0",
+          "effectiveFrom": "2026-01-01T00:00:00.000Z",
           "duplicateWindowSeconds": 86400,
           "maxEvidenceAgeSeconds": 604800,
+          "defaultDecision": "block",
           "rules": [
             {
               "actionType": "refund",
@@ -52,95 +49,90 @@
                 "minorUnits": 5000
               },
               "reasonCodes": [
-                "damaged",
-                "wrong_item",
-                "not_received"
+                "defective_item",
+                "wrong_item"
+              ],
+              "requireVerifiedIdentity": true,
+              "identityMaxAgeSeconds": 7776000,
+              "allowedRegions": [
+                "US",
+                "CA",
+                "GB"
               ]
             }
           ],
-          "defaultDecision": "block",
-          "createdAt": "2026-01-15T10:00:00.000Z",
-          "updatedAt": "2026-01-15T10:00:00.000Z",
-          "createdBy": {
-            "actorType": "human",
-            "actorId": "admin_1",
-            "role": "policy_admin"
+          "createdAt": "2026-01-01T00:00:00.000Z",
+          "updatedAt": "2026-01-01T00:00:00.000Z"
+        },
+        "customer": {
+          "id": "cust_001",
+          "tenantId": "tenant_demo",
+          "region": "US",
+          "identityVerification": {
+            "status": "verified",
+            "verifiedAt": "2026-01-01T00:00:00.000Z",
+            "method": "government_id"
           }
         },
         "evidence": [
           {
-            "id": "ev_1",
-            "specVersion": "0.2",
+            "id": "ev_photo_001",
             "tenantId": "tenant_demo",
-            "caseId": "case_1",
-            "evidenceType": "order_details",
-            "timestamp": "2026-01-15T09:00:00.000Z",
-            "content": {
-              "orderId": "ord_123",
-              "status": "delivered"
-            },
+            "caseId": "case_001",
+            "kind": "order",
+            "retrievedAt": "2026-01-15T09:00:00.000Z",
+            "expiresAt": "2026-01-22T09:00:00.000Z",
             "createdAt": "2026-01-15T09:00:00.000Z"
           }
         ],
         "recentProposals": [],
-        "injectionSuspected": false
+        "injectionSuspected": false,
+        "now": "2026-01-15T10:00:00.000Z"
       },
-      "expectedDecision": {
-        "decision": "block",
-        "reasons": [
-          {
-            "code": "REASON_CODE_NOT_ALLOWED",
-            "message": "reasonCode 'undefined' is not in the allowed list for actionType 'refund'"
-          },
-          {
-            "code": "AMOUNT_REQUIRED",
-            "message": "financial actionType 'refund' requires proposal.amount and rule.maxAmount before a threshold can be applied"
-          }
-        ],
-        "policyVersion": 1,
+      "expected": {
+        "decision": "auto_execute",
+        "reasons": [],
+        "policyVersion": "1.0.0",
         "evaluatedAt": "2026-01-15T10:00:00.000Z"
       }
     },
     {
-      "name": "require-approval-over-threshold",
-      "description": "Refund exceeds threshold",
+      "name": "large_refund_over_threshold",
+      "description": "Refund exceeds maxAmount threshold - should require_approval",
       "proposal": {
-        "id": "prop_2",
-        "specVersion": "0.2",
         "tenantId": "tenant_demo",
-        "caseId": "case_2",
+        "caseId": "case_001",
         "profile": "ecommerce",
-        "actionType": "refund",
-        "status": "pending_evaluation",
         "requestedPermission": "request-approval",
         "requestedBy": {
           "actorType": "model",
-          "actorId": "model_1",
-          "role": "support_agent"
-        },
-        "params": {
-          "orderId": "ord_456",
-          "amount": {
-            "currency": "USD",
-            "minorUnits": 10000
-          },
-          "reason": "damaged"
+          "modelId": "gpt-4"
         },
         "evidenceIds": [
-          "ev_2"
+          "ev_photo_001"
         ],
-        "createdAt": "2026-01-15T10:00:00.000Z",
-        "updatedAt": "2026-01-15T10:00:00.000Z"
+        "params": {
+          "orderId": "ord_001"
+        },
+        "specVersion": "0.2",
+        "id": "prop_002",
+        "actionType": "refund",
+        "reasonCode": "defective_item",
+        "amount": {
+          "currency": "USD",
+          "minorUnits": 6000
+        }
       },
       "context": {
         "policy": {
-          "id": "pol_demo",
+          "id": "pol_test",
           "specVersion": "0.2",
           "tenantId": "tenant_demo",
-          "version": 1,
-          "status": "active",
+          "version": "1.0.0",
+          "effectiveFrom": "2026-01-01T00:00:00.000Z",
           "duplicateWindowSeconds": 86400,
           "maxEvidenceAgeSeconds": 604800,
+          "defaultDecision": "block",
           "rules": [
             {
               "actionType": "refund",
@@ -150,183 +142,91 @@
                 "minorUnits": 5000
               },
               "reasonCodes": [
-                "damaged",
-                "wrong_item",
-                "not_received"
+                "defective_item",
+                "wrong_item"
+              ],
+              "requireVerifiedIdentity": true,
+              "identityMaxAgeSeconds": 7776000,
+              "allowedRegions": [
+                "US",
+                "CA",
+                "GB"
               ]
             }
           ],
-          "defaultDecision": "block",
-          "createdAt": "2026-01-15T10:00:00.000Z",
-          "updatedAt": "2026-01-15T10:00:00.000Z",
-          "createdBy": {
-            "actorType": "human",
-            "actorId": "admin_1",
-            "role": "policy_admin"
+          "createdAt": "2026-01-01T00:00:00.000Z",
+          "updatedAt": "2026-01-01T00:00:00.000Z"
+        },
+        "customer": {
+          "id": "cust_001",
+          "tenantId": "tenant_demo",
+          "region": "US",
+          "identityVerification": {
+            "status": "verified",
+            "verifiedAt": "2026-01-01T00:00:00.000Z",
+            "method": "government_id"
           }
         },
         "evidence": [
           {
-            "id": "ev_2",
-            "specVersion": "0.2",
+            "id": "ev_photo_001",
             "tenantId": "tenant_demo",
-            "caseId": "case_2",
-            "evidenceType": "order_details",
-            "timestamp": "2026-01-15T09:00:00.000Z",
-            "content": {
-              "orderId": "ord_456",
-              "status": "delivered"
-            },
+            "caseId": "case_001",
+            "kind": "order",
+            "retrievedAt": "2026-01-15T09:00:00.000Z",
+            "expiresAt": "2026-01-22T09:00:00.000Z",
             "createdAt": "2026-01-15T09:00:00.000Z"
           }
         ],
         "recentProposals": [],
-        "injectionSuspected": false
+        "injectionSuspected": false,
+        "now": "2026-01-15T10:00:00.000Z"
       },
-      "expectedDecision": {
-        "decision": "block",
+      "expected": {
+        "decision": "require_approval",
         "reasons": [
           {
-            "code": "REASON_CODE_NOT_ALLOWED",
-            "message": "reasonCode 'undefined' is not in the allowed list for actionType 'refund'"
-          },
-          {
-            "code": "AMOUNT_REQUIRED",
-            "message": "financial actionType 'refund' requires proposal.amount and rule.maxAmount before a threshold can be applied"
+            "code": "OVER_THRESHOLD",
+            "message": "amount 6000 USD exceeds rule maxAmount 5000 USD"
           }
         ],
-        "policyVersion": 1,
+        "policyVersion": "1.0.0",
         "evaluatedAt": "2026-01-15T10:00:00.000Z"
       }
     },
     {
-      "name": "block-permission-overreach",
-      "description": "Model requests execute permission",
+      "name": "refund_missing_amount",
+      "description": "Financial action missing required amount field - should block",
       "proposal": {
-        "id": "prop_3",
-        "specVersion": "0.2",
         "tenantId": "tenant_demo",
-        "caseId": "case_3",
+        "caseId": "case_001",
         "profile": "ecommerce",
-        "actionType": "refund",
-        "status": "pending_evaluation",
-        "requestedPermission": "execute",
-        "requestedBy": {
-          "actorType": "model",
-          "actorId": "model_1",
-          "role": "support_agent"
-        },
-        "params": {
-          "orderId": "ord_789",
-          "amount": {
-            "currency": "USD",
-            "minorUnits": 2500
-          },
-          "reason": "damaged"
-        },
-        "evidenceIds": [],
-        "createdAt": "2026-01-15T10:00:00.000Z",
-        "updatedAt": "2026-01-15T10:00:00.000Z"
-      },
-      "context": {
-        "policy": {
-          "id": "pol_demo",
-          "specVersion": "0.2",
-          "tenantId": "tenant_demo",
-          "version": 1,
-          "status": "active",
-          "duplicateWindowSeconds": 86400,
-          "maxEvidenceAgeSeconds": 604800,
-          "rules": [
-            {
-              "actionType": "refund",
-              "decision": "auto_execute",
-              "maxAmount": {
-                "currency": "USD",
-                "minorUnits": 5000
-              },
-              "reasonCodes": [
-                "damaged",
-                "wrong_item",
-                "not_received"
-              ]
-            }
-          ],
-          "defaultDecision": "block",
-          "createdAt": "2026-01-15T10:00:00.000Z",
-          "updatedAt": "2026-01-15T10:00:00.000Z",
-          "createdBy": {
-            "actorType": "human",
-            "actorId": "admin_1",
-            "role": "policy_admin"
-          }
-        },
-        "evidence": [],
-        "recentProposals": [],
-        "injectionSuspected": false
-      },
-      "expectedDecision": {
-        "decision": "block",
-        "reasons": [
-          {
-            "code": "PERMISSION_OVERREACH",
-            "message": "model principals are capped at request-approval; requestedPermission 'execute' is not allowed"
-          },
-          {
-            "code": "REASON_CODE_NOT_ALLOWED",
-            "message": "reasonCode 'undefined' is not in the allowed list for actionType 'refund'"
-          },
-          {
-            "code": "AMOUNT_REQUIRED",
-            "message": "financial actionType 'refund' requires proposal.amount and rule.maxAmount before a threshold can be applied"
-          },
-          {
-            "code": "INSUFFICIENT_EVIDENCE",
-            "message": "financial actionType 'refund' requires at least one evidence reference"
-          }
-        ],
-        "policyVersion": 1,
-        "evaluatedAt": "2026-01-15T10:00:00.000Z"
-      }
-    },
-    {
-      "name": "block-injection-suspected",
-      "description": "Prompt injection detected",
-      "proposal": {
-        "id": "prop_4",
-        "specVersion": "0.2",
-        "tenantId": "tenant_demo",
-        "caseId": "case_4",
-        "profile": "ecommerce",
-        "actionType": "refund",
-        "status": "pending_evaluation",
         "requestedPermission": "request-approval",
         "requestedBy": {
           "actorType": "model",
-          "actorId": "model_1",
-          "role": "support_agent"
+          "modelId": "gpt-4"
         },
+        "evidenceIds": [
+          "ev_photo_001"
+        ],
         "params": {
-          "orderId": "ord_abc",
-          "amount": {
-            "currency": "USD",
-            "minorUnits": 2500
-          },
-          "reason": "damaged"
+          "orderId": "ord_001"
         },
-        "evidenceIds": [],
-        "createdAt": "2026-01-15T10:00:00.000Z",
-        "updatedAt": "2026-01-15T10:00:00.000Z"
+        "specVersion": "0.2",
+        "id": "prop_003",
+        "actionType": "refund",
+        "reasonCode": "defective_item"
       },
       "context": {
         "policy": {
-          "id": "pol_demo",
+          "id": "pol_test",
           "specVersion": "0.2",
           "tenantId": "tenant_demo",
-          "version": 1,
-          "status": "active",
+          "version": "1.0.0",
+          "effectiveFrom": "2026-01-01T00:00:00.000Z",
           "duplicateWindowSeconds": 86400,
           "maxEvidenceAgeSeconds": 604800,
+          "defaultDecision": "block",
           "rules": [
             {
               "actionType": "refund",
@@ -336,82 +236,95 @@
                 "minorUnits": 5000
               },
               "reasonCodes": [
-                "damaged",
-                "wrong_item",
-                "not_received"
+                "defective_item",
+                "wrong_item"
+              ],
+              "requireVerifiedIdentity": true,
+              "identityMaxAgeSeconds": 7776000,
+              "allowedRegions": [
+                "US",
+                "CA",
+                "GB"
               ]
             }
           ],
-          "defaultDecision": "block",
-          "createdAt": "2026-01-15T10:00:00.000Z",
-          "updatedAt": "2026-01-15T10:00:00.000Z",
-          "createdBy": {
-            "actorType": "human",
-            "actorId": "admin_1",
-            "role": "policy_admin"
+          "createdAt": "2026-01-01T00:00:00.000Z",
+          "updatedAt": "2026-01-01T00:00:00.000Z"
+        },
+        "customer": {
+          "id": "cust_001",
+          "tenantId": "tenant_demo",
+          "region": "US",
+          "identityVerification": {
+            "status": "verified",
+            "verifiedAt": "2026-01-01T00:00:00.000Z",
+            "method": "government_id"
           }
         },
-        "evidence": [],
+        "evidence": [
+          {
+            "id": "ev_photo_001",
+            "tenantId": "tenant_demo",
+            "caseId": "case_001",
+            "kind": "order",
+            "retrievedAt": "2026-01-15T09:00:00.000Z",
+            "expiresAt": "2026-01-22T09:00:00.000Z",
+            "createdAt": "2026-01-15T09:00:00.000Z"
+          }
+        ],
         "recentProposals": [],
-        "injectionSuspected": true
+        "injectionSuspected": false,
+        "now": "2026-01-15T10:00:00.000Z"
       },
-      "expectedDecision": {
+      "expected": {
         "decision": "block",
         "reasons": [
           {
-            "code": "PROMPT_INJECTION_SUSPECTED",
-            "message": "prompt injection suspected in the originating conversation"
-          },
-          {
-            "code": "REASON_CODE_NOT_ALLOWED",
-            "message": "reasonCode 'undefined' is not in the allowed list for actionType 'refund'"
-          },
-          {
             "code": "AMOUNT_REQUIRED",
             "message": "financial actionType 'refund' requires proposal.amount and rule.maxAmount before a threshold can be applied"
-          },
-          {
-            "code": "INSUFFICIENT_EVIDENCE",
-            "message": "financial actionType 'refund' requires at least one evidence reference"
           }
         ],
-        "policyVersion": 1,
+        "policyVersion": "1.0.0",
         "evaluatedAt": "2026-01-15T10:00:00.000Z"
       }
     },
     {
-      "name": "block-no-rule",
-      "description": "Action type not in policy rules",
+      "name": "refund_disallowed_reason",
+      "description": "reasonCode not in rule's allowed list - should block",
       "proposal": {
-        "id": "prop_5",
-        "specVersion": "0.2",
         "tenantId": "tenant_demo",
-        "caseId": "case_5",
+        "caseId": "case_001",
         "profile": "ecommerce",
-        "actionType": "cancel_order",
-        "status": "pending_evaluation",
         "requestedPermission": "request-approval",
         "requestedBy": {
           "actorType": "model",
-          "actorId": "model_1",
-          "role": "support_agent"
+          "modelId": "gpt-4"
         },
+        "evidenceIds": [
+          "ev_photo_001"
+        ],
         "params": {
-          "orderId": "ord_xyz"
+          "orderId": "ord_001"
         },
-        "evidenceIds": [],
-        "createdAt": "2026-01-15T10:00:00.000Z",
-        "updatedAt": "2026-01-15T10:00:00.000Z"
+        "specVersion": "0.2",
+        "id": "prop_004",
+        "actionType": "refund",
+        "reasonCode": "customer_changed_mind",
+        "amount": {
+          "currency": "USD",
+          "minorUnits": 2000
+        }
       },
       "context": {
         "policy": {
-          "id": "pol_demo",
+          "id": "pol_test",
           "specVersion": "0.2",
           "tenantId": "tenant_demo",
-          "version": 1,
-          "status": "active",
+          "version": "1.0.0",
+          "effectiveFrom": "2026-01-01T00:00:00.000Z",
           "duplicateWindowSeconds": 86400,
           "maxEvidenceAgeSeconds": 604800,
+          "defaultDecision": "block",
           "rules": [
             {
               "actionType": "refund",
@@ -421,34 +334,157 @@
                 "minorUnits": 5000
               },
               "reasonCodes": [
-                "damaged",
-                "wrong_item",
-                "not_received"
+                "defective_item",
+                "wrong_item"
+              ],
+              "requireVerifiedIdentity": true,
+              "identityMaxAgeSeconds": 7776000,
+              "allowedRegions": [
+                "US",
+                "CA",
+                "GB"
               ]
             }
           ],
-          "defaultDecision": "block",
-          "createdAt": "2026-01-15T10:00:00.000Z",
-          "updatedAt": "2026-01-15T10:00:00.000Z",
-          "createdBy": {
-            "actorType": "human",
-            "actorId": "admin_1",
-            "role": "policy_admin"
+          "createdAt": "2026-01-01T00:00:00.000Z",
+          "updatedAt": "2026-01-01T00:00:00.000Z"
+        },
+        "customer": {
+          "id": "cust_001",
+          "tenantId": "tenant_demo",
+          "region": "US",
+          "identityVerification": {
+            "status": "verified",
+            "verifiedAt": "2026-01-01T00:00:00.000Z",
+            "method": "government_id"
           }
         },
-        "evidence": [],
+        "evidence": [
+          {
+            "id": "ev_photo_001",
+            "tenantId": "tenant_demo",
+            "caseId": "case_001",
+            "kind": "order",
+            "retrievedAt": "2026-01-15T09:00:00.000Z",
+            "expiresAt": "2026-01-22T09:00:00.000Z",
+            "createdAt": "2026-01-15T09:00:00.000Z"
+          }
+        ],
         "recentProposals": [],
-        "injectionSuspected": false
+        "injectionSuspected": false,
+        "now": "2026-01-15T10:00:00.000Z"
       },
-      "expectedDecision": {
+      "expected": {
         "decision": "block",
         "reasons": [
           {
-            "code": "NO_RULE",
-            "message": "no policy rule matches actionType 'cancel_order'; default decision is block"
+            "code": "REASON_CODE_NOT_ALLOWED",
+            "message": "reasonCode 'customer_changed_mind' is not in the allowed list for actionType 'refund'"
           }
         ],
-        "policyVersion": 1,
+        "policyVersion": "1.0.0",
+        "evaluatedAt": "2026-01-15T10:00:00.000Z"
+      }
+    },
+    {
+      "name": "refund_blocked_region",
+      "description": "Customer region in blockedRegions list - should block",
+      "proposal": {
+        "tenantId": "tenant_demo",
+        "caseId": "case_001",
+        "profile": "ecommerce",
+        "requestedPermission": "request-approval",
+        "requestedBy": {
+          "actorType": "model",
+          "modelId": "gpt-4"
+        },
+        "evidenceIds": [
+          "ev_photo_001"
+        ],
+        "params": {
+          "orderId": "ord_001"
+        },
+        "specVersion": "0.2",
+        "id": "prop_005",
+        "actionType": "refund",
+        "reasonCode": "defective_item",
+        "amount": {
+          "currency": "USD",
+          "minorUnits": 2000
+        }
+      },
+      "context": {
+        "policy": {
+          "id": "pol_test",
+          "specVersion": "0.2",
+          "tenantId": "tenant_demo",
+          "version": "1.0.0",
+          "effectiveFrom": "2026-01-01T00:00:00.000Z",
+          "duplicateWindowSeconds": 86400,
+          "maxEvidenceAgeSeconds": 604800,
+          "defaultDecision": "block",
+          "rules": [
+            {
+              "actionType": "refund",
+              "decision": "auto_execute",
+              "maxAmount": {
+                "currency": "USD",
+                "minorUnits": 5000
+              },
+              "reasonCodes": [
+                "defective_item",
+                "wrong_item"
+              ],
+              "requireVerifiedIdentity": true,
+              "identityMaxAgeSeconds": 7776000,
+              "allowedRegions": [
+                "US",
+                "CA",
+                "GB"
+              ],
+              "blockedRegions": [
+                "IR",
+                "KP"
+              ]
+            }
+          ],
+          "createdAt": "2026-01-01T00:00:00.000Z",
+          "updatedAt": "2026-01-01T00:00:00.000Z"
+        },
+        "customer": {
+          "id": "cust_001",
+          "tenantId": "tenant_demo",
+          "region": "IR",
+          "identityVerification": {
+            "status": "verified",
+            "verifiedAt": "2026-01-01T00:00:00.000Z",
+            "method": "government_id"
+          }
+        },
+        "evidence": [
+          {
+            "id": "ev_photo_001",
+            "tenantId": "tenant_demo",
+            "caseId": "case_001",
+            "kind": "order",
+            "retrievedAt": "2026-01-15T09:00:00.000Z",
+            "expiresAt": "2026-01-22T09:00:00.000Z",
+            "createdAt": "2026-01-15T09:00:00.000Z"
+          }
+        ],
+        "recentProposals": [],
+        "injectionSuspected": false,
+        "now": "2026-01-15T10:00:00.000Z"
+      },
+      "expected": {
+        "decision": "block",
+        "reasons": [
+          {
+            "code": "REGION_BLOCKED",
+            "message": "customer region 'IR' is in blockedRegions for actionType 'refund'"
+          }
+        ],
+        "policyVersion": "1.0.0",
         "evaluatedAt": "2026-01-15T10:00:00.000Z"
       }
     }

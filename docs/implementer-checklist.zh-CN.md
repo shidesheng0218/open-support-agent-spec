@@ -83,7 +83,7 @@
   常见问题：只检查路径参数，忽略 header
 
 - [ ] **版本历史按降序排列**  
-  测试：`GET /v1/policies/:tenant/history` 的 `policies[0].version` > `policies[1].version`  
+  测试：`GET /v1/policies/:tenant/versions` 的 `policies[0].version` > `policies[1].version`  
   常见问题：升序排列、随机顺序
 
 - [ ] **absent 字段不出现在 JSON**  
@@ -126,7 +126,7 @@
   常见问题：缺少前置状态检查
 
 - [ ] **RBAC 检查**  
-  测试：非 policy_admin 角色调用 `POST /v1/policies/:tenant/draft` → 403 FORBIDDEN  
+  测试：非 policy_admin 角色调用 `POST /v1/policies/:tenant/drafts` → 403 FORBIDDEN  
   常见问题：没有检查 `x-osas-role` header
 
 - [ ] **版本不可变**  
