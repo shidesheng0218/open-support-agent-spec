@@ -1,0 +1,128 @@
+name: Implementation Compatibility Claim
+description: Submit a compatibility claim for your OSAS implementation
+title: "[Implementation] "
+labels: ["implementation", "compatibility-claim"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thank you for implementing OSAS! This form helps us verify and list your implementation in the registry.
+        
+        ## Requirements for `independent-conforming` status
+        
+        1. **Independence**: Maintained by a different organization/individual than the spec maintainers
+        2. **Conformance**: Passes all compatibility tests (`gateOk: true`)
+        3. **Public**: Source code publicly accessible
+        4. **Maintained**: Active maintenance commitment
+
+  - type: input
+    id: repo-url
+    attributes:
+      label: Repository URL
+      description: Public repository where your implementation lives
+      placeholder: https://github.com/yourorg/osas-implementation
+    validations:
+      required: true
+
+  - type: dropdown
+    id: language
+    attributes:
+      label: Implementation Language
+      description: Primary programming language
+      options:
+        - Go
+        - Rust
+        - Java
+        - Python
+        - JavaScript/TypeScript
+        - C#
+        - Other
+    validations:
+      required: true
+
+  - type: input
+    id: version
+    attributes:
+      label: OSAS Spec Version
+      description: Which version of the spec does this implement?
+      placeholder: v0.2
+    validations:
+      required: true
+
+  - type: textarea
+    id: conformance-report
+    attributes:
+      label: Conformance Report
+      description: |
+        Paste the JSON output from `@osas/compat-runner --out report.json`.
+        Must show `gateOk: true` and zero skipped checks.
+      placeholder: |
+        {
+          "gateOk": true,
+          "total": 42,
+          "passed": 42,
+          "failed": 0,
+          "skipped": 0,
+          ...
+        }
+      render: json
+    validations:
+      required: true
+
+  - type: input
+    id: maintainer
+    attributes:
+      label: Maintainer Contact
+      description: GitHub username or email for the primary maintainer
+      placeholder: "@yourname or your@email.com"
+    validations:
+      required: true
+
+  - type: input
+    id: organization
+    attributes:
+      label: Organization
+      description: Company or organization maintaining this implementation
+      placeholder: YourCompany Inc. or Independent
+    validations:
+      required: true
+
+  - type: checkboxes
+    id: independence
+    attributes:
+      label: Independence Statement
+      description: Confirm that this implementation meets independence requirements
+      options:
+        - label: This implementation is maintained by a different organization/individual than the OSAS spec maintainers
+          required: true
+        - label: I commit to maintaining this implementation and keeping it conformant with future spec releases
+          required: true
+        - label: The source code is publicly accessible under an open-source license
+          required: true
+
+  - type: textarea
+    id: additional-info
+    attributes:
+      label: Additional Information
+      description: |
+        Any other relevant details:
+        - Notable features or limitations
+        - Production deployments (if any)
+        - Links to documentation
+        - CI/CD setup for conformance testing
+      placeholder: Optional but helpful
+
+  - type: markdown
+    attributes:
+      value: |
+        ---
+        
+        ## What happens next?
+        
+        1. **Verification**: Spec maintainers will clone your repo and run the conformance tests
+        2. **Independence check**: We'll verify that maintainer/organization is different from spec maintainers
+        3. **Registry update**: If verified, we'll update `conformance/implementations.json` with your entry
+        4. **Status**: Your implementation will be listed as `independent-conforming`
+        5. **Governance**: Per GOVERNANCE.md, implementers gain a governance seat at v1.0
+        
+        **Questions?** Ask in this issue.

@@ -1,0 +1,120 @@
+name: Seeking Independent Maintainer
+description: Express interest in adopting or maintaining an OSAS implementation
+title: "[Maintainer] Interest in maintaining OSAS implementation"
+labels: ["maintainer-wanted", "help-wanted"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        We're looking for independent maintainers to help reach the v1.0 milestone (≥3 independent implementations).
+        
+        ## Why become a maintainer?
+        
+        - **Governance seat**: Implementers gain a formal governance seat at v1.0 (see GOVERNANCE.md; exact composition to be set by RFC)
+        - **Technical leadership**: Shape the future of AI agent safety specifications
+        - **Registry listing**: Listed in conformance/implementations.json once verified
+        - **Low barrier**: Complete toolchain ready (7-day tutorial, test vectors, conformance runner)
+        
+        ## Options
+        
+        1. **Adopt Python reference**: Transfer `implementations/python-reference/` to your org (1566 lines, fully conformant)
+        2. **New implementation**: Build from scratch in Go/Rust/Java (7-day tutorial available)
+        3. **Port existing**: Adapt your existing agent implementation to OSAS
+
+  - type: dropdown
+    id: interest-type
+    attributes:
+      label: I'm interested in
+      options:
+        - Adopting the Python reference implementation
+        - Building a new Go implementation
+        - Building a new Rust implementation
+        - Building a new Java implementation
+        - Building in another language
+        - Porting my existing implementation
+    validations:
+      required: true
+
+  - type: input
+    id: language
+    attributes:
+      label: Target Language (if building new)
+      placeholder: e.g., Go, Rust, Java, C#
+    validations:
+      required: false
+
+  - type: input
+    id: organization
+    attributes:
+      label: Organization
+      description: Company or personal capacity
+      placeholder: YourCompany Inc. or Independent
+    validations:
+      required: true
+
+  - type: textarea
+    id: background
+    attributes:
+      label: Background
+      description: |
+        Tell us about your relevant experience:
+        - Languages and frameworks you're comfortable with
+        - Experience with AI/LLM systems
+        - Open source maintenance experience
+        - Why you're interested in OSAS
+      placeholder: Optional but helps us support you better
+
+  - type: input
+    id: timeline
+    attributes:
+      label: Estimated Timeline
+      description: When could you realistically complete a conformant implementation?
+      placeholder: e.g., 2-4 weeks, 1-2 months
+    validations:
+      required: false
+
+  - type: checkboxes
+    id: commitment
+    attributes:
+      label: Maintenance Commitment
+      description: Confirm your understanding of the maintainer role
+      options:
+        - label: I understand this requires ongoing maintenance (keeping up with spec updates)
+          required: true
+        - label: I commit to maintaining conformance (passing compatibility tests on each release)
+          required: true
+        - label: I understand that my organization must be independent from the spec maintainers
+          required: true
+
+  - type: textarea
+    id: questions
+    attributes:
+      label: Questions or Blockers
+      description: What would help you get started?
+      placeholder: |
+        e.g.:
+        - Need help setting up the development environment
+        - Unclear about a specific part of the spec
+        - Looking for a co-maintainer
+        - Need guidance on production deployment
+
+  - type: markdown
+    attributes:
+      value: |
+        ---
+        
+        ## Next Steps
+        
+        1. **For Python adoption**: We'll help transfer the repo and update registry
+        2. **For new implementations**: We'll provide implementation support and answer questions
+                4. **Track progress**: We can create a tracking issue for your implementation
+        
+        ## Resources
+        
+        - [7-day implementation tutorial](../docs/implementing-osas-7days.zh-CN.md)
+        - [Test vectors](../conformance/test-vectors/)
+        - [Implementer checklist](../docs/implementer-checklist.zh-CN.md)
+        - [OpenAPI spec](../docs/openapi-v0.2.json)
+        - [Conformance runner](../packages/compat-runner/)
+        
+        **Questions?** Ask in this issue.
