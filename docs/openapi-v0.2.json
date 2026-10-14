@@ -1,0 +1,4638 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "OSAS Reference API",
+    "version": "0.2.1",
+    "summary": "Governed support agents: the model proposes, the policy engine decides.",
+    "description": "HTTP surface of the Open Support Agent Spec reference implementation (specVersion 0.2). components.schemas are the authoritative JSON Schemas from schemas/ — the same source the runtime validator uses. Auth: demo mode uses x-osas-role / x-osas-actor-id / x-tenant-id headers; jwt mode uses OIDC Bearer tokens. All errors use the Error component.",
+    "license": {
+      "name": "Apache-2.0",
+      "url": "https://www.apache.org/licenses/LICENSE-2.0"
+    }
+  },
+  "servers": [
+    {
+      "url": "/"
+    }
+  ],
+  "tags": [
+    {
+      "name": "meta",
+      "description": "Discovery, schemas, validation, usage"
+    },
+    {
+      "name": "cases",
+      "description": "Cases and customers"
+    },
+    {
+      "name": "proposals",
+      "description": "ActionProposals: the only write path"
+    },
+    {
+      "name": "approvals",
+      "description": "Human approval lifecycle (fail-safe expiry)"
+    },
+    {
+      "name": "handoffs",
+      "description": "Human handoffs"
+    },
+    {
+      "name": "audit",
+      "description": "Hash-chained audit trail"
+    },
+    {
+      "name": "policies",
+      "description": "Immutable tenant policy versions"
+    },
+    {
+      "name": "shadow",
+      "description": "Shadow mode: record, review, never execute"
+    },
+    {
+      "name": "controlled-execution",
+      "description": "v0.3 sandbox execution and reconciliation"
+    },
+    {
+      "name": "demo",
+      "description": "Demo driver"
+    }
+  ],
+  "paths": {
+    "/health": {
+      "get": {
+        "tags": [
+          "meta"
+        ],
+        "summary": "Liveness probe",
+        "responses": {
+          "200": {
+            "description": "Service is healthy",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "const": "ok"
+                    },
+                    "specVersion": {
+                      "const": "0.2"
+                    },
+                    "version": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/.well-known/osas": {
+      "get": {
+        "tags": [
+          "meta"
+        ],
+        "summary": "Discovery document",
+        "responses": {
+          "200": {
+            "description": "Spec version, capabilities, endpoints"
+          }
+        }
+      }
+    },
+    "/v1/openapi.json": {
+      "get": {
+        "tags": [
+          "meta"
+        ],
+        "summary": "This OpenAPI 3.1 document",
+        "responses": {
+          "200": {
+            "description": "OpenAPI document"
+          }
+        }
+      }
+    },
+    "/v1/capabilities": {
+      "get": {
+        "tags": [
+          "meta"
+        ],
+        "summary": "CapabilityManifest of this implementation",
+        "responses": {
+          "200": {
+            "description": "The declared capability manifest",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/core.capability-manifest"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "CAPABILITIES_NOT_DECLARED when undeclared",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/meta/tools": {
+      "get": {
+        "tags": [
+          "meta"
+        ],
+        "summary": "The 20 MCP tool definitions (pure data)",
+        "responses": {
+          "200": {
+            "description": "TOOL_DEFINITIONS"
+          }
+        }
+      }
+    },
+    "/v1/schemas": {
+      "get": {
+        "tags": [
+          "meta"
+        ],
+        "summary": "Schema manifest",
+        "responses": {
+          "200": {
+            "description": "Schema manifest"
+          }
+        }
+      }
+    },
+    "/v1/schemas/{name}": {
+      "get": {
+        "tags": [
+          "meta"
+        ],
+        "summary": "One authoritative JSON Schema by name",
+        "responses": {
+          "200": {
+            "description": "The schema document"
+          },
+          "404": {
+            "description": "Unknown schema",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "name",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Schema name, e.g. core/action-proposal"
+          }
+        ]
+      }
+    },
+    "/v1/validate": {
+      "post": {
+        "tags": [
+          "meta"
+        ],
+        "summary": "Validate data against a named schema (dry run)",
+        "responses": {
+          "200": {
+            "description": "Validation result",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "valid": {
+                      "type": "boolean"
+                    },
+                    "errors": {
+                      "type": "array"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "schemaName",
+                  "data"
+                ],
+                "properties": {
+                  "schemaName": {
+                    "type": "string"
+                  },
+                  "data": {}
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/compat/report": {
+      "get": {
+        "tags": [
+          "meta"
+        ],
+        "summary": "Latest white-box compat report (404 until generated)",
+        "responses": {
+          "200": {
+            "description": "Machine-readable compat report"
+          },
+          "404": {
+            "description": "Report not generated yet",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/cases": {
+      "get": {
+        "tags": [
+          "cases"
+        ],
+        "summary": "Search cases",
+        "responses": {
+          "200": {
+            "description": "Matching cases",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/core.case"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "status",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Filter by CaseStatus"
+          },
+          {
+            "name": "customerId",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Filter by customer"
+          },
+          {
+            "name": "profile",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "core",
+                "ecommerce",
+                "saas"
+              ]
+            },
+            "description": "Filter by profile"
+          },
+          {
+            "name": "q",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Free-text search"
+          }
+        ]
+      }
+    },
+    "/v1/cases/{id}": {
+      "get": {
+        "tags": [
+          "cases"
+        ],
+        "summary": "Case detail with customer and evidence",
+        "responses": {
+          "200": {
+            "description": "Case bundle"
+          },
+          "404": {
+            "description": "Case not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Case id"
+          }
+        ]
+      }
+    },
+    "/v1/customers/{id}": {
+      "get": {
+        "tags": [
+          "cases"
+        ],
+        "summary": "Customer detail",
+        "responses": {
+          "200": {
+            "description": "The customer",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/core.customer"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Customer not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Customer id"
+          }
+        ]
+      }
+    },
+    "/v1/proposals": {
+      "get": {
+        "tags": [
+          "proposals"
+        ],
+        "summary": "List action proposals",
+        "responses": {
+          "200": {
+            "description": "Proposals",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/core.action-proposal"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "caseId",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Filter by case"
+          },
+          {
+            "name": "status",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Filter by ProposalStatus"
+          }
+        ]
+      },
+      "post": {
+        "tags": [
+          "proposals"
+        ],
+        "summary": "Create an action proposal (idempotent by idempotencyKey)",
+        "responses": {
+          "200": {
+            "description": "Identical replay of an existing proposal",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/core.action-proposal"
+                }
+              }
+            }
+          },
+          "201": {
+            "description": "Created proposal",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/core.action-proposal"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Idempotency key reused with different content",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "SCHEMA_INVALID",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "id": {
+                    "$ref": "#/components/schemas/core.common/$defs/Id"
+                  },
+                  "specVersion": {
+                    "$ref": "#/components/schemas/core.common/$defs/SpecVersion"
+                  },
+                  "tenantId": {
+                    "$ref": "#/components/schemas/core.common/$defs/Id"
+                  },
+                  "caseId": {
+                    "$ref": "#/components/schemas/core.common/$defs/Id"
+                  },
+                  "profile": {
+                    "$ref": "#/components/schemas/core.common/$defs/Profile"
+                  },
+                  "actionType": {
+                    "$ref": "#/components/schemas/core.common/$defs/ActionType"
+                  },
+                  "reasonCode": {
+                    "type": "string"
+                  },
+                  "params": {
+                    "type": "object"
+                  },
+                  "requestedPermission": {
+                    "$ref": "#/components/schemas/core.common/$defs/Permission"
+                  },
+                  "requestedBy": {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "required": [
+                      "actorType",
+                      "actorId"
+                    ],
+                    "properties": {
+                      "actorType": {
+                        "$ref": "#/components/schemas/core.common/$defs/ActorType"
+                      },
+                      "actorId": {
+                        "type": "string"
+                      },
+                      "model": {
+                        "type": "object",
+                        "additionalProperties": false,
+                        "required": [
+                          "provider",
+                          "model"
+                        ],
+                        "properties": {
+                          "provider": {
+                            "type": "string"
+                          },
+                          "model": {
+                            "type": "string"
+                          }
+                        }
+                      }
+                    }
+                  },
+                  "amount": {
+                    "$ref": "#/components/schemas/core.common/$defs/Money"
+                  },
+                  "evidenceIds": {
+                    "type": "array",
+                    "items": {
+                      "$ref": "#/components/schemas/core.common/$defs/Id"
+                    }
+                  },
+                  "idempotencyKey": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "status": {
+                    "type": "string",
+                    "enum": [
+                      "proposed",
+                      "policy_rejected",
+                      "pending_approval",
+                      "approved",
+                      "rejected",
+                      "executing",
+                      "executed",
+                      "failed",
+                      "reconciliation_required"
+                    ]
+                  },
+                  "policyDecision": {
+                    "$ref": "#/components/schemas/core.common/$defs/PolicyDecision"
+                  },
+                  "createdAt": {
+                    "$ref": "#/components/schemas/core.common/$defs/DateTime"
+                  },
+                  "updatedAt": {
+                    "$ref": "#/components/schemas/core.common/$defs/DateTime"
+                  }
+                },
+                "description": "ActionProposal without id/specVersion/status/createdAt/updatedAt (server-assigned). Validated against core/action-proposal semantics; invalid payloads are 422 SCHEMA_INVALID and never execute."
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/proposals/{id}": {
+      "get": {
+        "tags": [
+          "proposals"
+        ],
+        "summary": "Get one proposal",
+        "responses": {
+          "200": {
+            "description": "The proposal",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/core.action-proposal"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Proposal id"
+          }
+        ]
+      }
+    },
+    "/v1/proposals/{id}/evaluate": {
+      "post": {
+        "tags": [
+          "proposals"
+        ],
+        "summary": "Run deterministic policy evaluation (spec section 5)",
+        "responses": {
+          "200": {
+            "description": "Proposal plus its PolicyDecision"
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Proposal id"
+          }
+        ]
+      }
+    },
+    "/v1/proposals/{id}/execute": {
+      "post": {
+        "tags": [
+          "proposals"
+        ],
+        "summary": "Execute an approved proposal (idempotent; never for ShadowRun proposals)",
+        "responses": {
+          "200": {
+            "description": "Execution result; replays return the stored result"
+          },
+          "409": {
+            "description": "Not approved / has ShadowRun / ACTION_BINDING_MISMATCH",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Proposal id"
+          }
+        ]
+      }
+    },
+    "/v1/proposals/{id}/reconcile": {
+      "post": {
+        "tags": [
+          "proposals"
+        ],
+        "summary": "Human-driven reconciliation of an uncertain execution",
+        "responses": {
+          "200": {
+            "description": "Updated proposal",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/core.action-proposal"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Proposal id"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "outcome"
+                ],
+                "properties": {
+                  "outcome": {
+                    "enum": [
+                      "succeeded",
+                      "failed"
+                    ]
+                  },
+                  "note": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/proposals/{id}/shadow-run": {
+      "post": {
+        "tags": [
+          "shadow"
+        ],
+        "summary": "Simulate and record a ShadowRun (never executes)",
+        "responses": {
+          "201": {
+            "description": "Created ShadowRun",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/core.shadow-run"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Proposal id"
+          }
+        ]
+      }
+    },
+    "/v1/approvals": {
+      "get": {
+        "tags": [
+          "approvals"
+        ],
+        "summary": "List approvals with embedded proposals (effective status)",
+        "responses": {
+          "200": {
+            "description": "Approvals",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/core.approval"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "status",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Filter by status"
+          }
+        ]
+      }
+    },
+    "/v1/approvals/{id}/decide": {
+      "post": {
+        "tags": [
+          "approvals"
+        ],
+        "summary": "Approve or reject (deny-only after expiry; approved proposals auto-execute)",
+        "responses": {
+          "200": {
+            "description": "Decision result; approved proposals execute inline"
+          },
+          "409": {
+            "description": "APPROVAL_TIMED_OUT",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Approval id"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "decision",
+                  "approverId"
+                ],
+                "properties": {
+                  "decision": {
+                    "enum": [
+                      "approved",
+                      "rejected"
+                    ]
+                  },
+                  "approverId": {
+                    "type": "string"
+                  },
+                  "comment": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/handoffs": {
+      "get": {
+        "tags": [
+          "handoffs"
+        ],
+        "summary": "List human handoffs",
+        "responses": {
+          "200": {
+            "description": "Handoffs",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/core.human-handoff"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "status",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Filter by status"
+          }
+        ]
+      }
+    },
+    "/v1/handoffs/{id}/claim": {
+      "post": {
+        "tags": [
+          "handoffs"
+        ],
+        "summary": "Claim an open handoff",
+        "responses": {
+          "200": {
+            "description": "Updated handoff",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/core.human-handoff"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Handoff id"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "assignee": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/handoffs/{id}/resolve": {
+      "post": {
+        "tags": [
+          "handoffs"
+        ],
+        "summary": "Resolve a handoff",
+        "responses": {
+          "200": {
+            "description": "Updated handoff",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/core.human-handoff"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Handoff id"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "notes": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/audit": {
+      "get": {
+        "tags": [
+          "audit"
+        ],
+        "summary": "Query the audit trail",
+        "responses": {
+          "200": {
+            "description": "Audit events",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/core.audit-event"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "caseId",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Filter by case"
+          },
+          {
+            "name": "proposalId",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Filter by proposal"
+          }
+        ]
+      }
+    },
+    "/v1/audit/verify": {
+      "get": {
+        "tags": [
+          "audit"
+        ],
+        "summary": "Recompute the per-tenant hash chain",
+        "responses": {
+          "200": {
+            "description": "{ tenantId, chainLength, intact, firstError? }"
+          }
+        }
+      }
+    },
+    "/v1/policies/{tenantId}": {
+      "get": {
+        "tags": [
+          "policies"
+        ],
+        "summary": "Active TenantPolicy for a tenant",
+        "responses": {
+          "200": {
+            "description": "Active policy",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/core.tenant-policy"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "TENANT_MISMATCH",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "tenantId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Tenant id"
+          }
+        ]
+      },
+      "put": {
+        "tags": [
+          "policies"
+        ],
+        "summary": "Always 409 POLICY_IMMUTABLE — use the version lifecycle",
+        "responses": {
+          "409": {
+            "description": "POLICY_IMMUTABLE",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "tenantId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Tenant id"
+          }
+        ]
+      }
+    },
+    "/v1/policies/{tenantId}/versions": {
+      "get": {
+        "tags": [
+          "policies"
+        ],
+        "summary": "Policy version records (draft → simulated → approved → active → retired)",
+        "responses": {
+          "200": {
+            "description": "Version records"
+          }
+        },
+        "parameters": [
+          {
+            "name": "tenantId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Tenant id"
+          }
+        ]
+      }
+    },
+    "/v1/policies/{tenantId}/drafts": {
+      "post": {
+        "tags": [
+          "policies"
+        ],
+        "summary": "Create a policy draft (policy_admin)",
+        "responses": {
+          "201": {
+            "description": "Created draft"
+          },
+          "403": {
+            "description": "POLICY_ADMIN_REQUIRED / TENANT_MISMATCH",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "tenantId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Tenant id"
+          }
+        ]
+      }
+    },
+    "/v1/policies/{tenantId}/simulate": {
+      "post": {
+        "tags": [
+          "policies"
+        ],
+        "summary": "Pure policy simulation against a version (no side effects)",
+        "responses": {
+          "200": {
+            "description": "Decision plus policyVersion"
+          },
+          "404": {
+            "description": "Unknown version",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "tenantId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Tenant id"
+          }
+        ]
+      }
+    },
+    "/v1/policies/{tenantId}/versions/{version}/approve": {
+      "post": {
+        "tags": [
+          "policies"
+        ],
+        "summary": "Approve a simulated policy version (policy_admin)",
+        "responses": {
+          "200": {
+            "description": "Updated version record"
+          },
+          "409": {
+            "description": "Illegal lifecycle transition",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "tenantId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Tenant id"
+          },
+          {
+            "name": "version",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Policy version"
+          }
+        ]
+      }
+    },
+    "/v1/policies/{tenantId}/versions/{version}/activate": {
+      "post": {
+        "tags": [
+          "policies"
+        ],
+        "summary": "Activate a policy version; retires the previous active one",
+        "responses": {
+          "200": {
+            "description": "Updated version record"
+          },
+          "409": {
+            "description": "Illegal lifecycle transition",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "tenantId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Tenant id"
+          },
+          {
+            "name": "version",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Policy version"
+          }
+        ]
+      }
+    },
+    "/v1/policies/{tenantId}/versions/{version}/retire": {
+      "post": {
+        "tags": [
+          "policies"
+        ],
+        "summary": "Retire a policy version",
+        "responses": {
+          "200": {
+            "description": "Updated version record"
+          },
+          "409": {
+            "description": "Illegal lifecycle transition",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "tenantId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Tenant id"
+          },
+          {
+            "name": "version",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Policy version"
+          }
+        ]
+      }
+    },
+    "/v1/shadow-runs": {
+      "get": {
+        "tags": [
+          "shadow"
+        ],
+        "summary": "List ShadowRuns with embedded proposal and evidence",
+        "responses": {
+          "200": {
+            "description": "ShadowRuns",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/core.shadow-run"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/shadow-runs/metrics": {
+      "get": {
+        "tags": [
+          "shadow"
+        ],
+        "summary": "Aggregated ShadowMetrics",
+        "responses": {
+          "200": {
+            "description": "Shadow metrics",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/core.shadow-metrics"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "periodStart",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "ISO date-time"
+          },
+          {
+            "name": "periodEnd",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "ISO date-time"
+          }
+        ]
+      }
+    },
+    "/v1/shadow-runs/{id}": {
+      "get": {
+        "tags": [
+          "shadow"
+        ],
+        "summary": "One ShadowRun with context",
+        "responses": {
+          "200": {
+            "description": "ShadowRun",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/core.shadow-run"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "ShadowRun id"
+          }
+        ]
+      }
+    },
+    "/v1/shadow-runs/{id}/review": {
+      "post": {
+        "tags": [
+          "shadow"
+        ],
+        "summary": "Human review: accepted | rejected | modified (final)",
+        "responses": {
+          "200": {
+            "description": "Reviewed ShadowRun",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/core.shadow-run"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Already reviewed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "ShadowRun id"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "outcome"
+                ],
+                "properties": {
+                  "outcome": {
+                    "enum": [
+                      "accepted",
+                      "rejected",
+                      "modified"
+                    ]
+                  },
+                  "humanComment": {
+                    "type": "string"
+                  },
+                  "externalReference": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/chat": {
+      "post": {
+        "tags": [
+          "demo"
+        ],
+        "summary": "Demo driver: message in, reply + proposal + decision out",
+        "responses": {
+          "200": {
+            "description": "Reply with optional proposal/decision/execution/handoff"
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "message"
+                ],
+                "properties": {
+                  "message": {
+                    "type": "string"
+                  },
+                  "caseId": {
+                    "type": "string"
+                  },
+                  "profile": {
+                    "enum": [
+                      "core",
+                      "ecommerce",
+                      "saas"
+                    ]
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/usage": {
+      "get": {
+        "tags": [
+          "meta"
+        ],
+        "summary": "Model usage records (policy_admin / auditor only)",
+        "responses": {
+          "200": {
+            "description": "Usage records plus summary"
+          },
+          "403": {
+            "description": "Forbidden role / TENANT_MISMATCH",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "tenantId",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Tenant filter"
+          },
+          {
+            "name": "date",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Day filter (YYYY-MM-DD)"
+          },
+          {
+            "name": "model",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Model filter"
+          },
+          {
+            "name": "task",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Task filter"
+          }
+        ]
+      }
+    },
+    "/v1/executions/{id}": {
+      "get": {
+        "tags": [
+          "controlled-execution"
+        ],
+        "summary": "Execution attempt plus receipt (v0.3 sandbox)",
+        "responses": {
+          "200": {
+            "description": "{ attempt, receipt? }"
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Execution attempt id"
+          }
+        ]
+      }
+    },
+    "/v1/reconciliation": {
+      "get": {
+        "tags": [
+          "controlled-execution"
+        ],
+        "summary": "Open or resolved reconciliation tasks",
+        "responses": {
+          "200": {
+            "description": "Reconciliation tasks"
+          }
+        },
+        "parameters": [
+          {
+            "name": "status",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "open",
+                "resolved"
+              ]
+            },
+            "description": "open | resolved"
+          }
+        ]
+      }
+    },
+    "/v1/provider-events": {
+      "post": {
+        "tags": [
+          "controlled-execution"
+        ],
+        "summary": "Internal provider-event ingestion (server key required; deduped)",
+        "responses": {
+          "200": {
+            "description": "{ duplicate, event, proposal?, reconciliation? }"
+          },
+          "403": {
+            "description": "Missing or wrong provider key",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/governance/health": {
+      "get": {
+        "tags": [
+          "governance"
+        ],
+        "summary": "Control-plane snapshot: connections, inbox, queue, reconciliations, metering",
+        "responses": {
+          "200": {
+            "description": "GovernanceHealth"
+          },
+          "403": {
+            "description": "Missing governance capability",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Workspace not provisioned",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/governance/workspaces": {
+      "post": {
+        "tags": [
+          "governance"
+        ],
+        "summary": "Provision the organization/workspace pair for the caller's tenant (idempotent)",
+        "responses": {
+          "200": {
+            "description": "{ organization, workspace, created }"
+          },
+          "403": {
+            "description": "Requires workspace:write, or a foreign tenantId",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "SCHEMA_INVALID",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "organizationName",
+                  "workspaceName"
+                ],
+                "properties": {
+                  "organizationName": {
+                    "type": "string"
+                  },
+                  "workspaceName": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/governance/connections": {
+      "get": {
+        "tags": [
+          "governance"
+        ],
+        "summary": "List this tenant's connections",
+        "responses": {
+          "200": {
+            "description": "Connection[]"
+          }
+        },
+        "parameters": [
+          {
+            "name": "status",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "active | paused | revoked | error"
+          },
+          {
+            "name": "provider",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Provider key filter"
+          }
+        ]
+      },
+      "post": {
+        "tags": [
+          "governance"
+        ],
+        "summary": "Create a connection; it starts paused until verified",
+        "responses": {
+          "200": {
+            "description": "Connection"
+          },
+          "400": {
+            "description": "SECRET_REFUSED when credentialRef looks like a raw secret",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Requires connection:write",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "CONFLICT when a live connection already exists for the account",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "provider",
+                  "externalAccountId",
+                  "capabilities"
+                ],
+                "properties": {
+                  "provider": {
+                    "type": "string",
+                    "description": "e.g. shopify, zendesk, mock"
+                  },
+                  "externalAccountId": {
+                    "type": "string"
+                  },
+                  "capabilities": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    },
+                    "description": "Dotted ids; write capabilities end in .execute or .write"
+                  },
+                  "scopes": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  },
+                  "apiVersion": {
+                    "type": "string"
+                  },
+                  "credentialRef": {
+                    "type": "string",
+                    "description": "Opaque pointer with a scheme (vault:..., env:..., aws-sm:...). Never a credential."
+                  },
+                  "displayName": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/governance/connections/{id}": {
+      "get": {
+        "tags": [
+          "governance"
+        ],
+        "summary": "Read one connection",
+        "responses": {
+          "200": {
+            "description": "Connection"
+          },
+          "404": {
+            "description": "Not found in this tenant",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Connection id"
+          }
+        ]
+      },
+      "delete": {
+        "tags": [
+          "governance"
+        ],
+        "summary": "Delete a connection (must be revoked first)",
+        "responses": {
+          "204": {
+            "description": "Deleted"
+          },
+          "409": {
+            "description": "CONFLICT when the connection is still live",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Connection id"
+          }
+        ]
+      }
+    },
+    "/v1/governance/connections/{id}/verify": {
+      "post": {
+        "tags": [
+          "governance"
+        ],
+        "summary": "Probe the provider; activates only on success",
+        "responses": {
+          "200": {
+            "description": "Connection (active on success, error otherwise)"
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Connection id"
+          }
+        ]
+      }
+    },
+    "/v1/governance/connections/{id}/pause": {
+      "post": {
+        "tags": [
+          "governance"
+        ],
+        "summary": "Pause a connection",
+        "responses": {
+          "200": {
+            "description": "Connection"
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Connection id"
+          }
+        ]
+      }
+    },
+    "/v1/governance/connections/{id}/resume": {
+      "post": {
+        "tags": [
+          "governance"
+        ],
+        "summary": "Resume a connection (requires a prior successful verification)",
+        "responses": {
+          "200": {
+            "description": "Connection"
+          },
+          "409": {
+            "description": "CONFLICT when never verified",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Connection id"
+          }
+        ]
+      }
+    },
+    "/v1/governance/connections/{id}/rotate": {
+      "post": {
+        "tags": [
+          "governance"
+        ],
+        "summary": "Rotate the credential reference; the connection returns to paused",
+        "responses": {
+          "200": {
+            "description": "Connection"
+          },
+          "400": {
+            "description": "SECRET_REFUSED",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Requires connection:rotate",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Connection id"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "credentialRef"
+                ],
+                "properties": {
+                  "credentialRef": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/governance/connections/{id}/revoke": {
+      "post": {
+        "tags": [
+          "governance"
+        ],
+        "summary": "Revoke a connection; all further use is refused",
+        "responses": {
+          "200": {
+            "description": "Connection"
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Connection id"
+          }
+        ]
+      }
+    },
+    "/v1/governance/integration-events": {
+      "get": {
+        "tags": [
+          "governance"
+        ],
+        "summary": "Inbox records for this tenant",
+        "responses": {
+          "200": {
+            "description": "IntegrationEvent[]"
+          }
+        },
+        "parameters": [
+          {
+            "name": "connectionId",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Filter by connection"
+          },
+          {
+            "name": "topic",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Filter by topic"
+          },
+          {
+            "name": "status",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "received | processing | processed | duplicate | failed | stale_ignored"
+          }
+        ]
+      },
+      "post": {
+        "tags": [
+          "governance"
+        ],
+        "summary": "Internal event ingest (x-osas-governance-key; deduped; never executes inline)",
+        "responses": {
+          "200": {
+            "description": "IntegrationEventIntakeResult: accepted | duplicate | out_of_order"
+          },
+          "403": {
+            "description": "Missing or wrong governance event key",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Ingestion is disabled (no key configured) or the connection is not active",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "connectionId",
+                  "topic",
+                  "externalEventId",
+                  "occurredAt"
+                ],
+                "properties": {
+                  "connectionId": {
+                    "type": "string"
+                  },
+                  "topic": {
+                    "type": "string"
+                  },
+                  "externalEventId": {
+                    "type": "string",
+                    "description": "Provider event id; the dedupe key"
+                  },
+                  "occurredAt": {
+                    "type": "string",
+                    "description": "ISO-8601 provider timestamp; ordering uses this"
+                  },
+                  "payload": {
+                    "type": "object",
+                    "description": "Opaque provider snapshot"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/governance/jobs": {
+      "get": {
+        "tags": [
+          "governance"
+        ],
+        "summary": "Job queue for this tenant",
+        "responses": {
+          "200": {
+            "description": "JobRun[]"
+          }
+        },
+        "parameters": [
+          {
+            "name": "status",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "queued | leased | succeeded | dead_letter | cancelled"
+          },
+          {
+            "name": "kind",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "integration_event.process | connection.verify | reconciliation.refetch"
+          }
+        ]
+      }
+    },
+    "/v1/governance/jobs/drain": {
+      "post": {
+        "tags": [
+          "governance"
+        ],
+        "summary": "Run one worker sweep for this tenant (requires job:operate)",
+        "responses": {
+          "200": {
+            "description": "RunOnceReport"
+          },
+          "403": {
+            "description": "Requires job:operate",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "required": false,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "limit": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 100
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/governance/reconciliations": {
+      "get": {
+        "tags": [
+          "governance"
+        ],
+        "summary": "Reconciliation records; an uncertain outcome is never retried automatically",
+        "responses": {
+          "200": {
+            "description": "Reconciliation[]"
+          }
+        },
+        "parameters": [
+          {
+            "name": "status",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "open | resolved | dismissed"
+          },
+          {
+            "name": "caseId",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Filter by case"
+          }
+        ]
+      }
+    },
+    "/v1/governance/reconciliations/{id}/decide": {
+      "post": {
+        "tags": [
+          "governance"
+        ],
+        "summary": "Resolve or dismiss a reconciliation (compare-and-set, single shot)",
+        "responses": {
+          "200": {
+            "description": "Reconciliation"
+          },
+          "403": {
+            "description": "Requires reconciliation:resolve",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Already decided or stale version",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Reconciliation id"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "status",
+                  "resolution",
+                  "expectedVersion"
+                ],
+                "properties": {
+                  "status": {
+                    "enum": [
+                      "resolved",
+                      "dismissed"
+                    ]
+                  },
+                  "resolution": {
+                    "type": "string"
+                  },
+                  "expectedVersion": {
+                    "type": "integer"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/governance/usage": {
+      "get": {
+        "tags": [
+          "governance"
+        ],
+        "summary": "Control-plane metering (governed objects, never tokens)",
+        "responses": {
+          "200": {
+            "description": "{ records, summary }"
+          }
+        },
+        "parameters": [
+          {
+            "name": "kind",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "case_intake | proposal_created | approval_decided | execution_attempted | reconciliation_opened"
+          },
+          {
+            "name": "from",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "ISO-8601 lower bound"
+          },
+          {
+            "name": "to",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "ISO-8601 upper bound"
+          }
+        ]
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "core.common": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "$id": "https://open-support-agent.dev/schemas/core/common.json",
+        "title": "OSAS common definitions",
+        "description": "Shared $defs reused across all OSAS schemas via relative $ref.",
+        "$defs": {
+          "SpecVersion": {
+            "const": "0.2"
+          },
+          "Id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "DateTime": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "Currency": {
+            "type": "string",
+            "pattern": "^[A-Z]{3}$"
+          },
+          "Region": {
+            "type": "string",
+            "pattern": "^[A-Z]{2}$"
+          },
+          "Money": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "currency",
+              "minorUnits"
+            ],
+            "properties": {
+              "currency": {
+                "$ref": "#/$defs/Currency"
+              },
+              "minorUnits": {
+                "type": "integer",
+                "minimum": 0
+              }
+            }
+          },
+          "Permission": {
+            "type": "string",
+            "enum": [
+              "read",
+              "draft",
+              "request-approval",
+              "execute"
+            ]
+          },
+          "Profile": {
+            "type": "string",
+            "enum": [
+              "core",
+              "ecommerce",
+              "saas"
+            ]
+          },
+          "ActorType": {
+            "type": "string",
+            "enum": [
+              "model",
+              "human",
+              "system"
+            ]
+          },
+          "ActionType": {
+            "type": "string",
+            "enum": [
+              "create_note",
+              "create_escalation",
+              "refund",
+              "return_request",
+              "reshipment",
+              "cancel_order",
+              "exchange_request",
+              "credit_apply",
+              "subscription_cancel",
+              "plan_change"
+            ]
+          },
+          "PolicyDecision": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "decision",
+              "reasons",
+              "policyVersion",
+              "evaluatedAt"
+            ],
+            "properties": {
+              "decision": {
+                "type": "string",
+                "enum": [
+                  "auto_execute",
+                  "require_approval",
+                  "block"
+                ]
+              },
+              "reasons": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": [
+                    "code",
+                    "message"
+                  ],
+                  "properties": {
+                    "code": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    }
+                  }
+                }
+              },
+              "policyVersion": {
+                "type": "string"
+              },
+              "evaluatedAt": {
+                "$ref": "#/$defs/DateTime"
+              },
+              "transforms": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": [
+                    "path",
+                    "op"
+                  ],
+                  "properties": {
+                    "path": {
+                      "type": "string"
+                    },
+                    "op": {
+                      "type": "string",
+                      "enum": [
+                        "redact"
+                      ]
+                    },
+                    "replacement": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "core.case": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "$id": "https://open-support-agent.dev/schemas/core/case.json",
+        "title": "Case",
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "specVersion",
+          "tenantId",
+          "customerId",
+          "profile",
+          "channel",
+          "subject",
+          "status",
+          "priority",
+          "assigneeType",
+          "tags",
+          "evidenceIds",
+          "createdAt",
+          "updatedAt"
+        ],
+        "properties": {
+          "id": {
+            "$ref": "#/components/schemas/core.common/$defs/Id"
+          },
+          "specVersion": {
+            "$ref": "#/components/schemas/core.common/$defs/SpecVersion"
+          },
+          "tenantId": {
+            "$ref": "#/components/schemas/core.common/$defs/Id"
+          },
+          "customerId": {
+            "$ref": "#/components/schemas/core.common/$defs/Id"
+          },
+          "profile": {
+            "$ref": "#/components/schemas/core.common/$defs/Profile"
+          },
+          "channel": {
+            "type": "string",
+            "enum": [
+              "email",
+              "chat",
+              "phone",
+              "social",
+              "api"
+            ]
+          },
+          "subject": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "open",
+              "pending_agent",
+              "pending_customer",
+              "resolved",
+              "closed"
+            ]
+          },
+          "priority": {
+            "type": "string",
+            "enum": [
+              "low",
+              "normal",
+              "high",
+              "urgent"
+            ]
+          },
+          "assigneeType": {
+            "type": "string",
+            "enum": [
+              "agent",
+              "human",
+              "none"
+            ]
+          },
+          "tags": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "evidenceIds": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/core.common/$defs/Id"
+            }
+          },
+          "closedAt": {
+            "$ref": "#/components/schemas/core.common/$defs/DateTime"
+          },
+          "createdAt": {
+            "$ref": "#/components/schemas/core.common/$defs/DateTime"
+          },
+          "updatedAt": {
+            "$ref": "#/components/schemas/core.common/$defs/DateTime"
+          }
+        }
+      },
+      "core.customer": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "$id": "https://open-support-agent.dev/schemas/core/customer.json",
+        "title": "Customer",
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "specVersion",
+          "tenantId",
+          "displayName",
+          "region",
+          "identityVerification",
+          "tags",
+          "createdAt",
+          "updatedAt"
+        ],
+        "properties": {
+          "id": {
+            "$ref": "#/components/schemas/core.common/$defs/Id"
+          },
+          "specVersion": {
+            "$ref": "#/components/schemas/core.common/$defs/SpecVersion"
+          },
+          "tenantId": {
+            "$ref": "#/components/schemas/core.common/$defs/Id"
+          },
+          "displayName": {
+            "type": "string"
+          },
+          "email": {
+            "type": "string"
+          },
+          "phone": {
+            "type": "string"
+          },
+          "locale": {
+            "type": "string"
+          },
+          "region": {
+            "$ref": "#/components/schemas/core.common/$defs/Region"
+          },
+          "identityVerification": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "status"
+            ],
+            "properties": {
+              "status": {
+                "type": "string",
+                "enum": [
+                  "verified",
+                  "unverified",
+                  "expired"
+                ]
+              },
+              "method": {
+                "type": "string"
+              },
+              "verifiedAt": {
+                "$ref": "#/components/schemas/core.common/$defs/DateTime"
+              },
+              "expiresAt": {
+                "$ref": "#/components/schemas/core.common/$defs/DateTime"
+              }
+            }
+          },
+          "tags": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "createdAt": {
+            "$ref": "#/components/schemas/core.common/$defs/DateTime"
+          },
+          "updatedAt": {
+            "$ref": "#/components/schemas/core.common/$defs/DateTime"
+          }
+        }
+      },
+      "core.evidence": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "$id": "https://open-support-agent.dev/schemas/core/evidence.json",
+        "title": "Evidence",
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "specVersion",
+          "tenantId",
+          "kind",
+          "source",
+          "summary",
+          "data",
+          "retrievedAt",
+          "createdAt"
+        ],
+        "properties": {
+          "id": {
+            "$ref": "#/components/schemas/core.common/$defs/Id"
+          },
+          "specVersion": {
+            "$ref": "#/components/schemas/core.common/$defs/SpecVersion"
+          },
+          "tenantId": {
+            "$ref": "#/components/schemas/core.common/$defs/Id"
+          },
+          "caseId": {
+            "$ref": "#/components/schemas/core.common/$defs/Id"
+          },
+          "kind": {
+            "type": "string",
+            "enum": [
+              "order",
+              "shipment",
+              "subscription",
+              "invoice",
+              "knowledge",
+              "conversation",
+              "policy",
+              "identity",
+              "other"
+            ]
+          },
+          "source": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "system",
+              "recordType",
+              "recordId"
+            ],
+            "properties": {
+              "system": {
+                "type": "string"
+              },
+              "recordType": {
+                "type": "string"
+              },
+              "recordId": {
+                "type": "string"
+              },
+              "url": {
+                "type": "string"
+              }
+            }
+          },
+          "summary": {
+            "type": "string"
+          },
+          "data": {
+            "type": "object"
+          },
+          "retrievedAt": {
+            "$ref": "#/components/schemas/core.common/$defs/DateTime"
+          },
+          "expiresAt": {
+            "$ref": "#/components/schemas/core.common/$defs/DateTime"
+          },
+          "createdAt": {
+            "$ref": "#/components/schemas/core.common/$defs/DateTime"
+          }
+        }
+      },
+      "core.action-proposal": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "$id": "https://open-support-agent.dev/schemas/core/action-proposal.json",
+        "title": "ActionProposal",
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "specVersion",
+          "tenantId",
+          "caseId",
+          "profile",
+          "actionType",
+          "reasonCode",
+          "params",
+          "requestedPermission",
+          "requestedBy",
+          "evidenceIds",
+          "idempotencyKey",
+          "status",
+          "createdAt",
+          "updatedAt"
+        ],
+        "properties": {
+          "id": {
+            "$ref": "#/components/schemas/core.common/$defs/Id"
+          },
+          "specVersion": {
+            "$ref": "#/components/schemas/core.common/$defs/SpecVersion"
+          },
+          "tenantId": {
+            "$ref": "#/components/schemas/core.common/$defs/Id"
+          },
+          "caseId": {
+            "$ref": "#/components/schemas/core.common/$defs/Id"
+          },
+          "profile": {
+            "$ref": "#/components/schemas/core.common/$defs/Profile"
+          },
+          "actionType": {
+            "$ref": "#/components/schemas/core.common/$defs/ActionType"
+          },
+          "reasonCode": {
+            "type": "string"
+          },
+          "params": {
+            "type": "object"
+          },
+          "requestedPermission": {
+            "$ref": "#/components/schemas/core.common/$defs/Permission"
+          },
+          "requestedBy": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "actorType",
+              "actorId"
+            ],
+            "properties": {
+              "actorType": {
+                "$ref": "#/components/schemas/core.common/$defs/ActorType"
+              },
+              "actorId": {
+                "type": "string"
+              },
+              "model": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "provider",
+                  "model"
+                ],
+                "properties": {
+                  "provider": {
+                    "type": "string"
+                  },
+                  "model": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          },
+          "amount": {
+            "$ref": "#/components/schemas/core.common/$defs/Money"
+          },
+          "evidenceIds": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/core.common/$defs/Id"
+            }
+          },
+          "idempotencyKey": {
+            "type": "string",
+            "minLength": 1
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "proposed",
+              "policy_rejected",
+              "pending_approval",
+              "approved",
+              "rejected",
+              "executing",
+              "executed",
+              "failed",
+              "reconciliation_required"
+            ]
+          },
+          "policyDecision": {
+            "$ref": "#/components/schemas/core.common/$defs/PolicyDecision"
+          },
+          "createdAt": {
+            "$ref": "#/components/schemas/core.common/$defs/DateTime"
+          },
+          "updatedAt": {
+            "$ref": "#/components/schemas/core.common/$defs/DateTime"
+          }
+        }
+      },
+      "core.approval": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "$id": "https://open-support-agent.dev/schemas/core/approval.json",
+        "title": "Approval",
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "specVersion",
+          "tenantId",
+          "proposalId",
+          "status",
+          "policyVersion",
+          "requestedAt",
+          "createdAt",
+          "updatedAt"
+        ],
+        "properties": {
+          "id": {
+            "$ref": "#/components/schemas/core.common/$defs/Id"
+          },
+          "specVersion": {
+            "$ref": "#/components/schemas/core.common/$defs/SpecVersion"
+          },
+          "tenantId": {
+            "$ref": "#/components/schemas/core.common/$defs/Id"
+          },
+          "proposalId": {
+            "$ref": "#/components/schemas/core.common/$defs/Id"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "pending",
+              "approved",
+              "rejected",
+              "expired"
+            ]
+          },
+          "approverId": {
+            "type": "string"
+          },
+          "comment": {
+            "type": "string"
+          },
+          "policyVersion": {
+            "type": "string"
+          },
+          "requestedAt": {
+            "$ref": "#/components/schemas/core.common/$defs/DateTime"
+          },
+          "decidedAt": {
+            "$ref": "#/components/schemas/core.common/$defs/DateTime"
+          },
+          "expiresAt": {
+            "$ref": "#/components/schemas/core.common/$defs/DateTime"
+          },
+          "approverGroupId": {
+            "type": "string"
+          },
+          "createdAt": {
+            "$ref": "#/components/schemas/core.common/$defs/DateTime"
+          },
+          "updatedAt": {
+            "$ref": "#/components/schemas/core.common/$defs/DateTime"
+          },
+          "actionDigest": {
+            "type": "string",
+            "pattern": "^[0-9a-f]{64}$",
+            "description": "SHA-256 over the canonical stable-JSON serialization of { actionType, params } of the approved proposal (RFC 0008). Recomputed and verified at execution time."
+          }
+        }
+      },
+      "core.tenant-policy": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "$id": "https://open-support-agent.dev/schemas/core/tenant-policy.json",
+        "title": "TenantPolicy",
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "specVersion",
+          "tenantId",
+          "version",
+          "effectiveFrom",
+          "duplicateWindowSeconds",
+          "maxEvidenceAgeSeconds",
+          "rules",
+          "defaultDecision",
+          "createdAt",
+          "updatedAt"
+        ],
+        "properties": {
+          "id": {
+            "$ref": "#/components/schemas/core.common/$defs/Id"
+          },
+          "specVersion": {
+            "$ref": "#/components/schemas/core.common/$defs/SpecVersion"
+          },
+          "tenantId": {
+            "$ref": "#/components/schemas/core.common/$defs/Id"
+          },
+          "version": {
+            "type": "string"
+          },
+          "effectiveFrom": {
+            "$ref": "#/components/schemas/core.common/$defs/DateTime"
+          },
+          "duplicateWindowSeconds": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "maxEvidenceAgeSeconds": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "budget": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "dailyUsdCap": {
+                "type": "number",
+                "minimum": 0
+              }
+            }
+          },
+          "rules": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "actionType",
+                "decision"
+              ],
+              "properties": {
+                "actionType": {
+                  "$ref": "#/components/schemas/core.common/$defs/ActionType"
+                },
+                "reasonCodes": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                },
+                "decision": {
+                  "type": "string",
+                  "enum": [
+                    "auto_execute",
+                    "require_approval",
+                    "block"
+                  ]
+                },
+                "maxAmount": {
+                  "$ref": "#/components/schemas/core.common/$defs/Money"
+                },
+                "requireVerifiedIdentity": {
+                  "type": "boolean"
+                },
+                "identityMaxAgeSeconds": {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                "allowedRegions": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/core.common/$defs/Region"
+                  }
+                },
+                "blockedRegions": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/core.common/$defs/Region"
+                  }
+                },
+                "transforms": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "required": [
+                      "path",
+                      "op"
+                    ],
+                    "properties": {
+                      "path": {
+                        "type": "string"
+                      },
+                      "op": {
+                        "type": "string",
+                        "enum": [
+                          "redact"
+                        ]
+                      },
+                      "replacement": {
+                        "type": "string"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "defaultDecision": {
+            "const": "block"
+          },
+          "approval": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "timeoutSeconds": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "onTimeout": {
+                "type": "string",
+                "enum": [
+                  "deny"
+                ]
+              },
+              "approverGroups": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": [
+                    "id",
+                    "memberIds"
+                  ],
+                  "properties": {
+                    "id": {
+                      "type": "string"
+                    },
+                    "memberIds": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "createdAt": {
+            "$ref": "#/components/schemas/core.common/$defs/DateTime"
+          },
+          "updatedAt": {
+            "$ref": "#/components/schemas/core.common/$defs/DateTime"
+          }
+        }
+      },
+      "core.audit-event": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "$id": "https://open-support-agent.dev/schemas/core/audit-event.json",
+        "title": "AuditEvent",
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "specVersion",
+          "tenantId",
+          "eventType",
+          "actorType",
+          "actorId",
+          "detail",
+          "createdAt"
+        ],
+        "properties": {
+          "id": {
+            "$ref": "#/components/schemas/core.common/$defs/Id"
+          },
+          "specVersion": {
+            "$ref": "#/components/schemas/core.common/$defs/SpecVersion"
+          },
+          "tenantId": {
+            "$ref": "#/components/schemas/core.common/$defs/Id"
+          },
+          "caseId": {
+            "$ref": "#/components/schemas/core.common/$defs/Id"
+          },
+          "proposalId": {
+            "$ref": "#/components/schemas/core.common/$defs/Id"
+          },
+          "approvalId": {
+            "$ref": "#/components/schemas/core.common/$defs/Id"
+          },
+          "eventType": {
+            "type": "string",
+            "enum": [
+              "proposal_created",
+              "proposal_validated",
+              "proposal_validation_failed",
+              "policy_evaluated",
+              "approval_requested",
+              "approval_decided",
+              "execution_attempt_created",
+              "execution_started",
+              "execution_succeeded",
+              "execution_failed",
+              "execution_uncertain",
+              "provider_event_received",
+              "reconciliation_opened",
+              "reconciliation_resolved",
+              "handoff_created",
+              "handoff_resolved",
+              "prompt_injection_blocked",
+              "permission_overreach_blocked",
+              "budget_warning",
+              "budget_exceeded",
+              "model_call_recorded",
+              "policy_draft_created",
+              "policy_simulated",
+              "policy_approved",
+              "policy_activated",
+              "policy_retired",
+              "shadow_run_created",
+              "shadow_run_reviewed",
+              "action_binding_mismatch_blocked"
+            ]
+          },
+          "actorType": {
+            "type": "string",
+            "enum": [
+              "model",
+              "policy_engine",
+              "human",
+              "system",
+              "adapter"
+            ]
+          },
+          "actorId": {
+            "type": "string"
+          },
+          "policyVersion": {
+            "type": "string"
+          },
+          "modelInfo": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "provider",
+              "model",
+              "tier",
+              "inputTokens",
+              "outputTokens",
+              "latencyMs"
+            ],
+            "properties": {
+              "provider": {
+                "type": "string"
+              },
+              "model": {
+                "type": "string"
+              },
+              "tier": {
+                "type": "string",
+                "enum": [
+                  "classify",
+                  "standard",
+                  "reasoning"
+                ]
+              },
+              "inputTokens": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "outputTokens": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "latencyMs": {
+                "type": "number",
+                "minimum": 0
+              },
+              "costUsd": {
+                "type": "number",
+                "minimum": 0,
+                "description": "USD cost; absent = unknown (no price configured). Never fabricated."
+              }
+            }
+          },
+          "detail": {
+            "type": "object"
+          },
+          "createdAt": {
+            "$ref": "#/components/schemas/core.common/$defs/DateTime"
+          },
+          "sequence": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "1-based position in the tenant's audit hash chain (v0.1.1 extension)"
+          },
+          "previousHash": {
+            "type": "string",
+            "pattern": "^[0-9a-f]{64}$",
+            "description": "eventHash of the previous event in the chain; genesis uses 64 zeros"
+          },
+          "eventHash": {
+            "type": "string",
+            "pattern": "^[0-9a-f]{64}$",
+            "description": "SHA-256 over the stable JSON of this event with eventHash excluded"
+          }
+        }
+      },
+      "core.capability-manifest": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "$id": "https://open-support-agent.dev/schemas/core/capability-manifest.json",
+        "title": "CapabilityManifest",
+        "description": "What an OSAS implementation actually supports (introduced in v0.1.1; part of specVersion \"0.2\"). Served at GET /.well-known/osas and GET /v1/capabilities; operations needing an undeclared capability fail with CAPABILITY_UNSUPPORTED.",
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "specVersion",
+          "implementationId",
+          "implementationVersion",
+          "profiles",
+          "transports",
+          "executionModes",
+          "adapterVersion"
+        ],
+        "properties": {
+          "specVersion": {
+            "$ref": "#/components/schemas/core.common/$defs/SpecVersion"
+          },
+          "implementationId": {
+            "type": "string",
+            "minLength": 1
+          },
+          "implementationVersion": {
+            "type": "string",
+            "minLength": 1
+          },
+          "profiles": {
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "name",
+                "capabilities"
+              ],
+              "properties": {
+                "name": {
+                  "type": "string",
+                  "enum": [
+                    "core",
+                    "ecommerce",
+                    "saas"
+                  ]
+                },
+                "capabilities": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/$defs/Capability"
+                  },
+                  "uniqueItems": true
+                }
+              }
+            }
+          },
+          "transports": {
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "type": "string",
+              "enum": [
+                "http",
+                "mcp"
+              ]
+            },
+            "uniqueItems": true
+          },
+          "executionModes": {
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "type": "string",
+              "enum": [
+                "proposal_only",
+                "shadow",
+                "sandbox",
+                "live"
+              ]
+            },
+            "uniqueItems": true
+          },
+          "adapterVersion": {
+            "type": "string",
+            "minLength": 1
+          },
+          "executionContracts": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "actionType",
+                "supportedModes",
+                "approvalRequired",
+                "supportsIdempotency",
+                "supportsReconciliation",
+                "supportsCompensation"
+              ],
+              "properties": {
+                "actionType": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "supportedModes": {
+                  "type": "array",
+                  "items": {
+                    "enum": [
+                      "proposal_only",
+                      "shadow",
+                      "sandbox",
+                      "live"
+                    ]
+                  },
+                  "uniqueItems": true
+                },
+                "approvalRequired": {
+                  "type": "boolean"
+                },
+                "supportsIdempotency": {
+                  "type": "boolean"
+                },
+                "supportsReconciliation": {
+                  "type": "boolean"
+                },
+                "supportsCompensation": {
+                  "type": "boolean"
+                }
+              }
+            }
+          }
+        },
+        "$defs": {
+          "Capability": {
+            "type": "string",
+            "enum": [
+              "case.read",
+              "customer.read",
+              "knowledge.read",
+              "evidence.read",
+              "note.write",
+              "escalation.write",
+              "proposal.write",
+              "approval.read",
+              "approval.decide",
+              "audit.read",
+              "ecommerce.order.read",
+              "ecommerce.shipment.read",
+              "ecommerce.refund.propose",
+              "ecommerce.refund.execute",
+              "ecommerce.shipment_incident.read",
+              "ecommerce.refund_status.read",
+              "ecommerce.item_claim.propose",
+              "ecommerce.exchange.propose",
+              "saas.subscription.read",
+              "saas.credit.propose"
+            ]
+          }
+        }
+      },
+      "core.human-handoff": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "$id": "https://open-support-agent.dev/schemas/core/human-handoff.json",
+        "title": "HumanHandoff",
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "specVersion",
+          "tenantId",
+          "caseId",
+          "reason",
+          "status",
+          "createdAt",
+          "updatedAt"
+        ],
+        "properties": {
+          "id": {
+            "$ref": "#/components/schemas/core.common/$defs/Id"
+          },
+          "specVersion": {
+            "$ref": "#/components/schemas/core.common/$defs/SpecVersion"
+          },
+          "tenantId": {
+            "$ref": "#/components/schemas/core.common/$defs/Id"
+          },
+          "caseId": {
+            "$ref": "#/components/schemas/core.common/$defs/Id"
+          },
+          "proposalId": {
+            "$ref": "#/components/schemas/core.common/$defs/Id"
+          },
+          "reason": {
+            "type": "string",
+            "enum": [
+              "identity_unverified",
+              "insufficient_evidence",
+              "duplicate_request",
+              "over_threshold",
+              "region_blocked",
+              "policy_conflict",
+              "external_uncertain",
+              "prompt_injection_suspected",
+              "customer_requested",
+              "other"
+            ]
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "open",
+              "claimed",
+              "resolved"
+            ]
+          },
+          "assignedTo": {
+            "type": "string"
+          },
+          "notes": {
+            "type": "string"
+          },
+          "resolvedAt": {
+            "$ref": "#/components/schemas/core.common/$defs/DateTime"
+          },
+          "createdAt": {
+            "$ref": "#/components/schemas/core.common/$defs/DateTime"
+          },
+          "updatedAt": {
+            "$ref": "#/components/schemas/core.common/$defs/DateTime"
+          }
+        }
+      },
+      "core.knowledge-article": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "$id": "https://open-support-agent.dev/schemas/core/knowledge-article.json",
+        "title": "KnowledgeArticle",
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "specVersion",
+          "tenantId",
+          "title",
+          "body",
+          "tags",
+          "createdAt",
+          "updatedAt"
+        ],
+        "properties": {
+          "id": {
+            "$ref": "#/components/schemas/core.common/$defs/Id"
+          },
+          "specVersion": {
+            "$ref": "#/components/schemas/core.common/$defs/SpecVersion"
+          },
+          "tenantId": {
+            "$ref": "#/components/schemas/core.common/$defs/Id"
+          },
+          "title": {
+            "type": "string"
+          },
+          "body": {
+            "type": "string"
+          },
+          "tags": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "createdAt": {
+            "$ref": "#/components/schemas/core.common/$defs/DateTime"
+          },
+          "updatedAt": {
+            "$ref": "#/components/schemas/core.common/$defs/DateTime"
+          }
+        }
+      },
+      "core.case-note": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "$id": "https://open-support-agent.dev/schemas/core/case-note.json",
+        "title": "CaseNote",
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "specVersion",
+          "tenantId",
+          "caseId",
+          "body",
+          "createdAt"
+        ],
+        "properties": {
+          "id": {
+            "$ref": "#/components/schemas/core.common/$defs/Id"
+          },
+          "specVersion": {
+            "$ref": "#/components/schemas/core.common/$defs/SpecVersion"
+          },
+          "tenantId": {
+            "$ref": "#/components/schemas/core.common/$defs/Id"
+          },
+          "caseId": {
+            "$ref": "#/components/schemas/core.common/$defs/Id"
+          },
+          "body": {
+            "type": "string"
+          },
+          "createdAt": {
+            "$ref": "#/components/schemas/core.common/$defs/DateTime"
+          }
+        }
+      },
+      "core.escalation": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "$id": "https://open-support-agent.dev/schemas/core/escalation.json",
+        "title": "Escalation",
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "specVersion",
+          "tenantId",
+          "caseId",
+          "reason",
+          "createdAt"
+        ],
+        "properties": {
+          "id": {
+            "$ref": "#/components/schemas/core.common/$defs/Id"
+          },
+          "specVersion": {
+            "$ref": "#/components/schemas/core.common/$defs/SpecVersion"
+          },
+          "tenantId": {
+            "$ref": "#/components/schemas/core.common/$defs/Id"
+          },
+          "caseId": {
+            "$ref": "#/components/schemas/core.common/$defs/Id"
+          },
+          "reason": {
+            "type": "string"
+          },
+          "createdAt": {
+            "$ref": "#/components/schemas/core.common/$defs/DateTime"
+          }
+        }
+      },
+      "core.shadow-run": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "$id": "https://open-support-agent.dev/schemas/core/shadow-run.json",
+        "title": "ShadowRun",
+        "description": "Shadow Mode record (v0.1.1 Milestone 3): the simulated policy decision for one proposal, whether it would have auto-executed, and the eventual human outcome. Shadow Mode never executes the suggested action and never marks the proposal executed.",
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "specVersion",
+          "tenantId",
+          "proposalId",
+          "policyDecision",
+          "wouldAutoExecute",
+          "suggestedAction",
+          "humanOutcome",
+          "createdAt"
+        ],
+        "properties": {
+          "id": {
+            "$ref": "#/components/schemas/core.common/$defs/Id"
+          },
+          "specVersion": {
+            "$ref": "#/components/schemas/core.common/$defs/SpecVersion"
+          },
+          "tenantId": {
+            "$ref": "#/components/schemas/core.common/$defs/Id"
+          },
+          "proposalId": {
+            "$ref": "#/components/schemas/core.common/$defs/Id"
+          },
+          "policyDecision": {
+            "$ref": "#/components/schemas/core.common/$defs/PolicyDecision"
+          },
+          "wouldAutoExecute": {
+            "type": "boolean"
+          },
+          "suggestedAction": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "actionType",
+              "reasonCode",
+              "params"
+            ],
+            "properties": {
+              "actionType": {
+                "$ref": "#/components/schemas/core.common/$defs/ActionType"
+              },
+              "reasonCode": {
+                "type": "string"
+              },
+              "params": {
+                "type": "object"
+              },
+              "amount": {
+                "$ref": "#/components/schemas/core.common/$defs/Money"
+              }
+            }
+          },
+          "humanOutcome": {
+            "type": "string",
+            "enum": [
+              "accepted",
+              "rejected",
+              "modified",
+              "pending"
+            ]
+          },
+          "humanComment": {
+            "type": "string"
+          },
+          "externalReference": {
+            "type": "string"
+          },
+          "createdAt": {
+            "$ref": "#/components/schemas/core.common/$defs/DateTime"
+          },
+          "reviewedAt": {
+            "$ref": "#/components/schemas/core.common/$defs/DateTime"
+          }
+        }
+      },
+      "core.shadow-metrics": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "$id": "https://open-support-agent.dev/schemas/core/shadow-metrics.json",
+        "title": "ShadowMetrics",
+        "description": "Shadow Mode operational metrics report: aggregated per-tenant counts and rates over a reporting period, derived from ShadowRun records. Rates are fractions in [0, 1]; autoExecuteRate + approvalRate + blockRate SHOULD sum to 1 over the same population.",
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "specVersion",
+          "tenantId",
+          "periodStart",
+          "periodEnd",
+          "totals",
+          "byActionType",
+          "rates",
+          "createdAt"
+        ],
+        "properties": {
+          "id": {
+            "$ref": "#/components/schemas/core.common/$defs/Id"
+          },
+          "specVersion": {
+            "$ref": "#/components/schemas/core.common/$defs/SpecVersion"
+          },
+          "tenantId": {
+            "$ref": "#/components/schemas/core.common/$defs/Id"
+          },
+          "periodStart": {
+            "$ref": "#/components/schemas/core.common/$defs/DateTime"
+          },
+          "periodEnd": {
+            "$ref": "#/components/schemas/core.common/$defs/DateTime"
+          },
+          "totals": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "autoExecuted",
+              "approvalRequested",
+              "blocked",
+              "shadowRuns"
+            ],
+            "properties": {
+              "autoExecuted": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "approvalRequested": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "blocked": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "shadowRuns": {
+                "type": "integer",
+                "minimum": 0
+              }
+            }
+          },
+          "byActionType": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "actionType",
+                "autoExecuted",
+                "approvalRequested",
+                "blocked"
+              ],
+              "properties": {
+                "actionType": {
+                  "$ref": "#/components/schemas/core.common/$defs/ActionType"
+                },
+                "autoExecuted": {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                "approvalRequested": {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                "blocked": {
+                  "type": "integer",
+                  "minimum": 0
+                }
+              }
+            }
+          },
+          "rates": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "autoExecuteRate",
+              "approvalRate",
+              "blockRate",
+              "shadowCoveragePct"
+            ],
+            "properties": {
+              "autoExecuteRate": {
+                "type": "number",
+                "minimum": 0,
+                "maximum": 1
+              },
+              "approvalRate": {
+                "type": "number",
+                "minimum": 0,
+                "maximum": 1
+              },
+              "blockRate": {
+                "type": "number",
+                "minimum": 0,
+                "maximum": 1
+              },
+              "shadowCoveragePct": {
+                "type": "number",
+                "minimum": 0,
+                "maximum": 1
+              }
+            }
+          },
+          "createdAt": {
+            "$ref": "#/components/schemas/core.common/$defs/DateTime"
+          },
+          "updatedAt": {
+            "$ref": "#/components/schemas/core.common/$defs/DateTime"
+          }
+        }
+      },
+      "profiles.ecommerce.order": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "$id": "https://open-support-agent.dev/schemas/profiles/ecommerce/order.json",
+        "title": "Order",
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "specVersion",
+          "tenantId",
+          "customerId",
+          "status",
+          "items",
+          "total",
+          "region",
+          "createdAt"
+        ],
+        "properties": {
+          "id": {
+            "$ref": "#/components/schemas/core.common/$defs/Id"
+          },
+          "specVersion": {
+            "$ref": "#/components/schemas/core.common/$defs/SpecVersion"
+          },
+          "tenantId": {
+            "$ref": "#/components/schemas/core.common/$defs/Id"
+          },
+          "customerId": {
+            "$ref": "#/components/schemas/core.common/$defs/Id"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "pending",
+              "paid",
+              "fulfilled",
+              "shipped",
+              "delivered",
+              "refunded",
+              "cancelled"
+            ]
+          },
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "sku",
+                "name",
+                "qty",
+                "unitPrice"
+              ],
+              "properties": {
+                "sku": {
+                  "type": "string"
+                },
+                "name": {
+                  "type": "string"
+                },
+                "qty": {
+                  "type": "integer",
+                  "minimum": 1
+                },
+                "unitPrice": {
+                  "$ref": "#/components/schemas/core.common/$defs/Money"
+                }
+              }
+            }
+          },
+          "total": {
+            "$ref": "#/components/schemas/core.common/$defs/Money"
+          },
+          "region": {
+            "$ref": "#/components/schemas/core.common/$defs/Region"
+          },
+          "createdAt": {
+            "$ref": "#/components/schemas/core.common/$defs/DateTime"
+          }
+        }
+      },
+      "profiles.ecommerce.shipment": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "$id": "https://open-support-agent.dev/schemas/profiles/ecommerce/shipment.json",
+        "title": "Shipment",
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "specVersion",
+          "tenantId",
+          "orderId",
+          "carrier",
+          "status",
+          "createdAt"
+        ],
+        "properties": {
+          "id": {
+            "$ref": "#/components/schemas/core.common/$defs/Id"
+          },
+          "specVersion": {
+            "$ref": "#/components/schemas/core.common/$defs/SpecVersion"
+          },
+          "tenantId": {
+            "$ref": "#/components/schemas/core.common/$defs/Id"
+          },
+          "orderId": {
+            "$ref": "#/components/schemas/core.common/$defs/Id"
+          },
+          "carrier": {
+            "type": "string"
+          },
+          "trackingNumber": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "label_created",
+              "in_transit",
+              "out_for_delivery",
+              "delivered",
+              "exception"
+            ]
+          },
+          "eta": {
+            "$ref": "#/components/schemas/core.common/$defs/DateTime"
+          },
+          "createdAt": {
+            "$ref": "#/components/schemas/core.common/$defs/DateTime"
+          }
+        }
+      },
+      "profiles.ecommerce.shipment-incident": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "$id": "https://open-support-agent.dev/schemas/profiles/ecommerce/shipment-incident.json",
+        "title": "ShipmentIncident",
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "specVersion",
+          "tenantId",
+          "orderId",
+          "shipmentId",
+          "incidentType",
+          "status",
+          "detectedAt",
+          "createdAt",
+          "updatedAt"
+        ],
+        "properties": {
+          "id": {
+            "$ref": "#/components/schemas/core.common/$defs/Id"
+          },
+          "specVersion": {
+            "$ref": "#/components/schemas/core.common/$defs/SpecVersion"
+          },
+          "tenantId": {
+            "$ref": "#/components/schemas/core.common/$defs/Id"
+          },
+          "orderId": {
+            "$ref": "#/components/schemas/core.common/$defs/Id"
+          },
+          "shipmentId": {
+            "$ref": "#/components/schemas/core.common/$defs/Id"
+          },
+          "incidentType": {
+            "type": "string",
+            "enum": [
+              "delayed",
+              "lost",
+              "delivered_not_received",
+              "damaged_in_transit"
+            ]
+          },
+          "carrier": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "open",
+              "investigating",
+              "resolved",
+              "closed"
+            ]
+          },
+          "expectedAt": {
+            "$ref": "#/components/schemas/core.common/$defs/DateTime"
+          },
+          "detectedAt": {
+            "$ref": "#/components/schemas/core.common/$defs/DateTime"
+          },
+          "evidenceIds": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/core.common/$defs/Id"
+            }
+          },
+          "createdAt": {
+            "$ref": "#/components/schemas/core.common/$defs/DateTime"
+          },
+          "updatedAt": {
+            "$ref": "#/components/schemas/core.common/$defs/DateTime"
+          }
+        }
+      },
+      "profiles.ecommerce.refund-transaction": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "$id": "https://open-support-agent.dev/schemas/profiles/ecommerce/refund-transaction.json",
+        "title": "RefundTransaction",
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "specVersion",
+          "tenantId",
+          "orderId",
+          "status",
+          "amount",
+          "requestedAt",
+          "createdAt",
+          "updatedAt"
+        ],
+        "properties": {
+          "id": {
+            "$ref": "#/components/schemas/core.common/$defs/Id"
+          },
+          "specVersion": {
+            "$ref": "#/components/schemas/core.common/$defs/SpecVersion"
+          },
+          "tenantId": {
+            "$ref": "#/components/schemas/core.common/$defs/Id"
+          },
+          "orderId": {
+            "$ref": "#/components/schemas/core.common/$defs/Id"
+          },
+          "proposalId": {
+            "$ref": "#/components/schemas/core.common/$defs/Id"
+          },
+          "provider": {
+            "type": "string"
+          },
+          "externalTransactionId": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "requested",
+              "processing",
+              "succeeded",
+              "failed",
+              "reversed"
+            ]
+          },
+          "amount": {
+            "$ref": "#/components/schemas/core.common/$defs/Money"
+          },
+          "requestedAt": {
+            "$ref": "#/components/schemas/core.common/$defs/DateTime"
+          },
+          "completedAt": {
+            "$ref": "#/components/schemas/core.common/$defs/DateTime"
+          },
+          "failureCode": {
+            "type": "string"
+          },
+          "evidenceIds": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/core.common/$defs/Id"
+            }
+          },
+          "createdAt": {
+            "$ref": "#/components/schemas/core.common/$defs/DateTime"
+          },
+          "updatedAt": {
+            "$ref": "#/components/schemas/core.common/$defs/DateTime"
+          }
+        }
+      },
+      "profiles.ecommerce.item-claim": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "$id": "https://open-support-agent.dev/schemas/profiles/ecommerce/item-claim.json",
+        "title": "ItemClaim",
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "specVersion",
+          "tenantId",
+          "orderId",
+          "lineId",
+          "claimType",
+          "quantity",
+          "status",
+          "createdAt",
+          "updatedAt"
+        ],
+        "properties": {
+          "id": {
+            "$ref": "#/components/schemas/core.common/$defs/Id"
+          },
+          "specVersion": {
+            "$ref": "#/components/schemas/core.common/$defs/SpecVersion"
+          },
+          "tenantId": {
+            "$ref": "#/components/schemas/core.common/$defs/Id"
+          },
+          "orderId": {
+            "$ref": "#/components/schemas/core.common/$defs/Id"
+          },
+          "lineId": {
+            "$ref": "#/components/schemas/core.common/$defs/Id"
+          },
+          "claimType": {
+            "type": "string",
+            "enum": [
+              "damaged",
+              "wrong_item",
+              "missing_item",
+              "defective"
+            ]
+          },
+          "quantity": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "evidenceIds": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/core.common/$defs/Id"
+            }
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "submitted",
+              "under_review",
+              "approved",
+              "rejected",
+              "resolved"
+            ]
+          },
+          "createdAt": {
+            "$ref": "#/components/schemas/core.common/$defs/DateTime"
+          },
+          "updatedAt": {
+            "$ref": "#/components/schemas/core.common/$defs/DateTime"
+          }
+        }
+      },
+      "profiles.ecommerce.exchange-request": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "$id": "https://open-support-agent.dev/schemas/profiles/ecommerce/exchange-request.json",
+        "title": "ExchangeRequest",
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "specVersion",
+          "tenantId",
+          "orderId",
+          "originalLineId",
+          "replacementSku",
+          "returnRequired",
+          "status",
+          "createdAt",
+          "updatedAt"
+        ],
+        "properties": {
+          "id": {
+            "$ref": "#/components/schemas/core.common/$defs/Id"
+          },
+          "specVersion": {
+            "$ref": "#/components/schemas/core.common/$defs/SpecVersion"
+          },
+          "tenantId": {
+            "$ref": "#/components/schemas/core.common/$defs/Id"
+          },
+          "orderId": {
+            "$ref": "#/components/schemas/core.common/$defs/Id"
+          },
+          "originalLineId": {
+            "$ref": "#/components/schemas/core.common/$defs/Id"
+          },
+          "replacementSku": {
+            "type": "string",
+            "minLength": 1
+          },
+          "replacementVariant": {
+            "type": "string"
+          },
+          "inventoryStatus": {
+            "type": "string",
+            "enum": [
+              "unknown",
+              "in_stock",
+              "out_of_stock",
+              "backordered"
+            ]
+          },
+          "priceDelta": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "currency",
+              "minorUnits"
+            ],
+            "properties": {
+              "currency": {
+                "$ref": "#/components/schemas/core.common/$defs/Currency"
+              },
+              "minorUnits": {
+                "type": "integer"
+              }
+            }
+          },
+          "returnRequired": {
+            "type": "boolean"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "proposed",
+              "pending_approval",
+              "approved",
+              "rejected",
+              "fulfilled",
+              "cancelled"
+            ]
+          },
+          "evidenceIds": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/core.common/$defs/Id"
+            }
+          },
+          "createdAt": {
+            "$ref": "#/components/schemas/core.common/$defs/DateTime"
+          },
+          "updatedAt": {
+            "$ref": "#/components/schemas/core.common/$defs/DateTime"
+          }
+        }
+      },
+      "profiles.saas.subscription": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "$id": "https://open-support-agent.dev/schemas/profiles/saas/subscription.json",
+        "title": "Subscription",
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "specVersion",
+          "tenantId",
+          "customerId",
+          "plan",
+          "status",
+          "mrr",
+          "renewsAt",
+          "createdAt"
+        ],
+        "properties": {
+          "id": {
+            "$ref": "#/components/schemas/core.common/$defs/Id"
+          },
+          "specVersion": {
+            "$ref": "#/components/schemas/core.common/$defs/SpecVersion"
+          },
+          "tenantId": {
+            "$ref": "#/components/schemas/core.common/$defs/Id"
+          },
+          "customerId": {
+            "$ref": "#/components/schemas/core.common/$defs/Id"
+          },
+          "plan": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "trialing",
+              "active",
+              "past_due",
+              "cancelled"
+            ]
+          },
+          "mrr": {
+            "$ref": "#/components/schemas/core.common/$defs/Money"
+          },
+          "renewsAt": {
+            "$ref": "#/components/schemas/core.common/$defs/DateTime"
+          },
+          "createdAt": {
+            "$ref": "#/components/schemas/core.common/$defs/DateTime"
+          }
+        }
+      },
+      "profiles.saas.invoice": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "$id": "https://open-support-agent.dev/schemas/profiles/saas/invoice.json",
+        "title": "Invoice",
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "specVersion",
+          "tenantId",
+          "customerId",
+          "amount",
+          "status",
+          "issuedAt",
+          "createdAt"
+        ],
+        "properties": {
+          "id": {
+            "$ref": "#/components/schemas/core.common/$defs/Id"
+          },
+          "specVersion": {
+            "$ref": "#/components/schemas/core.common/$defs/SpecVersion"
+          },
+          "tenantId": {
+            "$ref": "#/components/schemas/core.common/$defs/Id"
+          },
+          "customerId": {
+            "$ref": "#/components/schemas/core.common/$defs/Id"
+          },
+          "subscriptionId": {
+            "$ref": "#/components/schemas/core.common/$defs/Id"
+          },
+          "amount": {
+            "$ref": "#/components/schemas/core.common/$defs/Money"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "open",
+              "paid",
+              "void"
+            ]
+          },
+          "issuedAt": {
+            "$ref": "#/components/schemas/core.common/$defs/DateTime"
+          },
+          "dueAt": {
+            "$ref": "#/components/schemas/core.common/$defs/DateTime"
+          },
+          "createdAt": {
+            "$ref": "#/components/schemas/core.common/$defs/DateTime"
+          }
+        }
+      },
+      "profiles.saas.credit-balance": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "$id": "https://open-support-agent.dev/schemas/profiles/saas/credit-balance.json",
+        "title": "CreditBalance",
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "specVersion",
+          "tenantId",
+          "customerId",
+          "balance",
+          "createdAt"
+        ],
+        "properties": {
+          "id": {
+            "$ref": "#/components/schemas/core.common/$defs/Id"
+          },
+          "specVersion": {
+            "$ref": "#/components/schemas/core.common/$defs/SpecVersion"
+          },
+          "tenantId": {
+            "$ref": "#/components/schemas/core.common/$defs/Id"
+          },
+          "customerId": {
+            "$ref": "#/components/schemas/core.common/$defs/Id"
+          },
+          "balance": {
+            "$ref": "#/components/schemas/core.common/$defs/Money"
+          },
+          "createdAt": {
+            "$ref": "#/components/schemas/core.common/$defs/DateTime"
+          }
+        }
+      },
+      "Error": {
+        "type": "object",
+        "required": [
+          "error"
+        ],
+        "properties": {
+          "error": {
+            "type": "object",
+            "required": [
+              "code",
+              "message"
+            ],
+            "properties": {
+              "code": {
+                "type": "string",
+                "description": "Machine-readable error code"
+              },
+              "message": {
+                "type": "string"
+              },
+              "details": {}
+            },
+            "additionalProperties": false
+          }
+        },
+        "additionalProperties": false
+      }
+    }
+  }
+}

@@ -1,0 +1,161 @@
+{
+  "schemaVersion": "1",
+  "description": "Test vectors for audit event hashing and chain verification",
+  "algorithm": "SHA-256(UTF-8(stableJson(event without eventHash))), lowercase hex",
+  "genesisHash": "0000000000000000000000000000000000000000000000000000000000000000",
+  "vectors": [
+    {
+      "name": "single-event",
+      "description": "Genesis event with sequence 1",
+      "events": [
+        {
+          "id": "evt_1",
+          "specVersion": "0.2",
+          "tenantId": "tenant_test",
+          "eventType": "policy_draft_created",
+          "timestamp": "2026-01-15T10:00:00.000Z",
+          "sequence": 1,
+          "previousHash": "0000000000000000000000000000000000000000000000000000000000000000",
+          "eventHash": "4b3e6a62ff3a940a2fc99c3539fcd3df1b30b5096db226714bf78dd71ff0325d",
+          "principal": {
+            "actorType": "human",
+            "actorId": "admin_1",
+            "role": "policy_admin"
+          },
+          "resource": {
+            "resourceType": "policy",
+            "resourceId": "pol_1"
+          }
+        }
+      ],
+      "expectedHashes": [
+        {
+          "eventId": "evt_1",
+          "eventHash": "4b3e6a62ff3a940a2fc99c3539fcd3df1b30b5096db226714bf78dd71ff0325d"
+        }
+      ],
+      "verification": {
+        "intact": true,
+        "chainLength": 1
+      }
+    },
+    {
+      "name": "three-event-chain",
+      "description": "Valid chain with 3 events",
+      "events": [
+        {
+          "id": "evt_1",
+          "specVersion": "0.2",
+          "tenantId": "tenant_test",
+          "eventType": "policy_draft_created",
+          "timestamp": "2026-01-15T10:00:00.000Z",
+          "sequence": 1,
+          "previousHash": "0000000000000000000000000000000000000000000000000000000000000000",
+          "eventHash": "4b3e6a62ff3a940a2fc99c3539fcd3df1b30b5096db226714bf78dd71ff0325d",
+          "principal": {
+            "actorType": "human",
+            "actorId": "admin_1",
+            "role": "policy_admin"
+          },
+          "resource": {
+            "resourceType": "policy",
+            "resourceId": "pol_1"
+          }
+        },
+        {
+          "id": "evt_2",
+          "specVersion": "0.2",
+          "tenantId": "tenant_test",
+          "eventType": "policy_activated",
+          "timestamp": "2026-01-15T10:01:00.000Z",
+          "sequence": 2,
+          "previousHash": "4b3e6a62ff3a940a2fc99c3539fcd3df1b30b5096db226714bf78dd71ff0325d",
+          "eventHash": "cd02e5dbd9aaf5ec4d7a86279aadfcdcd4813ba9caa556429a0e582dabcab10a",
+          "principal": {
+            "actorType": "human",
+            "actorId": "admin_1",
+            "role": "policy_admin"
+          },
+          "resource": {
+            "resourceType": "policy",
+            "resourceId": "pol_1"
+          }
+        },
+        {
+          "id": "evt_3",
+          "specVersion": "0.2",
+          "tenantId": "tenant_test",
+          "eventType": "proposal_created",
+          "timestamp": "2026-01-15T10:02:00.000Z",
+          "sequence": 3,
+          "previousHash": "cd02e5dbd9aaf5ec4d7a86279aadfcdcd4813ba9caa556429a0e582dabcab10a",
+          "eventHash": "d048bb77dc6bb99cc1488b797b0297dd1ebe0a46d004f968ed371d7b2b2db513",
+          "principal": {
+            "actorType": "model",
+            "actorId": "model_gpt4",
+            "role": "support_agent"
+          },
+          "resource": {
+            "resourceType": "proposal",
+            "resourceId": "prop_1"
+          }
+        }
+      ],
+      "expectedHashes": [
+        {
+          "eventId": "evt_1",
+          "eventHash": "4b3e6a62ff3a940a2fc99c3539fcd3df1b30b5096db226714bf78dd71ff0325d"
+        },
+        {
+          "eventId": "evt_2",
+          "eventHash": "cd02e5dbd9aaf5ec4d7a86279aadfcdcd4813ba9caa556429a0e582dabcab10a"
+        },
+        {
+          "eventId": "evt_3",
+          "eventHash": "d048bb77dc6bb99cc1488b797b0297dd1ebe0a46d004f968ed371d7b2b2db513"
+        }
+      ],
+      "verification": {
+        "intact": true,
+        "chainLength": 3
+      }
+    },
+    {
+      "name": "tampered-event",
+      "description": "Event with modified content (hash mismatch)",
+      "events": [
+        {
+          "id": "evt_1",
+          "specVersion": "0.2",
+          "tenantId": "tenant_test",
+          "eventType": "policy_draft_created",
+          "timestamp": "2026-01-15T10:00:00.000Z",
+          "sequence": 1,
+          "previousHash": "0000000000000000000000000000000000000000000000000000000000000000",
+          "eventHash": "0000000000000000000000000000000000000000000000000000000000000000",
+          "principal": {
+            "actorType": "human",
+            "actorId": "admin_1",
+            "role": "policy_admin"
+          },
+          "resource": {
+            "resourceType": "policy",
+            "resourceId": "pol_1"
+          }
+        }
+      ],
+      "expectedHashes": [],
+      "verification": {
+        "intact": false,
+        "chainLength": 1,
+        "firstError": {
+          "eventId": "evt_1",
+          "sequence": 1,
+          "reason": "event_hash_mismatch",
+          "expectedEventHash": "0000000000000000000000000000000000000000000000000000000000000000",
+          "actualEventHash": "4b3e6a62ff3a940a2fc99c3539fcd3df1b30b5096db226714bf78dd71ff0325d"
+        }
+      }
+    }
+  ]
+}

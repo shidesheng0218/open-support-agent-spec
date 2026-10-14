@@ -1,0 +1,456 @@
+{
+  "schemaVersion": "1",
+  "description": "Test vectors for policy evaluation algorithm (spec §5)",
+  "note": "Expected decisions computed by the reference implementation",
+  "vectors": [
+    {
+      "name": "auto-execute-small-refund",
+      "description": "Small refund within threshold and allowed reason",
+      "proposal": {
+        "id": "prop_1",
+        "specVersion": "0.2",
+        "tenantId": "tenant_demo",
+        "caseId": "case_1",
+        "profile": "ecommerce",
+        "actionType": "refund",
+        "status": "pending_evaluation",
+        "requestedPermission": "request-approval",
+        "requestedBy": {
+          "actorType": "model",
+          "actorId": "model_1",
+          "role": "support_agent"
+        },
+        "params": {
+          "orderId": "ord_123",
+          "amount": {
+            "currency": "USD",
+            "minorUnits": 2500
+          },
+          "reason": "damaged"
+        },
+        "evidenceIds": [
+          "ev_1"
+        ],
+        "createdAt": "2026-01-15T10:00:00.000Z",
+        "updatedAt": "2026-01-15T10:00:00.000Z"
+      },
+      "context": {
+        "policy": {
+          "id": "pol_demo",
+          "specVersion": "0.2",
+          "tenantId": "tenant_demo",
+          "version": 1,
+          "status": "active",
+          "duplicateWindowSeconds": 86400,
+          "maxEvidenceAgeSeconds": 604800,
+          "rules": [
+            {
+              "actionType": "refund",
+              "decision": "auto_execute",
+              "maxAmount": {
+                "currency": "USD",
+                "minorUnits": 5000
+              },
+              "reasonCodes": [
+                "damaged",
+                "wrong_item",
+                "not_received"
+              ]
+            }
+          ],
+          "defaultDecision": "block",
+          "createdAt": "2026-01-15T10:00:00.000Z",
+          "updatedAt": "2026-01-15T10:00:00.000Z",
+          "createdBy": {
+            "actorType": "human",
+            "actorId": "admin_1",
+            "role": "policy_admin"
+          }
+        },
+        "evidence": [
+          {
+            "id": "ev_1",
+            "specVersion": "0.2",
+            "tenantId": "tenant_demo",
+            "caseId": "case_1",
+            "evidenceType": "order_details",
+            "timestamp": "2026-01-15T09:00:00.000Z",
+            "content": {
+              "orderId": "ord_123",
+              "status": "delivered"
+            },
+            "createdAt": "2026-01-15T09:00:00.000Z"
+          }
+        ],
+        "recentProposals": [],
+        "injectionSuspected": false
+      },
+      "expectedDecision": {
+        "decision": "block",
+        "reasons": [
+          {
+            "code": "REASON_CODE_NOT_ALLOWED",
+            "message": "reasonCode 'undefined' is not in the allowed list for actionType 'refund'"
+          },
+          {
+            "code": "AMOUNT_REQUIRED",
+            "message": "financial actionType 'refund' requires proposal.amount and rule.maxAmount before a threshold can be applied"
+          }
+        ],
+        "policyVersion": 1,
+        "evaluatedAt": "2026-01-15T10:00:00.000Z"
+      }
+    },
+    {
+      "name": "require-approval-over-threshold",
+      "description": "Refund exceeds threshold",
+      "proposal": {
+        "id": "prop_2",
+        "specVersion": "0.2",
+        "tenantId": "tenant_demo",
+        "caseId": "case_2",
+        "profile": "ecommerce",
+        "actionType": "refund",
+        "status": "pending_evaluation",
+        "requestedPermission": "request-approval",
+        "requestedBy": {
+          "actorType": "model",
+          "actorId": "model_1",
+          "role": "support_agent"
+        },
+        "params": {
+          "orderId": "ord_456",
+          "amount": {
+            "currency": "USD",
+            "minorUnits": 10000
+          },
+          "reason": "damaged"
+        },
+        "evidenceIds": [
+          "ev_2"
+        ],
+        "createdAt": "2026-01-15T10:00:00.000Z",
+        "updatedAt": "2026-01-15T10:00:00.000Z"
+      },
+      "context": {
+        "policy": {
+          "id": "pol_demo",
+          "specVersion": "0.2",
+          "tenantId": "tenant_demo",
+          "version": 1,
+          "status": "active",
+          "duplicateWindowSeconds": 86400,
+          "maxEvidenceAgeSeconds": 604800,
+          "rules": [
+            {
+              "actionType": "refund",
+              "decision": "auto_execute",
+              "maxAmount": {
+                "currency": "USD",
+                "minorUnits": 5000
+              },
+              "reasonCodes": [
+                "damaged",
+                "wrong_item",
+                "not_received"
+              ]
+            }
+          ],
+          "defaultDecision": "block",
+          "createdAt": "2026-01-15T10:00:00.000Z",
+          "updatedAt": "2026-01-15T10:00:00.000Z",
+          "createdBy": {
+            "actorType": "human",
+            "actorId": "admin_1",
+            "role": "policy_admin"
+          }
+        },
+        "evidence": [
+          {
+            "id": "ev_2",
+            "specVersion": "0.2",
+            "tenantId": "tenant_demo",
+            "caseId": "case_2",
+            "evidenceType": "order_details",
+            "timestamp": "2026-01-15T09:00:00.000Z",
+            "content": {
+              "orderId": "ord_456",
+              "status": "delivered"
+            },
+            "createdAt": "2026-01-15T09:00:00.000Z"
+          }
+        ],
+        "recentProposals": [],
+        "injectionSuspected": false
+      },
+      "expectedDecision": {
+        "decision": "block",
+        "reasons": [
+          {
+            "code": "REASON_CODE_NOT_ALLOWED",
+            "message": "reasonCode 'undefined' is not in the allowed list for actionType 'refund'"
+          },
+          {
+            "code": "AMOUNT_REQUIRED",
+            "message": "financial actionType 'refund' requires proposal.amount and rule.maxAmount before a threshold can be applied"
+          }
+        ],
+        "policyVersion": 1,
+        "evaluatedAt": "2026-01-15T10:00:00.000Z"
+      }
+    },
+    {
+      "name": "block-permission-overreach",
+      "description": "Model requests execute permission",
+      "proposal": {
+        "id": "prop_3",
+        "specVersion": "0.2",
+        "tenantId": "tenant_demo",
+        "caseId": "case_3",
+        "profile": "ecommerce",
+        "actionType": "refund",
+        "status": "pending_evaluation",
+        "requestedPermission": "execute",
+        "requestedBy": {
+          "actorType": "model",
+          "actorId": "model_1",
+          "role": "support_agent"
+        },
+        "params": {
+          "orderId": "ord_789",
+          "amount": {
+            "currency": "USD",
+            "minorUnits": 2500
+          },
+          "reason": "damaged"
+        },
+        "evidenceIds": [],
+        "createdAt": "2026-01-15T10:00:00.000Z",
+        "updatedAt": "2026-01-15T10:00:00.000Z"
+      },
+      "context": {
+        "policy": {
+          "id": "pol_demo",
+          "specVersion": "0.2",
+          "tenantId": "tenant_demo",
+          "version": 1,
+          "status": "active",
+          "duplicateWindowSeconds": 86400,
+          "maxEvidenceAgeSeconds": 604800,
+          "rules": [
+            {
+              "actionType": "refund",
+              "decision": "auto_execute",
+              "maxAmount": {
+                "currency": "USD",
+                "minorUnits": 5000
+              },
+              "reasonCodes": [
+                "damaged",
+                "wrong_item",
+                "not_received"
+              ]
+            }
+          ],
+          "defaultDecision": "block",
+          "createdAt": "2026-01-15T10:00:00.000Z",
+          "updatedAt": "2026-01-15T10:00:00.000Z",
+          "createdBy": {
+            "actorType": "human",
+            "actorId": "admin_1",
+            "role": "policy_admin"
+          }
+        },
+        "evidence": [],
+        "recentProposals": [],
+        "injectionSuspected": false
+      },
+      "expectedDecision": {
+        "decision": "block",
+        "reasons": [
+          {
+            "code": "PERMISSION_OVERREACH",
+            "message": "model principals are capped at request-approval; requestedPermission 'execute' is not allowed"
+          },
+          {
+            "code": "REASON_CODE_NOT_ALLOWED",
+            "message": "reasonCode 'undefined' is not in the allowed list for actionType 'refund'"
+          },
+          {
+            "code": "AMOUNT_REQUIRED",
+            "message": "financial actionType 'refund' requires proposal.amount and rule.maxAmount before a threshold can be applied"
+          },
+          {
+            "code": "INSUFFICIENT_EVIDENCE",
+            "message": "financial actionType 'refund' requires at least one evidence reference"
+          }
+        ],
+        "policyVersion": 1,
+        "evaluatedAt": "2026-01-15T10:00:00.000Z"
+      }
+    },
+    {
+      "name": "block-injection-suspected",
+      "description": "Prompt injection detected",
+      "proposal": {
+        "id": "prop_4",
+        "specVersion": "0.2",
+        "tenantId": "tenant_demo",
+        "caseId": "case_4",
+        "profile": "ecommerce",
+        "actionType": "refund",
+        "status": "pending_evaluation",
+        "requestedPermission": "request-approval",
+        "requestedBy": {
+          "actorType": "model",
+          "actorId": "model_1",
+          "role": "support_agent"
+        },
+        "params": {
+          "orderId": "ord_abc",
+          "amount": {
+            "currency": "USD",
+            "minorUnits": 2500
+          },
+          "reason": "damaged"
+        },
+        "evidenceIds": [],
+        "createdAt": "2026-01-15T10:00:00.000Z",
+        "updatedAt": "2026-01-15T10:00:00.000Z"
+      },
+      "context": {
+        "policy": {
+          "id": "pol_demo",
+          "specVersion": "0.2",
+          "tenantId": "tenant_demo",
+          "version": 1,
+          "status": "active",
+          "duplicateWindowSeconds": 86400,
+          "maxEvidenceAgeSeconds": 604800,
+          "rules": [
+            {
+              "actionType": "refund",
+              "decision": "auto_execute",
+              "maxAmount": {
+                "currency": "USD",
+                "minorUnits": 5000
+              },
+              "reasonCodes": [
+                "damaged",
+                "wrong_item",
+                "not_received"
+              ]
+            }
+          ],
+          "defaultDecision": "block",
+          "createdAt": "2026-01-15T10:00:00.000Z",
+          "updatedAt": "2026-01-15T10:00:00.000Z",
+          "createdBy": {
+            "actorType": "human",
+            "actorId": "admin_1",
+            "role": "policy_admin"
+          }
+        },
+        "evidence": [],
+        "recentProposals": [],
+        "injectionSuspected": true
+      },
+      "expectedDecision": {
+        "decision": "block",
+        "reasons": [
+          {
+            "code": "PROMPT_INJECTION_SUSPECTED",
+            "message": "prompt injection suspected in the originating conversation"
+          },
+          {
+            "code": "REASON_CODE_NOT_ALLOWED",
+            "message": "reasonCode 'undefined' is not in the allowed list for actionType 'refund'"
+          },
+          {
+            "code": "AMOUNT_REQUIRED",
+            "message": "financial actionType 'refund' requires proposal.amount and rule.maxAmount before a threshold can be applied"
+          },
+          {
+            "code": "INSUFFICIENT_EVIDENCE",
+            "message": "financial actionType 'refund' requires at least one evidence reference"
+          }
+        ],
+        "policyVersion": 1,
+        "evaluatedAt": "2026-01-15T10:00:00.000Z"
+      }
+    },
+    {
+      "name": "block-no-rule",
+      "description": "Action type not in policy rules",
+      "proposal": {
+        "id": "prop_5",
+        "specVersion": "0.2",
+        "tenantId": "tenant_demo",
+        "caseId": "case_5",
+        "profile": "ecommerce",
+        "actionType": "cancel_order",
+        "status": "pending_evaluation",
+        "requestedPermission": "request-approval",
+        "requestedBy": {
+          "actorType": "model",
+          "actorId": "model_1",
+          "role": "support_agent"
+        },
+        "params": {
+          "orderId": "ord_xyz"
+        },
+        "evidenceIds": [],
+        "createdAt": "2026-01-15T10:00:00.000Z",
+        "updatedAt": "2026-01-15T10:00:00.000Z"
+      },
+      "context": {
+        "policy": {
+          "id": "pol_demo",
+          "specVersion": "0.2",
+          "tenantId": "tenant_demo",
+          "version": 1,
+          "status": "active",
+          "duplicateWindowSeconds": 86400,
+          "maxEvidenceAgeSeconds": 604800,
+          "rules": [
+            {
+              "actionType": "refund",
+              "decision": "auto_execute",
+              "maxAmount": {
+                "currency": "USD",
+                "minorUnits": 5000
+              },
+              "reasonCodes": [
+                "damaged",
+                "wrong_item",
+                "not_received"
+              ]
+            }
+          ],
+          "defaultDecision": "block",
+          "createdAt": "2026-01-15T10:00:00.000Z",
+          "updatedAt": "2026-01-15T10:00:00.000Z",
+          "createdBy": {
+            "actorType": "human",
+            "actorId": "admin_1",
+            "role": "policy_admin"
+          }
+        },
+        "evidence": [],
+        "recentProposals": [],
+        "injectionSuspected": false
+      },
+      "expectedDecision": {
+        "decision": "block",
+        "reasons": [
+          {
+            "code": "NO_RULE",
+            "message": "no policy rule matches actionType 'cancel_order'; default decision is block"
+          }
+        ],
+        "policyVersion": 1,
+        "evaluatedAt": "2026-01-15T10:00:00.000Z"
+      }
+    }
+  ]
+}

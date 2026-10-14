@@ -19,6 +19,11 @@ import type {
 class Collector {
   private readonly suites = new Map<string, RunnerCheck[]>();
   private current = "";
+  private readonly verbose: boolean;
+
+  constructor(verbose: boolean) {
+    this.verbose = verbose;
+  }
 
   suite(name: string): void {
     this.current = name;
@@ -32,13 +37,22 @@ class Collector {
 
   async check(name: string, fn: () => void | string | Promise<void | string>): Promise<boolean> {
     const list = this.suites.get(this.current)!;
+    if (this.verbose) {
+      console.log(`\n▶ ${this.current} / ${name}`);
+    }
     try {
       const detail = await fn();
       list.push({ name, status: "pass", ...(typeof detail === "string" ? { detail } : {}) });
+      if (this.verbose) {
+        console.log(`  ✓ PASS${typeof detail === "string" ? ": " + detail : ""}`);
+      }
       return true;
     } catch (err) {
       const detail = err instanceof Error ? err.message : String(err);
       list.push({ name, status: "fail", detail });
+      if (this.verbose) {
+        console.log(`  ✗ FAIL: ${detail}`);
+      }
       return false;
     }
   }
@@ -336,7 +350,7 @@ async function runControlledExecutionSuite(
 
 export async function runCompat(options: RunnerOptions): Promise<CompatRunReport> {
   const client = new HttpClient(options);
-  const c = new Collector();
+  const c = new Collector(options.verbose ?? false);
   const tenant = options.tenant ?? "tenant_demo";
   const conformanceKey = options.conformanceKey;
   const stateful = Boolean(conformanceKey);

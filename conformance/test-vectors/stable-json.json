@@ -1,0 +1,107 @@
+{
+  "schemaVersion": "1",
+  "description": "Test vectors for stable (key-sorted) JSON canonicalization",
+  "algorithm": "Keys sorted lexicographically (UTF-16 code unit order), no whitespace",
+  "vectors": [
+    {
+      "name": "simple-object",
+      "input": {
+        "z": 1,
+        "a": 2,
+        "b": 3
+      },
+      "canonical": "{\"a\":2,\"b\":3,\"z\":1}",
+      "description": "Keys sorted lexicographically"
+    },
+    {
+      "name": "nested-object",
+      "input": {
+        "outer": {
+          "z": 1,
+          "a": 2
+        },
+        "middle": 5
+      },
+      "canonical": "{\"middle\":5,\"outer\":{\"a\":2,\"z\":1}}",
+      "description": "Recursive key sorting"
+    },
+    {
+      "name": "array-preserved-order",
+      "input": [
+        3,
+        1,
+        2
+      ],
+      "canonical": "[3,1,2]",
+      "description": "Array order unchanged"
+    },
+    {
+      "name": "null-value",
+      "input": {
+        "a": null,
+        "b": 2
+      },
+      "canonical": "{\"a\":null,\"b\":2}",
+      "description": "null serialized as null"
+    },
+    {
+      "name": "amount-object",
+      "input": {
+        "currency": "USD",
+        "minorUnits": 5000
+      },
+      "canonical": "{\"currency\":\"USD\",\"minorUnits\":5000}",
+      "description": "Money object (50.00 USD)"
+    },
+    {
+      "name": "proposal-params",
+      "input": {
+        "orderId": "ord_123",
+        "amount": {
+          "currency": "USD",
+          "minorUnits": 2500
+        },
+        "reason": "damaged"
+      },
+      "canonical": "{\"amount\":{\"currency\":\"USD\",\"minorUnits\":2500},\"orderId\":\"ord_123\",\"reason\":\"damaged\"}",
+      "description": "Typical refund proposal params"
+    },
+    {
+      "name": "empty-object",
+      "input": {},
+      "canonical": "{}"
+    },
+    {
+      "name": "empty-array",
+      "input": [],
+      "canonical": "[]"
+    },
+    {
+      "name": "string-escaping",
+      "input": {
+        "text": "Hello\n\"World\""
+      },
+      "canonical": "{\"text\":\"Hello\\n\\\"World\\\"\"}",
+      "description": "JSON escaping for newline and quotes"
+    },
+    {
+      "name": "number-formats",
+      "input": {
+        "int": 42,
+        "float": 3.14,
+        "negative": -10
+      },
+      "canonical": "{\"float\":3.14,\"int\":42,\"negative\":-10}",
+      "description": "Various number formats"
+    },
+    {
+      "name": "unicode",
+      "input": {
+        "emoji": "🚀",
+        "chinese": "中文"
+      },
+      "canonical": "{\"chinese\":\"中文\",\"emoji\":\"🚀\"}",
+      "description": "UTF-8 non-ASCII characters preserved"
+    }
+  ]
+}

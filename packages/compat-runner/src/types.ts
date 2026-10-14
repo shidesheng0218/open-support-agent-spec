@@ -61,4 +61,6 @@ export interface RunnerOptions {
   timeoutMs?: number;
   /** Injectable fetch (tests). Defaults to global fetch. */
   fetchFn?: typeof fetch;
+  /** Verbose mode: print request/response details for each check. */
+  verbose?: boolean;
 }

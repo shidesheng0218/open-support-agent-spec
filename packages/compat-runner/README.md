@@ -9,24 +9,35 @@ code — and produces a machine-readable report. This is the examiner: the regis
 gate (`gateOk`) is defined so the party claiming compatibility is never the party
 grading it.
 
-## Usage
+## Installation
 
-**Not yet published to npm**, so there is no `npx @osas/compat-runner` yet.
-Run it from a checkout of this repo:
+```bash
+npm install -g @osas/compat-runner
+
+# or use without installing
+npx @osas/compat-runner --target http://localhost:8080
+```
+
+## Usage
 
 ```bash
 # against any OSAS implementation
-pnpm osas:compat -- --target http://localhost:3001
+osas-compat --target http://localhost:8080
 
 # include the stateful suite (required for a registry claim)
-pnpm osas:compat -- --target http://localhost:3001 \
-  --conformance-key <test-only-key>
+osas-compat --target http://localhost:8080 --conformance-key <test-only-key>
+
+# verbose mode: print request/response details for each check
+osas-compat --target http://localhost:8080 --conformance-key <key> --verbose
 
 # the v0.3 controlled-execution profile
-pnpm osas:compat -- --target http://localhost:3001 \
+osas-compat --target http://localhost:8080 \
   --profile controlled-execution \
   --conformance-key <test-only-key> \
   --provider-event-key <test-only-key>
+
+# save report to file
+osas-compat --target http://localhost:8080 --conformance-key <key> --out report.json
 ```
 
 The target must run its conformance mode (`OSAS_CONFORMANCE_MODE=true` +

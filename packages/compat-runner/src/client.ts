@@ -45,7 +45,16 @@ export class HttpClient {
     const headers = this.headers(opts.role, opts.conformanceKey, opts.providerEventKey);
     if (opts.tenant) headers["x-tenant-id"] = opts.tenant;
     if (opts.body !== undefined) headers["content-type"] = "application/json";
-    const res = await (this.opts.fetchFn ?? fetch)(`${this.baseUrl}${path}`, {
+    
+    const url = `${this.baseUrl}${path}`;
+    if (this.opts.verbose) {
+      console.log(`  ${method} ${url}`);
+      if (opts.body !== undefined) {
+        console.log(`  Request body: ${JSON.stringify(opts.body, null, 2).split('\n').join('\n  ')}`);
+      }
+    }
+    
+    const res = await (this.opts.fetchFn ?? fetch)(url, {
       method,
       headers,
       ...(opts.body !== undefined ? { body: JSON.stringify(opts.body) } : {}),
@@ -58,6 +67,16 @@ export class HttpClient {
     } catch {
       body = text;
     }
+    
+    if (this.opts.verbose) {
+      console.log(`  Response: ${res.status}`);
+      if (body) {
+        const bodyStr = typeof body === 'string' ? body : JSON.stringify(body, null, 2);
+        const preview = bodyStr.length > 500 ? bodyStr.substring(0, 500) + '...' : bodyStr;
+        console.log(`  ${preview.split('\n').join('\n  ')}`);
+      }
+    }
+    
     return { status: res.status, body };
   }
 

@@ -18,6 +18,7 @@ Options:
                            OSAS_CONFORMANCE_MODE=true). Alternatively set env
                            OSAS_CONFORMANCE_MODE=true + OSAS_CONFORMANCE_KEY.
   --timeout <ms>           Per-request timeout (default: 10000)
+  --verbose                Print request/response details for each check
   --out <file>             Also write the JSON report to a file
   -h, --help               Show this help
 
@@ -53,6 +54,7 @@ function parseArgs(argv: string[]): RunnerOptions & { out?: string } {
       case "--provider-event-key": opts.providerEventKey = next(); break;
       case "--conformance-key": opts.conformanceKey = next(); break;
       case "--timeout": opts.timeoutMs = Number(next()); break;
+      case "--verbose": opts.verbose = true; break;
       case "--out": opts.out = next(); break;
       case "--": break; // pnpm argument-forwarding separator
       case "-h":
