@@ -90,6 +90,8 @@ declare module "fastify" {
     governance: GovernanceRuntime;
     /** Absent = integration-event ingestion disabled (fail closed). */
     governanceEventKey?: string;
+    /** Env used to resolve per-connection webhook secrets (never logged). */
+    webhookEnv: NodeJS.ProcessEnv;
   }
 }
 

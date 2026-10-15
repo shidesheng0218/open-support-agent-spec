@@ -12,7 +12,7 @@ import { ctxFor } from "./basic.js";
 
 // §8/Milestone 2: every model call is persisted to the UsageStore and the
 // audit stream. costUsd is omitted entirely when unknown — never fabricated.
-async function recordModelCall(
+export async function recordModelCall(
   adapter: SupportAdapter,
   ctx: ToolContext,
   usageStore: UsageStore,

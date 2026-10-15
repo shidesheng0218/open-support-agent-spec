@@ -47,7 +47,10 @@ import {
   type StorageConfig,
 } from "./config.js";
 import { registerRoutes } from "./routes/index.js";
-import { buildGovernance, loadGovernanceEventKey } from "./governance.js";
+import { buildGovernance, loadGovernanceEventConsumer, loadGovernanceEventKey } from "./governance.js";
+import { ChatwootAdapter, chatwootConfigFromEnv } from "@osas/chatwoot-adapter";
+import { ShopifyAdapter, shopifyConfigFromEnv } from "@osas/shopify-adapter";
+import { loadDrainIntervalMs, startDrainLoop } from "./workers/drain-loop.js";
 import type { GovernanceRuntime } from "@osas/governance";
 import { buildSecurityPosture } from "./posture.js";
 import { conformanceRoutes } from "./routes/conformance.js";
@@ -76,6 +79,10 @@ export interface BuildAppOptions {
   env?: NodeJS.ProcessEnv;
   /** Explicit governance runtime (tests). Default: memory or Postgres wiring. */
   governance?: GovernanceRuntime;
+  /** Chatwoot client for the shadow worker (tests). Default: built from CHATWOOT_* env. */
+  chatwoot?: { client: ChatwootAdapter; accountId: string };
+  /** Read-only Shopify client for order evidence (tests). Default: built from SHOPIFY_* env when set. */
+  shopify?: { client: ShopifyAdapter; shopDomain: string };
 }
 
 const utcDayStart = (): string => `${new Date().toISOString().slice(0, 10)}T00:00:00.000Z`;
@@ -184,10 +191,42 @@ export async function buildApp(opts: BuildAppOptions = {}): Promise<FastifyInsta
     app.decorate("governance", opts.governance);
     app.decorate("governanceEventKey", loadGovernanceEventKey(env));
   } else {
+    const chatwoot =
+      opts.chatwoot ??
+      (loadGovernanceEventConsumer(env) === "chatwoot-shadow"
+        ? // Throws ChatwootNotConfiguredError when CHATWOOT_* is missing: fail closed at boot.
+          (() => {
+            const config = chatwootConfigFromEnv(env);
+            return { client: new ChatwootAdapter({ config }), accountId: config.accountId };
+          })()
+        : undefined);
+    const shopify =
+      opts.shopify ??
+      (chatwoot && (env.SHOPIFY_SHOP_DOMAIN || env.SHOPIFY_ADMIN_ACCESS_TOKEN)
+        ? // A half-configured Shopify throws ShopifyNotConfiguredError: fail closed at boot.
+          (() => {
+            const config = shopifyConfigFromEnv(env);
+            return { client: new ShopifyAdapter({ config }), shopDomain: config.shopDomain };
+          })()
+        : undefined);
     const governance = buildGovernance({
       ...(app.pgPool ? { pool: app.pgPool } : {}),
       storage,
       env,
+      ...(chatwoot
+        ? {
+            shadow: {
+              app: () => app,
+              ...(shopify ? { shopify } : {}),
+              // A connection only gets the client if it names the same Chatwoot
+              // account the credentials belong to; otherwise fail closed.
+              chatwootFor: (connection) =>
+                connection.provider === "chatwoot" && connection.externalAccountId === chatwoot.accountId
+                  ? chatwoot.client
+                  : undefined,
+            },
+          }
+        : {}),
     });
     app.decorate("governance", governance.runtime);
     app.decorate("governanceEventKey", governance.eventKey);
@@ -199,6 +238,15 @@ export async function buildApp(opts: BuildAppOptions = {}): Promise<FastifyInsta
       },
       "governance control plane ready",
     );
+  }
+
+  app.decorate("webhookEnv", env);
+
+  const drainIntervalMs = loadDrainIntervalMs(env);
+  if (drainIntervalMs !== undefined) {
+    const stop = startDrainLoop(app.governance, drainIntervalMs, app.log);
+    app.addHook("onClose", async () => stop());
+    app.log.info({ drainIntervalMs }, "governance drain loop started");
   }
 
   const onBudgetWarning = createBudgetWarningAuditor(adapter, app.log);

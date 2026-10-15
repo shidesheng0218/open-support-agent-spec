@@ -74,6 +74,23 @@ export interface RefundProposalDraft {
   params: { orderId: string };
 }
 
+/**
+ * Stateless read of one order for a support workflow. Unlike
+ * buildRefundProposalDraft it stores nothing in the adapter, and it exposes the
+ * emails Shopify holds for the order so the CALLER can check that the order
+ * belongs to the person asking. The caller owns that decision.
+ */
+export interface OrderSupportRead {
+  orderId: string;
+  orderStatus: OrderStatus;
+  /** Total minus refunds already recorded. */
+  refundable: Money;
+  /** Lower-cased, de-duplicated emails on the order and its customer. */
+  contactEmails: string[];
+  /** Ready to pass to a SupportAdapter's captureEvidence (order, fulfillments, refund eligibility). */
+  evidence: Array<Omit<Evidence, "id" | "specVersion" | "createdAt">>;
+}
+
 const unsupported = (capability: Capability): never => {
   throw new AdapterCapabilityError(
     capability,
@@ -239,6 +256,28 @@ export class ShopifyAdapter implements SupportAdapter {
       currency: amount.currency,
       evidence,
       params: { orderId: String(order.id) },
+    };
+  }
+
+  /** Read-only: GET order + GET fulfillments. Never writes, never stores. */
+  async readOrderForSupport(ctx: ToolContext, orderId: string): Promise<OrderSupportRead> {
+    requirePermission(ctx.principal, "read");
+    const shopifyId = shopifyOrderIdFromOsas(orderId);
+    const order = await this.fetchOrder(shopifyId);
+    const fulfillments = await this.fetchFulfillments(shopifyId);
+    const emails = [order.email, order.customer?.email]
+      .map((e) => (typeof e === "string" ? e.trim().toLowerCase() : ""))
+      .filter((e) => e.length > 0);
+    return {
+      orderId: orderIdForShopify(order.id),
+      orderStatus: mapShopifyOrder(order, ctx.tenantId).status,
+      refundable: refundableAmount(order),
+      contactEmails: [...new Set(emails)],
+      evidence: [
+        orderEvidenceInput(order, ctx.tenantId, this.config.shopDomain),
+        ...fulfillments.map((f) => fulfillmentEvidenceInput(f, ctx.tenantId, this.config.shopDomain)),
+        refundEligibilityEvidenceInput(order, ctx.tenantId, this.config.shopDomain),
+      ],
     };
   }
 

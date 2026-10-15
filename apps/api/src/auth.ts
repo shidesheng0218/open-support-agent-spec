@@ -205,6 +205,14 @@ export function createAuthHook(config: AuthConfig): AuthHook {
         req.tenantId = anonymous.tenantId;
         return;
       }
+      // Provider webhooks cannot carry our JWT; they authenticate by HMAC
+      // signature inside the route, which fails closed. The anonymous principal
+      // is read-only and has no tenant authority.
+      if (req.routeOptions.url?.startsWith("/v1/webhooks/")) {
+        req.principal = anonymous;
+        req.tenantId = anonymous.tenantId;
+        return;
+      }
       await inner(req);
     };
   };
