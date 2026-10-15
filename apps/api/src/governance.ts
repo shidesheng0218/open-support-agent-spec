@@ -13,6 +13,7 @@ import type { OsasRole } from "./auth.js";
 import { GovernanceValidationError } from "@osas/governance";
 import { loadStorageConfig, type StorageConfig } from "./config.js";
 import { ConfigError } from "./config.js";
+import { createChatwootShadowHandler, type ChatwootShadowDeps } from "./workers/chatwoot-shadow.js";
 
 /**
  * Governance control-plane wiring for the reference API (M1).
@@ -126,19 +127,22 @@ export function loadGovernanceEventKey(env: NodeJS.ProcessEnv = process.env): st
  */
 export function loadGovernanceEventConsumer(
   env: NodeJS.ProcessEnv = process.env,
-): "record-only" | "none" {
+): GovernanceConsumerMode {
   const raw = (env.OSAS_GOVERNANCE_EVENT_CONSUMER ?? "none").trim().toLowerCase();
   if (!raw || raw === "none") return "none";
   if (raw === "record-only") return "record-only";
+  if (raw === "chatwoot-shadow") return "chatwoot-shadow";
   throw new ConfigError(
-    `OSAS_GOVERNANCE_EVENT_CONSUMER must be "none" or "record-only"; got "${raw}"`,
+    `OSAS_GOVERNANCE_EVENT_CONSUMER must be "none", "record-only" or "chatwoot-shadow"; got "${raw}"`,
   );
 }
+
+export type GovernanceConsumerMode = "none" | "record-only" | "chatwoot-shadow";
 
 export interface GovernanceWiring {
   runtime: GovernanceRuntime;
   eventKey?: string;
-  consumer: "record-only" | "none";
+  consumer: GovernanceConsumerMode;
 }
 
 export function buildGovernance(
@@ -147,6 +151,8 @@ export function buildGovernance(
     storage?: StorageConfig;
     env?: NodeJS.ProcessEnv;
     clock?: () => Date;
+    /** Required when the consumer is "chatwoot-shadow"; ignored otherwise. */
+    shadow?: Omit<ChatwootShadowDeps, "intake">;
   } = {},
 ): GovernanceWiring {
   const env = options.env ?? process.env;
@@ -166,6 +172,27 @@ export function buildGovernance(
     ...(options.clock ? { clock: { now: options.clock } } : {}),
     ...(consumer === "record-only" ? { handlers: {} } : {}),
   });
+  if (consumer === "chatwoot-shadow") {
+    if (!options.shadow) {
+      throw new ConfigError(
+        'OSAS_GOVERNANCE_EVENT_CONSUMER="chatwoot-shadow" requires a configured Chatwoot client',
+      );
+    }
+    const shadow = options.shadow;
+    return {
+      runtime: GovernanceRuntime.create({
+        stores,
+        ...(options.clock ? { clock: { now: options.clock } } : {}),
+        handlers: {
+          // Bound to this runtime's own intake so event state transitions are shared.
+          "integration_event.process": (job, hctx) =>
+            createChatwootShadowHandler({ ...shadow, intake: runtime.intake })(job, hctx),
+        },
+      }),
+      ...(loadGovernanceEventKey(env) ? { eventKey: loadGovernanceEventKey(env)! } : {}),
+      consumer,
+    };
+  }
   if (consumer === "record-only") {
     // Rebuild with the handler bound to this runtime's own intake instance.
     return {

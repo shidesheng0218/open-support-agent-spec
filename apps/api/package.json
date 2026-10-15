@@ -18,6 +18,8 @@
   "dependencies": {
     "@fastify/cors": "^10.0.2",
     "@osas/adapter": "workspace:*",
+    "@osas/chatwoot-adapter": "workspace:*",
+    "@osas/shopify-adapter": "workspace:*",
     "@osas/core": "workspace:*",
     "@osas/ecommerce-shadow": "workspace:*",
     "@osas/governance": "workspace:*",

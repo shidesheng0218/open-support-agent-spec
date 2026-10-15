@@ -410,3 +410,35 @@ describe("ShopifyAdapter after-sales writes: fail closed, zero HTTP", () => {
     expect(requests).toHaveLength(0);
   });
 });
+
+describe("ShopifyAdapter.readOrderForSupport (read-only, stateless)", () => {
+  it("returns lower-cased unique contact emails, refundable amount and evidence inputs, using GET only", async () => {
+    const { http, requests } = mockHttp(okHandler);
+    const adapter = new ShopifyAdapter({ config, http });
+    const read = await adapter.readOrderForSupport(ctx, "shopify_order_555");
+    expect(read.orderId).toBe("shopify_order_555");
+    expect(read.contactEmails).toEqual(["jane@example.com"]);
+    expect(read.refundable).toEqual({ currency: "USD", minorUnits: 12999 - 2000 });
+    // order + 1 fulfillment + refund eligibility
+    expect(read.evidence).toHaveLength(3);
+    expect(requests.every((r) => r.method === "GET")).toBe(true);
+    // stateless: nothing was stored in the adapter
+    expect(await adapter.listEvidence(ctx, {})).toHaveLength(0);
+  });
+
+  it("requires only read permission and rejects non-numeric ids before any HTTP call", async () => {
+    const { http, requests } = mockHttp(okHandler);
+    const adapter = new ShopifyAdapter({ config, http });
+    const readOnly: ToolContext = { tenantId: "tenant_demo", principal: { actorType: "system", actorId: "t", permission: "read" } };
+    await expect(adapter.readOrderForSupport(readOnly, "555")).resolves.toBeTruthy();
+    const before = requests.length;
+    await expect(adapter.readOrderForSupport(readOnly, "555/../x")).rejects.toThrow();
+    expect(requests.length).toBe(before);
+  });
+
+  it("maps a missing order to AdapterNotFoundError", async () => {
+    const { http } = mockHttp(okHandler);
+    const adapter = new ShopifyAdapter({ config, http });
+    await expect(adapter.readOrderForSupport(ctx, "999")).rejects.toBeInstanceOf(AdapterNotFoundError);
+  });
+});

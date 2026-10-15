@@ -10,6 +10,7 @@ import { shadowRoutes } from "./shadow.js";
 import { providerEventRoutes } from "./provider-events.js";
 import { afterSalesRoutes } from "./after-sales.js";
 import { governanceRoutes } from "./governance.js";
+import { webhookRoutes } from "./webhooks.js";
 
 export async function registerRoutes(app: FastifyInstance): Promise<void> {
   await app.register(basicRoutes);
@@ -23,4 +24,5 @@ export async function registerRoutes(app: FastifyInstance): Promise<void> {
   await app.register(providerEventRoutes);
   await app.register(afterSalesRoutes);
   await app.register(governanceRoutes);
+  await app.register(webhookRoutes);
 }

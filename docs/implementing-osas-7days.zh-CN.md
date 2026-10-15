@@ -83,7 +83,7 @@ cp -r /tmp/osas/schemas ./schemas
 {
   "specVersion": "0.2",
   "implementationId": "my-osas-go",
-  "implementationVersion": "0.1.0",
+  "implementationVersion": "1.0.0",
   "profiles": [
     {
       "name": "core",

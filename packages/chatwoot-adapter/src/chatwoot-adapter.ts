@@ -208,6 +208,32 @@ export class ChatwootAdapter implements SupportAdapter {
     return mapContactToCustomer(contact, ctx.tenantId);
   }
 
+  /**
+   * The most recent customer-authored messages of a conversation, oldest first.
+   * Private notes and agent/system messages are excluded so a worker never
+   * feeds its own notes (or an agent's reply) back into a model. Content is
+   * truncated: this is model input, not a transcript export.
+   */
+  async getRecentCustomerMessages(
+    ctx: ToolContext,
+    caseId: string,
+    limit = 3,
+  ): Promise<Array<{ id: string; content: string }>> {
+    requirePermission(ctx.principal, "read");
+    const conv = await this.getConversation(conversationIdFromCaseId(caseId));
+    const incoming = (conv.messages ?? []).filter(
+      (m) =>
+        !m.private &&
+        (m.message_type === 0 || m.message_type === "incoming") &&
+        typeof m.content === "string" &&
+        m.content.trim().length > 0,
+    );
+    return incoming.slice(-Math.max(1, limit)).map((m) => ({
+      id: String(m.id ?? ""),
+      content: m.content!.trim().slice(0, 2000),
+    }));
+  }
+
   // ---- supported: writes (idempotent) --------------------------------------
 
   async createCaseNote(

@@ -127,6 +127,7 @@ export async function proposalRoutes(app: FastifyInstance): Promise<void> {
       injectionSuspected: body.injectionSuspected,
       policy,
       sink: app.auditStore,
+      ...(app.slackApprovals ? { onApprovalRequested: app.slackApprovals.notify } : {}),
     });
     return { proposal: outcome.proposal, decision: outcome.decision };
   });

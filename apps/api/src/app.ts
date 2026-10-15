@@ -47,7 +47,14 @@ import {
   type StorageConfig,
 } from "./config.js";
 import { registerRoutes } from "./routes/index.js";
-import { buildGovernance, loadGovernanceEventKey } from "./governance.js";
+import { buildGovernance, loadGovernanceEventConsumer, loadGovernanceEventKey } from "./governance.js";
+import { ChatwootAdapter, chatwootConfigFromEnv } from "@osas/chatwoot-adapter";
+import { ShopifyAdapter, shopifyConfigFromEnv } from "@osas/shopify-adapter";
+import { loadSlackConfig, type SlackConfig } from "./slack/config.js";
+import { createSlackClient, type SlackClient } from "./slack/client.js";
+import { createSlackApprovals } from "./slack/approvals.js";
+import { slackRoutes } from "./slack/route.js";
+import { loadDrainIntervalMs, startDrainLoop } from "./workers/drain-loop.js";
 import type { GovernanceRuntime } from "@osas/governance";
 import { buildSecurityPosture } from "./posture.js";
 import { conformanceRoutes } from "./routes/conformance.js";
@@ -76,6 +83,12 @@ export interface BuildAppOptions {
   env?: NodeJS.ProcessEnv;
   /** Explicit governance runtime (tests). Default: memory or Postgres wiring. */
   governance?: GovernanceRuntime;
+  /** Chatwoot client for the shadow worker (tests). Default: built from CHATWOOT_* env. */
+  chatwoot?: { client: ChatwootAdapter; accountId: string };
+  /** Read-only Shopify client for order evidence (tests). Default: built from SHOPIFY_* env when set. */
+  shopify?: { client: ShopifyAdapter; shopDomain: string };
+  /** Slack approval cards (tests). Default: built from SLACK_* env when set; partial config fails startup. */
+  slack?: { config: SlackConfig; client: SlackClient };
 }
 
 const utcDayStart = (): string => `${new Date().toISOString().slice(0, 10)}T00:00:00.000Z`;
@@ -184,10 +197,42 @@ export async function buildApp(opts: BuildAppOptions = {}): Promise<FastifyInsta
     app.decorate("governance", opts.governance);
     app.decorate("governanceEventKey", loadGovernanceEventKey(env));
   } else {
+    const chatwoot =
+      opts.chatwoot ??
+      (loadGovernanceEventConsumer(env) === "chatwoot-shadow"
+        ? // Throws ChatwootNotConfiguredError when CHATWOOT_* is missing: fail closed at boot.
+          (() => {
+            const config = chatwootConfigFromEnv(env);
+            return { client: new ChatwootAdapter({ config }), accountId: config.accountId };
+          })()
+        : undefined);
+    const shopify =
+      opts.shopify ??
+      (chatwoot && (env.SHOPIFY_SHOP_DOMAIN || env.SHOPIFY_ADMIN_ACCESS_TOKEN)
+        ? // A half-configured Shopify throws ShopifyNotConfiguredError: fail closed at boot.
+          (() => {
+            const config = shopifyConfigFromEnv(env);
+            return { client: new ShopifyAdapter({ config }), shopDomain: config.shopDomain };
+          })()
+        : undefined);
     const governance = buildGovernance({
       ...(app.pgPool ? { pool: app.pgPool } : {}),
       storage,
       env,
+      ...(chatwoot
+        ? {
+            shadow: {
+              app: () => app,
+              ...(shopify ? { shopify } : {}),
+              // A connection only gets the client if it names the same Chatwoot
+              // account the credentials belong to; otherwise fail closed.
+              chatwootFor: (connection) =>
+                connection.provider === "chatwoot" && connection.externalAccountId === chatwoot.accountId
+                  ? chatwoot.client
+                  : undefined,
+            },
+          }
+        : {}),
     });
     app.decorate("governance", governance.runtime);
     app.decorate("governanceEventKey", governance.eventKey);
@@ -199,6 +244,15 @@ export async function buildApp(opts: BuildAppOptions = {}): Promise<FastifyInsta
       },
       "governance control plane ready",
     );
+  }
+
+  app.decorate("webhookEnv", env);
+
+  const drainIntervalMs = loadDrainIntervalMs(env);
+  if (drainIntervalMs !== undefined) {
+    const stop = startDrainLoop(app.governance, drainIntervalMs, app.log);
+    app.addHook("onClose", async () => stop());
+    app.log.info({ drainIntervalMs }, "governance drain loop started");
   }
 
   const onBudgetWarning = createBudgetWarningAuditor(adapter, app.log);
@@ -251,7 +305,16 @@ export async function buildApp(opts: BuildAppOptions = {}): Promise<FastifyInsta
   app.decorate("authConfig", auth);
   app.decorate("conformanceConfig", conformance);
   registerPlugins(app, createAuthHook(auth));
+  const slackConfig = opts.slack?.config ?? loadSlackConfig(env);
+  const slackApprovals = slackConfig
+    ? createSlackApprovals(app, slackConfig, opts.slack?.client ?? createSlackClient(slackConfig.botToken))
+    : undefined;
+  app.decorate("slackApprovals", slackApprovals);
   await registerRoutes(app);
+  if (slackConfig && slackApprovals) {
+    await app.register(slackRoutes, { config: slackConfig, approvals: slackApprovals });
+    app.log.info({ channel: slackConfig.channel, approvers: slackConfig.approvers.size }, "slack approval cards enabled");
+  }
   // Conformance endpoints exist only in conformance mode (never in production).
   if (conformance.enabled) {
     await app.register(conformanceRoutes);

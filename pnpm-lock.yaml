@@ -26,6 +26,9 @@ importers:
       '@osas/adapter':
         specifier: workspace:*
         version: link:../../packages/adapter
+      '@osas/chatwoot-adapter':
+        specifier: workspace:*
+        version: link:../../packages/chatwoot-adapter
       '@osas/core':
         specifier: workspace:*
         version: link:../../packages/core
@@ -50,6 +53,9 @@ importers:
       '@osas/schema-validator':
         specifier: workspace:*
         version: link:../../packages/schema-validator
+      '@osas/shopify-adapter':
+        specifier: workspace:*
+        version: link:../../packages/shopify-adapter
       '@osas/store-postgres':
         specifier: workspace:*
         version: link:../../packages/store-postgres
@@ -151,6 +157,15 @@ importers:
       '@osas/core':
         specifier: workspace:*
         version: link:../core
+
+  packages/agent-guard:
+    dependencies:
+      '@osas/core':
+        specifier: workspace:*
+        version: link:../core
+      '@osas/policy-engine':
+        specifier: workspace:*
+        version: link:../policy-engine
 
   packages/chatwoot-adapter:
     dependencies:

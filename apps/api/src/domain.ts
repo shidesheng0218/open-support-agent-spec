@@ -187,7 +187,13 @@ export async function runEvaluation(
   adapter: SupportAdapter,
   ctx: ToolContext,
   proposal: ActionProposal,
-  opts: { injectionSuspected?: boolean; policy?: TenantPolicy; sink?: AuditSink } = {},
+  opts: {
+    injectionSuspected?: boolean;
+    policy?: TenantPolicy;
+    sink?: AuditSink;
+    /** Called after a pending Approval is created and audited. Must not throw. */
+    onApprovalRequested?: (ctx: ToolContext, proposal: ActionProposal, approval: Approval) => Promise<void>;
+  } = {},
 ): Promise<EvaluationOutcome> {
   const kase = await adapter.getCase(ctx, proposal.caseId);
   const customer = await adapter.getCustomer(ctx, kase.customerId);
@@ -289,6 +295,9 @@ export async function runEvaluation(
       policyVersion: decision.policyVersion,
       detail: { reasons: decision.reasons },
     }, opts.sink);
+    if (opts.onApprovalRequested) {
+      await opts.onApprovalRequested(ctx, updated, approval).catch(() => undefined);
+    }
     return { proposal: updated, decision, approval, handoffs };
   }
 
