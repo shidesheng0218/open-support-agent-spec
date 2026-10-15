@@ -26,6 +26,7 @@ const PUBLIC_PACKAGES = [
   { dir: "packages/schema-validator", name: "@osas/schema-validator" },
   { dir: "packages/policy-engine", name: "@osas/policy-engine" },
   { dir: "packages/compat-runner", name: "@osas/compat-runner" },
+  { dir: "packages/agent-guard", name: "@osas/agent-guard" },
 ];
 
 // Per-package extra tarball members beyond the universal baseline.

@@ -13,6 +13,7 @@ import assert from "node:assert/strict";
 import {
   evaluateProposal,
   type ActionProposal,
+  type Evidence,
   type EvaluationContext,
   type Permission,
   type PolicyDecision,
@@ -45,11 +46,27 @@ const policy: TenantPolicy = {
   updatedAt: "2026-09-01T00:00:00.000Z",
 };
 
+// Money-moving actions must cite evidence the caller has actually loaded.
+// A proposal that references an evidence id missing from this list is blocked
+// with INSUFFICIENT_EVIDENCE, so load the order record you looked up.
+const orderEvidence: Evidence = {
+  id: "ev_order_5001",
+  specVersion: "0.2",
+  tenantId: policy.tenantId,
+  caseId: "case_1001",
+  kind: "order",
+  source: { system: "example-shop", recordType: "order", recordId: "ord_5001" },
+  summary: "Order ord_5001, delivered, paid",
+  data: { orderId: "ord_5001" },
+  retrievedAt: NOW.toISOString(),
+  createdAt: NOW.toISOString(),
+};
+
 // Evaluation context: inject everything the engine may need to know.
 // `now` is injectable so evaluation is fully deterministic in tests.
 const ctx: EvaluationContext = {
   policy,
-  evidence: [],
+  evidence: [orderEvidence],
   recentProposals: [],
   injectionSuspected: false,
   now: NOW,

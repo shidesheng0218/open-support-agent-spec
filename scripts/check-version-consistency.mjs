@@ -23,6 +23,7 @@ const PUBLIC_PACKAGES = new Set([
   "@osas/schema-validator",
   "@osas/policy-engine",
   "@osas/compat-runner",
+  "@osas/agent-guard",
 ]);
 
 const pkgFiles = ["package.json"];

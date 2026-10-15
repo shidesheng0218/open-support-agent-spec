@@ -158,6 +158,15 @@ importers:
         specifier: workspace:*
         version: link:../core
 
+  packages/agent-guard:
+    dependencies:
+      '@osas/core':
+        specifier: workspace:*
+        version: link:../core
+      '@osas/policy-engine':
+        specifier: workspace:*
+        version: link:../policy-engine
+
   packages/chatwoot-adapter:
     dependencies:
       '@osas/adapter':
