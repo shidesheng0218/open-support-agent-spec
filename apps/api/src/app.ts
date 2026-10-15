@@ -50,6 +50,10 @@ import { registerRoutes } from "./routes/index.js";
 import { buildGovernance, loadGovernanceEventConsumer, loadGovernanceEventKey } from "./governance.js";
 import { ChatwootAdapter, chatwootConfigFromEnv } from "@osas/chatwoot-adapter";
 import { ShopifyAdapter, shopifyConfigFromEnv } from "@osas/shopify-adapter";
+import { loadSlackConfig, type SlackConfig } from "./slack/config.js";
+import { createSlackClient, type SlackClient } from "./slack/client.js";
+import { createSlackApprovals } from "./slack/approvals.js";
+import { slackRoutes } from "./slack/route.js";
 import { loadDrainIntervalMs, startDrainLoop } from "./workers/drain-loop.js";
 import type { GovernanceRuntime } from "@osas/governance";
 import { buildSecurityPosture } from "./posture.js";
@@ -83,6 +87,8 @@ export interface BuildAppOptions {
   chatwoot?: { client: ChatwootAdapter; accountId: string };
   /** Read-only Shopify client for order evidence (tests). Default: built from SHOPIFY_* env when set. */
   shopify?: { client: ShopifyAdapter; shopDomain: string };
+  /** Slack approval cards (tests). Default: built from SLACK_* env when set; partial config fails startup. */
+  slack?: { config: SlackConfig; client: SlackClient };
 }
 
 const utcDayStart = (): string => `${new Date().toISOString().slice(0, 10)}T00:00:00.000Z`;
@@ -299,7 +305,16 @@ export async function buildApp(opts: BuildAppOptions = {}): Promise<FastifyInsta
   app.decorate("authConfig", auth);
   app.decorate("conformanceConfig", conformance);
   registerPlugins(app, createAuthHook(auth));
+  const slackConfig = opts.slack?.config ?? loadSlackConfig(env);
+  const slackApprovals = slackConfig
+    ? createSlackApprovals(app, slackConfig, opts.slack?.client ?? createSlackClient(slackConfig.botToken))
+    : undefined;
+  app.decorate("slackApprovals", slackApprovals);
   await registerRoutes(app);
+  if (slackConfig && slackApprovals) {
+    await app.register(slackRoutes, { config: slackConfig, approvals: slackApprovals });
+    app.log.info({ channel: slackConfig.channel, approvers: slackConfig.approvers.size }, "slack approval cards enabled");
+  }
   // Conformance endpoints exist only in conformance mode (never in production).
   if (conformance.enabled) {
     await app.register(conformanceRoutes);

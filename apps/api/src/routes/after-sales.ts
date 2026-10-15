@@ -422,7 +422,11 @@ export async function afterSalesRoutes(app: FastifyInstance): Promise<void> {
       policyVersion: policy.version,
       detail: { scenarioCode: record.scenarioCode, actionType },
     }, app.auditStore);
-    const evaluated = await runEvaluation(adapter, ctx, proposal, { policy, sink: app.auditStore });
+    const evaluated = await runEvaluation(adapter, ctx, proposal, {
+      policy,
+      sink: app.auditStore,
+      ...(app.slackApprovals ? { onApprovalRequested: app.slackApprovals.notify } : {}),
+    });
     if (record.scenarioCode === "exchange_request") {
       const handoff = await adapter.createHandoff(ctx, {
         tenantId: ctx.tenantId,

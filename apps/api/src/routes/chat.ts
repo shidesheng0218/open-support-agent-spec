@@ -337,6 +337,7 @@ export async function chatRoutes(app: FastifyInstance): Promise<void> {
       ),
       policy: await resolveActivePolicy(adapter, app.policyStore, ctx, ctx.tenantId),
       sink: app.auditStore,
+      ...(app.slackApprovals ? { onApprovalRequested: app.slackApprovals.notify } : {}),
     });
 
     let execution;
