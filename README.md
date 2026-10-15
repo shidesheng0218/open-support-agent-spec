@@ -107,6 +107,17 @@ refunds stay blocked even with order evidence. A web-widget email can be
 self-asserted, so the email match narrows the risk but is not identity proof.
 The e2e script needs Docker and about 4 GB of images and is not part of CI.
 
+### Approve from Slack
+
+When policy requires a human, OSAS can post an Approve / Reject card to a Slack
+channel. A click runs the same code as `POST /v1/approvals/:id/decide`, so expiry,
+audit and the `actionDigest` check at execution are identical. Only Slack users you
+list are accepted, each limited to one tenant, and the signature on every click is
+verified. Cards carry the action, amount and ids, never customer text.
+
+Setup and limits: [Slack approvals](docs/slack-approvals.md). Covered by unit tests
+with a faked Slack client; **not** run against a real Slack workspace.
+
 ## How it works
 
 Every agent action follows the same pipeline:

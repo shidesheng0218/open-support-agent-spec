@@ -1,5 +1,7 @@
 # Slack approval cards
 
+[中文](slack-approvals.zh-CN.md)
+
 When the policy engine returns `require_approval`, OSAS can post a card to a
 Slack channel. An approver clicks Approve or Reject. The click goes through the
 same code as `POST /v1/approvals/:id/decide` (`decideApprovalCore`), so expiry,

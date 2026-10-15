@@ -101,6 +101,15 @@ docker compose up --build
 网页挂件里的邮箱可以自行填写，邮箱匹配只能降低风险，不能证明身份。端到端脚本需要 Docker 和约 4 GB
 镜像，不在 CI 里运行。
 
+### 在 Slack 里审批
+
+策略要求人工审批时，OSAS 可以向 Slack 频道发一张 Approve / Reject 卡片。点击走的代码与
+`POST /v1/approvals/:id/decide` 相同，所以过期处理、审计和执行时的 `actionDigest` 校验完全一致。
+只接受你列出的 Slack 用户，每人限定一个租户，每次点击都会校验签名。卡片只含动作、金额和 id，不含客户原文。
+
+配置与限制见：[Slack 审批](docs/slack-approvals.zh-CN.md)。已用伪造的 Slack 客户端做过单元测试，
+**没有**对真实 Slack 工作区运行过。
+
 ## 工作原理
 
 每个 Agent 动作都走同一条管线：
