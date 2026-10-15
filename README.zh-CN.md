@@ -9,6 +9,7 @@
   <p>
     <a href="README.md">English</a> ·
     <a href="#六十秒跑通">本地运行</a> ·
+    <a href="#在你的客服系统里跑影子模式">Chatwoot 影子模式</a> ·
     <a href="docs/spec-v0.2.zh-CN.md">阅读规范</a> ·
     <a href="CONTRIBUTING.zh-CN.md">参与贡献</a>
   </p>
@@ -69,6 +70,36 @@ docker compose up --build
 
 没有 Docker？`pnpm install && pnpm build && pnpm dev:api && pnpm dev:web`，
 然后打开 [localhost:5173](http://localhost:5173)。
+
+## 在你的客服系统里跑影子模式
+
+在团队已经在用的地方试用 Agent，又不让它碰任何东西。Chatwoot 影子 worker 会读取每条客户消息，
+让模型给出提案，交给策略引擎判定，然后给你的坐席留下**一条私有备注**。不执行任何动作。
+
+<img src="docs/assets/osas-shadow-flow.svg" alt="Chatwoot 客户消息、签名 webhook、模型提案、策略判定、一条私有备注" width="100%" />
+
+<img src="docs/assets/osas-shadow-note.svg" alt="OSAS 在 Chatwoot 会话中写下的私有备注示意，列出策略拦截原因" width="100%" />
+
+| 你得到什么 | 如何保证 |
+|---|---|
+| 每条消息的第二意见，仅坐席可见 | 每个会话一条私有备注，只含 id 和策略原因，不含客户原文和邮箱。 |
+| 无法伪造投递 | HMAC-SHA256 签名、300 秒时间窗、重放去重，任何拒绝都统一返回 401。 |
+| 模型花不了钱 | worker 只有 `draft` 权限，`live` 执行模式在启动时就被拒绝。 |
+| 可选的真实订单事实 | 只读 Shopify 查询（仅 GET），只有订单邮箱与 Chatwoot 联系人一致才会附上；任何失败都退回“无证据”。 |
+
+配置步骤见：[Chatwoot 影子模式快速上手](docs/chatwoot-shadow-quickstart.zh-CN.md)。
+
+**已验证与未验证**
+
+| 已验证 | 尚未验证 |
+|---|---|
+| 真实 Chatwoot 4.18.0：签名投递被接受，伪造和缺失签名被拒绝，重放被识别，恰好一条私有备注，无循环。用 [`scripts/e2e-chatwoot.sh`](scripts/e2e-chatwoot.sh) 连续 5 次均为 11/11。 | 真实 Shopify 店铺（单元测试使用伪造的 HTTP 客户端）。 |
+| 接收器、worker 和 Shopify 证据的单元测试。 | 真实 LLM（仅用过 mock）、Postgres 存储、`jwt` 认证模式。 |
+| | 并发、重试、Chatwoot 不可达、OSAS 重启。 |
+
+需要了解的限制：Chatwoot 联系人是 `unverified`、地区为 `ZZ`，所以即使有订单证据，退款依然会被拦截。
+网页挂件里的邮箱可以自行填写，邮箱匹配只能降低风险，不能证明身份。端到端脚本需要 Docker 和约 4 GB
+镜像，不在 CI 里运行。
 
 ## 工作原理
 

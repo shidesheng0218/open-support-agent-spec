@@ -1,0 +1,27 @@
+<svg width="1000" height="470" viewBox="0 0 1000 470" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="t d">
+  <title id="t">Illustration of an OSAS private note in a Chatwoot conversation</title>
+  <desc id="d">A customer asks for a refund. Below it, a private note from OSAS lists the policy reasons and states that nothing has been executed.</desc>
+  <rect width="1000" height="470" rx="20" fill="#F8FAFC" stroke="#E2E8F0"/>
+  <rect width="1000" height="52" rx="20" fill="#1F2937"/>
+  <rect y="32" width="1000" height="20" fill="#1F2937"/>
+  <circle cx="30" cy="26" r="6" fill="#F87171"/><circle cx="52" cy="26" r="6" fill="#FBBF24"/><circle cx="74" cy="26" r="6" fill="#34D399"/>
+  <text x="104" y="31" fill="#E5E7EB" font-family="Inter, ui-sans-serif, system-ui, sans-serif" font-size="15">Conversation #42  ·  Open</text>
+
+  <rect x="40" y="76" width="420" height="52" rx="14" fill="#E2E8F0"/>
+  <text x="60" y="108" fill="#0F172A" font-family="Inter, ui-sans-serif, system-ui, sans-serif" font-size="16">Customer: I want a refund for my order.</text>
+
+  <rect x="40" y="150" width="920" height="276" rx="14" fill="#FEF9C3" stroke="#FACC15"/>
+  <text x="60" y="180" fill="#854D0E" font-family="Inter, ui-sans-serif, system-ui, sans-serif" font-size="13" font-weight="700" letter-spacing="1">PRIVATE NOTE  ·  visible to agents only</text>
+  <g font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="14" fill="#1F2937">
+    <text x="60" y="212" font-weight="700">[OSAS shadow] Suggested: refund $20.00 (reason: other)</text>
+    <text x="60" y="238">Policy v1.0.0: blocked by policy</text>
+    <text x="60" y="260">  - IDENTITY_UNVERIFIED: rule requires a verified identity</text>
+    <text x="60" y="282">  - REGION_UNLISTED: region 'ZZ' is not in allowedRegions</text>
+    <text x="60" y="304">  - INSUFFICIENT_EVIDENCE: refund needs at least one evidence reference</text>
+    <text x="60" y="330">Evidence: none attached (Chatwoot holds no order data)</text>
+    <text x="60" y="352">Not verified against any order system. Check the order before acting.</text>
+    <text x="60" y="378" fill="#166534" font-weight="700">Shadow mode: nothing has been executed.</text>
+    <text x="60" y="404" fill="#64748B">Refs: proposal prop_1 / shadow run shadow_...</text>
+  </g>
+  <text x="40" y="452" fill="#64748B" font-family="Inter, ui-sans-serif, system-ui, sans-serif" font-size="12">Illustration, not a screenshot. Text follows the note written in the real Chatwoot 4.18.0 end-to-end run; lines shortened for width.</text>
+</svg>

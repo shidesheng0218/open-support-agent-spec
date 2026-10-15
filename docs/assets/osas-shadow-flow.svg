@@ -1,0 +1,61 @@
+<svg width="1400" height="400" viewBox="0 0 1400 400" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="t d">
+  <title id="t">OSAS shadow mode in a helpdesk</title>
+  <desc id="d">A customer message in Chatwoot reaches OSAS through a signed webhook. The model proposes, the policy engine decides, and OSAS writes one private note. Optional read-only Shopify evidence feeds the policy step. Nothing is executed.</desc>
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1400" y2="400" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#0B1020"/><stop offset="0.6" stop-color="#132A46"/><stop offset="1" stop-color="#0D3B45"/>
+    </linearGradient>
+    <linearGradient id="acc" x1="0" y1="0" x2="1" y2="0">
+      <stop stop-color="#8B5CF6"/><stop offset="0.5" stop-color="#22D3EE"/><stop offset="1" stop-color="#34D399"/>
+    </linearGradient>
+    <marker id="ar" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="8" markerHeight="8" orient="auto">
+      <path d="M0 0L10 5L0 10z" fill="#67E8F9"/>
+    </marker>
+  </defs>
+  <rect width="1400" height="400" rx="24" fill="url(#bg)"/>
+  <text x="40" y="52" fill="#A5F3FC" font-family="Inter, ui-sans-serif, system-ui, sans-serif" font-size="16" font-weight="700" letter-spacing="3">SHADOW MODE IN YOUR HELPDESK</text>
+  <text x="40" y="84" fill="#E2E8F0" font-family="Inter, ui-sans-serif, system-ui, sans-serif" font-size="22" font-weight="600">The agent reads. The policy engine judges. A human still decides.</text>
+
+  <g font-family="Inter, ui-sans-serif, system-ui, sans-serif">
+    <g transform="translate(30 130)">
+      <rect width="200" height="116" rx="14" fill="#0F1B33" stroke="#334155"/>
+      <text x="100" y="40" text-anchor="middle" fill="#F8FAFC" font-size="18" font-weight="700">1 Customer writes</text>
+      <text x="100" y="68" text-anchor="middle" fill="#94A3B8" font-size="13">Chatwoot</text>
+      <text x="100" y="88" text-anchor="middle" fill="#94A3B8" font-size="13">message_created</text>
+    </g>
+    <g transform="translate(315 130)">
+      <rect width="200" height="116" rx="14" fill="#0F1B33" stroke="#334155"/>
+      <text x="100" y="40" text-anchor="middle" fill="#F8FAFC" font-size="18" font-weight="700">2 Signed webhook</text>
+      <text x="100" y="68" text-anchor="middle" fill="#94A3B8" font-size="13">HMAC-SHA256, 300 s window</text>
+      <text x="100" y="88" text-anchor="middle" fill="#94A3B8" font-size="13">bad signature: uniform 401</text>
+    </g>
+    <g transform="translate(600 130)">
+      <rect width="200" height="116" rx="14" fill="#171436" stroke="#8B5CF6"/>
+      <text x="100" y="40" text-anchor="middle" fill="#F8FAFC" font-size="18" font-weight="700">3 Model proposes</text>
+      <text x="100" y="68" text-anchor="middle" fill="#C4B5FD" font-size="13">typed ActionProposal</text>
+      <text x="100" y="88" text-anchor="middle" fill="#C4B5FD" font-size="13">capped at request-approval</text>
+    </g>
+    <g transform="translate(885 130)">
+      <rect width="200" height="116" rx="14" fill="#0B2A33" stroke="#22D3EE"/>
+      <text x="100" y="40" text-anchor="middle" fill="#F8FAFC" font-size="18" font-weight="700">4 Policy decides</text>
+      <text x="100" y="68" text-anchor="middle" fill="#A5F3FC" font-size="13">identity, region, evidence</text>
+      <text x="100" y="88" text-anchor="middle" fill="#A5F3FC" font-size="13">deterministic, audited</text>
+    </g>
+    <g transform="translate(1170 130)">
+      <rect width="200" height="116" rx="14" fill="#0B2D26" stroke="#34D399"/>
+      <text x="100" y="40" text-anchor="middle" fill="#F8FAFC" font-size="18" font-weight="700">5 Private note</text>
+      <text x="100" y="68" text-anchor="middle" fill="#A7F3D0" font-size="13">ids and reasons only</text>
+      <text x="100" y="88" text-anchor="middle" fill="#A7F3D0" font-size="13">nothing is executed</text>
+    </g>
+    <g stroke="#67E8F9" stroke-width="2" marker-end="url(#ar)">
+      <path d="M232 188H311"/><path d="M517 188H596"/><path d="M802 188H881"/><path d="M1087 188H1166"/>
+    </g>
+    <g transform="translate(600 290)">
+      <rect width="485" height="48" rx="12" fill="#0F1B33" stroke="#475569" stroke-dasharray="6 5"/>
+      <text x="242" y="28" text-anchor="middle" fill="#CBD5E1" font-size="14">Optional: read-only Shopify order evidence (GET only)</text>
+    </g>
+    <path d="M842 290V250" stroke="#67E8F9" stroke-width="2" stroke-dasharray="5 4" marker-end="url(#ar)"/>
+    <text x="40" y="372" fill="#94A3B8" font-size="14">Only write path into the helpdesk: one private note. No write path into Shopify at all. Live execution is refused at startup.</text>
+  </g>
+  <rect x="40" y="108" width="1320" height="3" rx="1.5" fill="url(#acc)" opacity="0.7"/>
+</svg>

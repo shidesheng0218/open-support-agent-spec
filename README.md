@@ -10,6 +10,7 @@
   <p>
     <a href="README.zh-CN.md">中文文档</a> ·
     <a href="#sixty-seconds">Try it locally</a> ·
+    <a href="#shadow-mode-in-your-helpdesk">Chatwoot shadow mode</a> ·
     <a href="docs/spec-v0.2.md">Read the spec</a> ·
     <a href="CONTRIBUTING.md">Contribute</a>
   </p>
@@ -72,6 +73,39 @@ three guided scenarios on `/demo`:
 
 No Docker? `pnpm install && pnpm build && pnpm dev:api && pnpm dev:web`, then
 open [localhost:5173](http://localhost:5173).
+
+## Shadow mode in your helpdesk
+
+Try the agent where your team already works, without letting it touch anything.
+The Chatwoot shadow worker reads each customer message, asks the model for a
+proposal, runs it through the policy engine, and leaves **one private note** for
+your agents. Nothing is executed.
+
+<img src="docs/assets/osas-shadow-flow.svg" alt="Customer message in Chatwoot, signed webhook, model proposal, policy decision, one private note" width="100%" />
+
+<img src="docs/assets/osas-shadow-note.svg" alt="Illustration of an OSAS private note in a Chatwoot conversation listing policy reasons" width="100%" />
+
+| What you get | How it is enforced |
+|---|---|
+| A second opinion on every message, visible to agents only | One private note per conversation. It carries ids and policy reasons, never the customer's text or email. |
+| No way to forge a delivery | HMAC-SHA256 signature, 300 second window, replay dedupe, uniform 401 for every rejection. |
+| A model that cannot spend money | The worker holds `draft` permission only. Live execution is refused at startup. |
+| Real order facts, optionally | Read-only Shopify lookup (GET only), attached only when the order email matches the Chatwoot contact. Any failure falls back to "no evidence". |
+
+Setup steps: [Chatwoot shadow quickstart](docs/chatwoot-shadow-quickstart.md).
+
+**What has been checked, and what has not**
+
+| Checked | Not checked yet |
+|---|---|
+| Real Chatwoot 4.18.0: signed delivery accepted, forged and missing signatures rejected, replay detected, exactly one private note, no loop. 5 consecutive runs of 11/11 with [`scripts/e2e-chatwoot.sh`](scripts/e2e-chatwoot.sh). | A real Shopify store (unit tests use a faked HTTP client). |
+| Unit tests for the receiver, worker and Shopify evidence. | A real LLM (mock only), Postgres storage, `jwt` auth mode. |
+| | Concurrency, retries, Chatwoot unreachable, OSAS restart. |
+
+Limits you should know: Chatwoot contacts are `unverified` with region `ZZ`, so
+refunds stay blocked even with order evidence. A web-widget email can be
+self-asserted, so the email match narrows the risk but is not identity proof.
+The e2e script needs Docker and about 4 GB of images and is not part of CI.
 
 ## How it works
 
