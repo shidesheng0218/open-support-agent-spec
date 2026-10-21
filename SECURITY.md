@@ -52,6 +52,34 @@ unless you prefer otherwise.
   (see [docs/spec-v0.2.md](docs/spec-v0.2.md) §9). Changes that weaken them are
   treated as security regressions.
 
+## Known vulnerabilities (as of 2024-10-21)
+
+The reference implementation currently depends on packages with known security
+advisories. We actively track these and apply mitigations where possible.
+
+| Severity | Component | CVE/Advisory | Status | Mitigation |
+|----------|-----------|--------------|--------|------------|
+| Critical | vitest | Arbitrary file read/exec via UI server | Dev-only | UI endpoints blocked in production via security plugin |
+| Critical | proxy-addr | IPv4-mapped IPv6 trust subnet spoofing | Runtime | Input validation added in security plugin |
+| Critical | tinypool (2) | Prototype pollution RCE in worker options | Dev-only | Used only in test runner, not in production runtime |
+| High | vite | `server.fs.deny` bypass on Windows paths | Dev-only | Build tool only, not exposed in production |
+| High | source-map-js | Event-loop DoS via indexed source maps | Dev-only | Used in build pipeline, not runtime |
+| High | @modelcontextprotocol/sdk | OAuth credentials to attacker-chosen server | Runtime | Under review; consider pinning or forking |
+| Moderate | Various | 19 moderate-severity findings | Mixed | Evaluating on case-by-case basis |
+
+**Production deployment:** The security plugin (`apps/api/src/plugins/security.ts`)
+maintains runtime mitigations for runtime vulnerabilities. Dev-only
+vulnerabilities (vitest, vite, tinypool, source-map-js) do not affect the
+production API deployment.
+
+**Tracking:** We monitor `pnpm audit` output and upstream issue trackers. When
+upstream fixes become available, we will update dependencies immediately. For
+issues without upstream fixes, we evaluate alternatives including forking or
+replacing the affected dependency.
+
+See [docs/security-audit.md](docs/security-audit.md) for detailed analysis and
+tracking status (TODO: create this document).
+
 If you are building an independent implementation, treat the items above as
 minimum baselines, and see the normative security requirements in
 [docs/spec-v0.2.md](docs/spec-v0.2.md) §9.

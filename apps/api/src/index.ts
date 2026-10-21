@@ -1,5 +1,9 @@
 import { buildApp } from "./app.js";
 import { createEmptyAdapter, createSeededAdapter } from "./seed.js";
+import { runPreflightChecks } from "./preflight.js";
+
+// Run preflight checks before any service initialization
+runPreflightChecks();
 
 const port = Number(process.env.PORT ?? 3001);
 const adapter = process.env.SEED_DEMO !== "false" ? createSeededAdapter() : createEmptyAdapter();

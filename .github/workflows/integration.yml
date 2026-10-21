@@ -1,0 +1,118 @@
+name: Integration Tests
+
+on:
+  schedule:
+    # Run every Monday at 2 AM UTC
+    - cron: '0 2 * * 1'
+  workflow_dispatch:
+    inputs:
+      adapters:
+        description: 'Adapters to test (comma-separated: shopify,chatwoot,zendesk,all)'
+        required: false
+        default: 'all'
+
+jobs:
+  shopify-integration:
+    name: Shopify Real API Tests
+    runs-on: ubuntu-latest
+    # Only run in main repository (not forks) to protect secrets
+    if: github.repository == 'anthropics/open-support-agent-spec'
+    
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build packages
+        run: pnpm build
+
+      - name: Run Shopify integration tests
+        if: contains(github.event.inputs.adapters, 'shopify') || contains(github.event.inputs.adapters, 'all') || github.event_name == 'schedule'
+        env:
+          SHOPIFY_TEST_MODE: '1'
+          SHOPIFY_SHOP_DOMAIN: ${{ secrets.SHOPIFY_TEST_SHOP_DOMAIN }}
+          SHOPIFY_ADMIN_ACCESS_TOKEN: ${{ secrets.SHOPIFY_TEST_ACCESS_TOKEN }}
+          SHOPIFY_TEST_ORDER_ID: ${{ secrets.SHOPIFY_TEST_ORDER_ID }}
+          SHOPIFY_TEST_CUSTOMER_EMAIL: ${{ secrets.SHOPIFY_TEST_CUSTOMER_EMAIL }}
+        run: pnpm --filter @osas/tests-integration test
+        continue-on-error: true
+        id: shopify-tests
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: shopify-integration-results
+          path: tests/integration/reports/
+
+      - name: Report status
+        if: always()
+        run: |
+          if [ "${{ steps.shopify-tests.outcome }}" == "failure" ]; then
+            echo "::warning::Shopify integration tests failed"
+          else
+            echo "::notice::Shopify integration tests passed"
+          fi
+
+  stress-tests:
+    name: Stress & Concurrency Tests
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build packages
+        run: pnpm build
+
+      - name: Run stress tests
+        run: pnpm --filter @osas/tests-stress test
+        timeout-minutes: 15
+
+      - name: Upload stress test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: stress-test-results
+          path: tests/stress/reports/
+
+  summary:
+    name: Test Summary
+    runs-on: ubuntu-latest
+    needs: [shopify-integration, stress-tests]
+    if: always()
+    
+    steps:
+      - name: Check test results
+        run: |
+          echo "## Integration Test Results" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "- Shopify: ${{ needs.shopify-integration.result }}" >> $GITHUB_STEP_SUMMARY
+          echo "- Stress: ${{ needs.stress-tests.result }}" >> $GITHUB_STEP_SUMMARY

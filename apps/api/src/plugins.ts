@@ -228,6 +228,9 @@ export function errorHandler(err: FastifyError, req: FastifyRequest, reply: Fast
 }
 
 export function registerPlugins(app: FastifyInstance, authHook: AuthHook): void {
+  // Register security plugin first (runtime CVE mitigations)
+  app.register(import("./plugins/security.js"));
+  
   app.addHook("preHandler", authHook);
   app.setErrorHandler(errorHandler);
   app.setNotFoundHandler((req, reply) =>
