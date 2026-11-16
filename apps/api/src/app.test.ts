@@ -225,7 +225,8 @@ describe("policy + execution flows (§4/§5)", () => {
     const decideRes = await app.inject({
       method: "POST",
       url: `/v1/approvals/${approval!.id}/decide`,
-      payload: { decision: "approved", approverId: "agent_1", comment: "lgtm" },
+      headers: { "x-osas-role": "policy_admin", "x-osas-actor-id": "agent_1" },
+      payload: { decision: "approved", comment: "lgtm" },
     });
     expect(decideRes.statusCode).toBe(200);
     const decided = decideRes.json();

@@ -12,3 +12,4 @@ export * from "./governance-event-store.js";
 export * from "./governance-job-store.js";
 export * from "./governance-case-store.js";
 export * from "./governance-stores.js";
+export * from "./postgres-support-adapter.js";

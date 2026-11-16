@@ -13,6 +13,7 @@ import { createSandboxAdapter } from "./seed.js";
  */
 
 const AGENT = { "x-osas-role": "support_agent" };
+const ADMIN = { "x-osas-role": "policy_admin", "x-osas-actor-id": "ops_1" };
 
 let apps: FastifyInstance[] = [];
 afterEach(async () => {
@@ -98,8 +99,8 @@ describe("action-bound approvals (RFC 0008)", () => {
     const decide = await app.inject({
       method: "POST",
       url: `/v1/approvals/${approval.id}/decide`,
-      headers: AGENT,
-      payload: { decision: "approved", approverId: "ops_1" },
+      headers: ADMIN,
+      payload: { decision: "approved" },
     });
     expect(decide.statusCode).toBe(200);
 
@@ -130,8 +131,8 @@ describe("action-bound approvals (RFC 0008)", () => {
     const decide = await app.inject({
       method: "POST",
       url: `/v1/approvals/${approval.id}/decide`,
-      headers: AGENT,
-      payload: { decision: "approved", approverId: "ops_1" },
+      headers: ADMIN,
+      payload: { decision: "approved" },
     });
     expect(decide.statusCode).toBe(409);
     expect(decide.json().error.code).toBe("ACTION_BINDING_MISMATCH");

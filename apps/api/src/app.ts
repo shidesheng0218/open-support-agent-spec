@@ -20,6 +20,7 @@ import {
   PostgresProviderEventStore,
   PostgresReconciliationStore,
   PostgresShadowRunStore,
+  PostgresSupportAdapter,
   PostgresUsageStore,
   assertConnectable,
   createPool,
@@ -138,8 +139,21 @@ export async function buildApp(opts: BuildAppOptions = {}): Promise<FastifyInsta
   // Milestone 4: conformance mode — enabled only via explicit env, never in
   // production, and only with a test-only key (loadConformanceConfig throws).
   const conformance = opts.conformance ?? loadConformanceConfig(env);
-  const adapter =
-    opts.adapter ?? (executionMode.mode === "sandbox" ? createSandboxAdapter() : createSeededAdapter());
+
+  // P0-3 fix: when storage=postgres and no adapter is provided, use PostgresSupportAdapter.
+  // Sandbox mode still uses createSandboxAdapter for synthetic execution.
+  let adapter: SupportAdapter;
+  if (opts.adapter) {
+    adapter = opts.adapter;
+  } else if (executionMode.mode === "sandbox") {
+    adapter = createSandboxAdapter();
+  } else if (storage.mode === "postgres") {
+    // PostgresSupportAdapter will be initialized after pool creation
+    adapter = null as unknown as SupportAdapter; // temporary, replaced below
+  } else {
+    adapter = createSeededAdapter();
+  }
+
   const app = Fastify({ logger: opts.logger === false ? false : loggerOptions });
   // Security posture summary: one structured line + one WARN per weak
   // combination. Observability only — the fail-closed loaders above already
@@ -171,6 +185,15 @@ export async function buildApp(opts: BuildAppOptions = {}): Promise<FastifyInsta
     // Startup must connect — fail closed otherwise.
     const pool = createPool(storage.databaseUrl!);
     await assertConnectable(pool);
+
+    // P0-3 fix: initialize PostgresSupportAdapter and hydrate audit chain heads (P0-4 fix)
+    if (!opts.adapter && executionMode.mode !== "sandbox") {
+      const pgAdapter = new PostgresSupportAdapter(pool);
+      await pgAdapter.initialize();
+      adapter = pgAdapter;
+      app.log.info("PostgresSupportAdapter initialized with audit chain hydration");
+    }
+
     app.decorate("executionStore", new PostgresExecutionStore(pool));
     app.decorate("executionAttemptStore", new PostgresExecutionAttemptStore(pool));
     app.decorate("executionReceiptStore", new PostgresExecutionReceiptStore(pool));

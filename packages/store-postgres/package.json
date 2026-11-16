@@ -24,6 +24,7 @@
     "db:reset": "tsx scripts/reset.ts"
   },
   "dependencies": {
+    "@osas/adapter": "workspace:*",
     "@osas/core": "workspace:*",
     "@osas/ecommerce-shadow": "workspace:*",
     "@osas/governance": "workspace:*",

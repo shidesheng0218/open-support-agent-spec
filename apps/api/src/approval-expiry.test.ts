@@ -128,8 +128,8 @@ describe("approval fail-safe expiry (wired)", () => {
     const decideRes = await app.inject({
       method: "POST",
       url: `/v1/approvals/${row!.id}/decide`,
-      headers: AGENT,
-      payload: { decision: "approved", approverId: "late_agent" },
+      headers: ADMIN,
+      payload: { decision: "approved" },
     });
     expect(decideRes.statusCode).toBe(409);
     expect(decideRes.json().error.message).toContain("APPROVAL_TIMED_OUT");
@@ -179,8 +179,8 @@ describe("approval fail-safe expiry (wired)", () => {
     const decideAgain = await app.inject({
       method: "POST",
       url: `/v1/approvals/${row!.id}/decide`,
-      headers: AGENT,
-      payload: { decision: "approved", approverId: "late_agent" },
+      headers: ADMIN,
+      payload: { decision: "approved" },
     });
     expect(decideAgain.statusCode).toBe(409);
 

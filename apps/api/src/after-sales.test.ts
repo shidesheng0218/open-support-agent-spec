@@ -241,7 +241,8 @@ describe("after-sales sandbox lifecycle", () => {
     const decided = await app.inject({
       method: "POST",
       url: `/v1/approvals/${approvalId}/decide`,
-      payload: { decision: "approved", approverId: "after-sales-test" },
+      headers: { "x-osas-role": "policy_admin", "x-osas-actor-id": "after-sales-test" },
+      payload: { decision: "approved" },
     });
     expect(decided.statusCode).toBe(500);
     const detail = await app.inject({ method: "GET", url: `/v1/after-sales/cases/${caseId}` });
