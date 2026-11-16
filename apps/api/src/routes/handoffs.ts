@@ -4,6 +4,7 @@ import type { HumanHandoff } from "@osas/core";
 import { SchemaInvalidError } from "../plugins.js";
 import { audit } from "../domain.js";
 import { ctxFor } from "./basic.js";
+import { requireRole } from "../auth.js";
 
 export async function handoffRoutes(app: FastifyInstance): Promise<void> {
   const adapter: SupportAdapter = app.adapter;
@@ -14,6 +15,8 @@ export async function handoffRoutes(app: FastifyInstance): Promise<void> {
   });
 
   app.post("/v1/handoffs/:id/claim", async (req) => {
+    // P0-1 fix: only support_agent or policy_admin can claim handoffs
+    requireRole(req, "support_agent", "policy_admin");
     const ctx = ctxFor(req);
     const { id } = req.params as { id: string };
     const body = (req.body ?? {}) as { assignee?: string };
@@ -24,6 +27,8 @@ export async function handoffRoutes(app: FastifyInstance): Promise<void> {
   });
 
   app.post("/v1/handoffs/:id/resolve", async (req) => {
+    // P0-1 fix: only support_agent or policy_admin can resolve handoffs
+    requireRole(req, "support_agent", "policy_admin");
     const ctx = ctxFor(req);
     const { id } = req.params as { id: string };
     const body = (req.body ?? {}) as { notes?: string };

@@ -9,6 +9,7 @@ import { SchemaInvalidError } from "../plugins.js";
 import type { AuditSink } from "../domain.js";
 import { audit, resolveActivePolicy, runEvaluation, runExecution } from "../domain.js";
 import { ctxFor } from "./basic.js";
+import { requireRole } from "../auth.js";
 
 // §8/Milestone 2: every model call is persisted to the UsageStore and the
 // audit stream. costUsd is omitted entirely when unknown — never fabricated.
@@ -163,6 +164,8 @@ export async function chatRoutes(app: FastifyInstance): Promise<void> {
   const adapter: SupportAdapter = app.adapter;
 
   app.post("/v1/chat", async (req) => {
+    // P0-1 fix: chat must be invoked by support_agent or policy_admin
+    requireRole(req, "support_agent", "policy_admin");
     const ctx = ctxFor(req);
     const body = (req.body ?? {}) as ChatBody;
     if (!body.message || typeof body.message !== "string") {

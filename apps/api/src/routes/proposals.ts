@@ -6,6 +6,7 @@ import { deepEqual } from "@osas/policy-engine";
 import { SPEC_VERSION, SchemaInvalidError, ConflictError } from "../plugins.js";
 import { audit, resolveActivePolicy, runEvaluation, runExecution, runReconcile } from "../domain.js";
 import { PROPOSAL_SCHEMA, ctxFor, validateSchema } from "./basic.js";
+import { requireRole } from "../auth.js";
 import { syncAfterSalesCaseStatus } from "./after-sales.js";
 
 /** Capability required to propose a given actionType (v0.1.1). */
@@ -33,6 +34,8 @@ export async function proposalRoutes(app: FastifyInstance): Promise<void> {
   });
 
   app.post("/v1/proposals", async (req, reply) => {
+    // P0-1 fix: verify the caller has permission to create proposals
+    requireRole(req, "policy_admin", "support_agent");
     const ctx = ctxFor(req);
     await requireAdapterCapability(adapter, ctx, "proposal.write");
     const body = req.body as Record<string, unknown> | undefined;

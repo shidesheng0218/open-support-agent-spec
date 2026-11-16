@@ -14,6 +14,7 @@ import {
   tryResolveActivePolicy,
 } from "../domain.js";
 import { ctxFor } from "./basic.js";
+import { requireRole } from "../auth.js";
 import { syncAfterSalesCaseStatus } from "./after-sales.js";
 
 export async function approvalRoutes(app: FastifyInstance): Promise<void> {
@@ -46,16 +47,23 @@ export async function approvalRoutes(app: FastifyInstance): Promise<void> {
   });
 
   app.post("/v1/approvals/:id/decide", async (req) => {
+    // P0-1 fix: require policy_admin role and bind approverId to authenticated principal
+    const principal = requireRole(req, "policy_admin");
     const ctx = ctxFor(req);
     await requireAdapterCapability(adapter, ctx, "approval.decide");
     const { id } = req.params as { id: string };
-    const body = (req.body ?? {}) as { decision?: string; approverId?: string; comment?: string };
-    if ((body.decision !== "approved" && body.decision !== "rejected") || !body.approverId) {
+    const body = (req.body ?? {}) as { decision?: string; comment?: string };
+    if (body.decision !== "approved" && body.decision !== "rejected") {
       throw new SchemaInvalidError([
-        { message: 'body must be { decision: "approved" | "rejected", approverId: string, comment? }' },
+        { message: 'body must be { decision: "approved" | "rejected", comment?: string }' },
       ]);
     }
-    return decideApprovalCore(app, ctx, id, body as DecideApprovalInput);
+    // approverId comes from the authenticated principal, not the request body
+    return decideApprovalCore(app, ctx, id, {
+      decision: body.decision,
+      approverId: principal.actorId,
+      comment: body.comment,
+    });
   });
 }
 
